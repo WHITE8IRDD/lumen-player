@@ -164,13 +164,4 @@ class LibraryViewModel @Inject constructor(
         }
     }
 
-    fun renameFile(item: MediaItem, newName: String) {
-        viewModelScope.launch {
-            runCatching {
-                val values = android.content.ContentValues().apply {
-                    put(MediaStore.Video.Media.DISPLAY_NAME, newName)
-                }
-            }
-        }
-    }
 }

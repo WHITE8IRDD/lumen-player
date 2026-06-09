@@ -93,7 +93,6 @@ fun VideoGrid(
     onDelete: ((MediaItem) -> Unit)? = null,
     onPlayNext: ((MediaItem) -> Unit)? = null,
     onOpenFileLocation: ((MediaItem) -> Unit)? = null,
-    onRename: ((MediaItem) -> Unit)? = null,
     onProperties: ((MediaItem) -> Unit)? = null,
     onHideFromHome: ((MediaItem) -> Unit)? = null,
     contentPadding: PaddingValues = GridContentPadding
@@ -117,7 +116,6 @@ fun VideoGrid(
                 onDelete = { onDelete?.invoke(item) },
                 onPlayNext = { onPlayNext?.invoke(item) },
                 onOpenFileLocation = { onOpenFileLocation?.invoke(item) },
-                onRename = { onRename?.invoke(item) },
                 onProperties = { onProperties?.invoke(item) },
                 onHideFromHome = { onHideFromHome?.invoke(item) }
             )
@@ -139,7 +137,6 @@ fun VideoGridCard(
     onDelete: (() -> Unit)? = null,
     onPlayNext: (() -> Unit)? = null,
     onOpenFileLocation: (() -> Unit)? = null,
-    onRename: (() -> Unit)? = null,
     onProperties: (() -> Unit)? = null,
     onHideFromHome: (() -> Unit)? = null
 ) {
@@ -257,11 +254,6 @@ fun VideoGridCard(
                                 enabled = onOpenFileLocation != null
                             )
                             DropdownMenuItem(
-                                text = { Text("Rename") },
-                                onClick = { showMenu = false; onRename?.invoke() },
-                                enabled = onRename != null
-                            )
-                            DropdownMenuItem(
                                 text = { Text("Properties") },
                                 onClick = { showMenu = false; onProperties?.invoke() },
                                 enabled = onProperties != null
@@ -352,7 +344,6 @@ fun VideoList(
                 onDelete = { onDelete?.invoke(item) },
                 onPlayNext = { onPlayNext?.invoke(item) },
                 onOpenFileLocation = { onOpenFileLocation?.invoke(item) },
-                onRename = { onRename?.invoke(item) },
                 onProperties = { onProperties?.invoke(item) },
                 onHideFromHome = { onHideFromHome?.invoke(item) }
             )
@@ -374,7 +365,6 @@ fun VideoListRow(
     onDelete: (() -> Unit)? = null,
     onPlayNext: (() -> Unit)? = null,
     onOpenFileLocation: (() -> Unit)? = null,
-    onRename: (() -> Unit)? = null,
     onProperties: (() -> Unit)? = null,
     onHideFromHome: (() -> Unit)? = null
 ) {
@@ -509,11 +499,6 @@ fun VideoListRow(
                         enabled = onOpenFileLocation != null
                     )
                     DropdownMenuItem(
-                        text = { Text("Rename") },
-                        onClick = { showMenu = false; onRename?.invoke() },
-                        enabled = onRename != null
-                    )
-                    DropdownMenuItem(
                         text = { Text("Properties") },
                         onClick = { showMenu = false; onProperties?.invoke() },
                         enabled = onProperties != null
@@ -634,7 +619,6 @@ fun FolderGrid(
     onDelete: ((MediaItem) -> Unit)? = null,
     onPlayNext: ((MediaItem) -> Unit)? = null,
     onOpenFileLocation: ((MediaItem) -> Unit)? = null,
-    onRename: ((MediaItem) -> Unit)? = null,
     onProperties: ((MediaItem) -> Unit)? = null,
     onHideFromHome: ((MediaItem) -> Unit)? = null,
     selectedIds: Set<Long> = emptySet(),
@@ -663,7 +647,6 @@ fun FolderGrid(
                 onDelete = { onDelete?.invoke(item) },
                 onPlayNext = { onPlayNext?.invoke(item) },
                 onOpenFileLocation = { onOpenFileLocation?.invoke(item) },
-                onRename = { onRename?.invoke(item) },
                 onProperties = { onProperties?.invoke(item) },
                 onHideFromHome = { onHideFromHome?.invoke(item) }
             )

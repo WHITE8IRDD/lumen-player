@@ -37,7 +37,6 @@ import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Shuffle
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -100,6 +99,7 @@ import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.SnackbarResult
 import com.lumen.player.core.util.TimeFormatter
+import com.lumen.player.ui.components.LumenInfoDialog
 import com.lumen.player.ui.components.LumenInputDialog
 import java.util.Locale
 import kotlinx.coroutines.launch
@@ -233,8 +233,7 @@ private fun VideosTabContent(
     var overflowExpanded by remember { mutableStateOf(false) }
     var showSortSubmenu by remember { mutableStateOf(false) }
     var showHiddenItems by remember { mutableStateOf(false) }
-    var showRenameDialog by remember { mutableStateOf<MediaItem?>(null) }
-    var renameText by remember { mutableStateOf("") }
+    var isGroupedByFolder by remember { mutableStateOf(true) }
     var showPropertiesDialog by remember { mutableStateOf<MediaItem?>(null) }
     val context = LocalContext.current
 
@@ -362,6 +361,13 @@ private fun VideosTabContent(
                                 onClick = { showSortSubmenu = true }
                             )
                             DropdownMenuItem(
+                                text = { Text(if (isGroupedByFolder) "Ungroup folders" else "Group by folder") },
+                                onClick = {
+                                    isGroupedByFolder = !isGroupedByFolder
+                                    overflowExpanded = false
+                                }
+                            )
+                            DropdownMenuItem(
                                 text = { Text(if (isGridView) "List view" else "Grid view") },
                                 onClick = {
                                     onToggleViewMode()
@@ -406,7 +412,7 @@ private fun VideosTabContent(
             }
         }
 
-        if (isGridView) {
+        if (isGridView && isGroupedByFolder) {
             FolderGrid(
                 folders = folders,
                 onFolderClick = { onFolderClick(it.path) },
@@ -459,9 +465,74 @@ private fun VideosTabContent(
                         context.startActivity(intent)
                     } catch (_: Exception) { }
                 },
-                onRename = { item ->
-                    renameText = item.cleanTitle.ifEmpty { item.title }
-                    showRenameDialog = item
+                onProperties = { item ->
+                    showPropertiesDialog = item
+                },
+                onHideFromHome = { item ->
+                    viewModel.hideFromHome(item)
+                    sheetScope.launch {
+                        val result = snackbarState.showSnackbar(
+                            message = "Hidden from Home",
+                            actionLabel = "Undo"
+                        )
+                        if (result == SnackbarResult.ActionPerformed) {
+                            viewModel.unhideFromHome(item)
+                        }
+                    }
+                },
+                selectedIds = selectedIds
+            )
+        } else if (isGridView) {
+            VideoGrid(
+                items = displayItems,
+                onClick = { item ->
+                    if (inSelectionMode) {
+                        selectionMode = true
+                        selectedIds = if (item.id in selectedIds) selectedIds - item.id else selectedIds + item.id
+                    } else {
+                        android.util.Log.d("CLICK", "title=${item.title} isVideo=${item.isVideo} mimeType=${item.mimeType} uri=${item.uri}")
+                        val idx = displayItems.indexOf(item).coerceAtLeast(0)
+                        viewModel.playAtIndex(displayItems, idx)
+                        onVideoClick(item)
+                    }
+                },
+                onLongClick = { item ->
+                    selectedIds = selectedIds + item.id
+                },
+                onAddToQueue = { item ->
+                    viewModel.addToQueue(listOf(item))
+                },
+                onAddToPlaylist = { item ->
+                    selectedIds = setOf(item.id)
+                    showPlaylistSheet = true
+                },
+                onShare = { item ->
+                    viewModel.share(context, listOf(item))
+                },
+                onDelete = { item ->
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                        val intentSender = viewModel.createDeleteSender(context, listOf(item))
+                        intentSender?.let { deleteLauncher.launch(it) }
+                    } else {
+                        viewModel.requestDelete(context, listOf(item))
+                    }
+                },
+                onPlayNext = { item ->
+                    viewModel.addToQueue(listOf(item))
+                },
+                onOpenFileLocation = { item ->
+                    try {
+                        val intent = Intent(Intent.ACTION_VIEW)
+                        intent.setDataAndType(
+                            DocumentsContract.buildDocumentUri(
+                                "com.android.externalstorage.documents",
+                                "primary:" + item.folderPath.removePrefix("/storage/emulated/0/")
+                            ),
+                            "application/zip"
+                        )
+                        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        context.startActivity(intent)
+                    } catch (_: Exception) { }
                 },
                 onProperties = { item ->
                     showPropertiesDialog = item
@@ -531,10 +602,6 @@ private fun VideosTabContent(
                         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         context.startActivity(intent)
                     } catch (_: Exception) { }
-                },
-                onRename = { item ->
-                    renameText = item.cleanTitle.ifEmpty { item.title }
-                    showRenameDialog = item
                 },
                 onProperties = { item ->
                     showPropertiesDialog = item
@@ -660,49 +727,20 @@ private fun VideosTabContent(
         )
     }
 
-    if (showRenameDialog != null) {
-        val item = showRenameDialog!!
-        LumenInputDialog(
-            onDismiss = {
-                showRenameDialog = null
-                renameText = ""
-            },
-            onConfirm = { newName ->
-                viewModel.renameFile(item, newName)
-                showRenameDialog = null
-                renameText = ""
-            },
-            title = "Rename \"${item.cleanTitle.ifEmpty { item.title }}\"",
-            initialValue = renameText,
-            label = "New name",
-            confirmLabel = "Rename"
-        )
-    }
-
     if (showPropertiesDialog != null) {
         val item = showPropertiesDialog!!
-        AlertDialog(
-            onDismissRequest = { showPropertiesDialog = null },
-            title = { Text(item.cleanTitle.ifEmpty { item.title }) },
-            text = {
-                Column {
-                    PropertiesRow("Path", item.folderPath)
-                    PropertiesRow("Size", humanSize(item.sizeBytes))
-                    PropertiesRow("Duration", TimeFormatter.format(item.durationMs))
-                    if (item.year != null) PropertiesRow("Year", item.year.toString())
-                    if (item.seasonEpisode != null) PropertiesRow("Season/Episode", item.seasonEpisode!!)
-                    PropertiesRow("Type", item.mimeType)
-                    if (item.posterUrl != null) PropertiesRow("Poster", "TMDB")
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showPropertiesDialog = null }) {
-                    Text("Close")
-                }
-            },
-            shape = RoundedCornerShape(16.dp),
-            containerColor = MaterialTheme.colorScheme.surface
-        )
+        LumenInfoDialog(
+            onDismiss = { showPropertiesDialog = null },
+            title = item.cleanTitle.ifEmpty { item.title }
+        ) {
+            PropertiesRow("Path", item.folderPath)
+            PropertiesRow("Size", humanSize(item.sizeBytes))
+            PropertiesRow("Duration", TimeFormatter.format(item.durationMs))
+            if (item.year != null) PropertiesRow("Year", item.year.toString())
+            if (item.seasonEpisode != null) PropertiesRow("Season/Episode", item.seasonEpisode!!)
+            PropertiesRow("Type", item.mimeType)
+            if (item.posterUrl != null) PropertiesRow("Poster", "TMDB")
+        }
     }
 }
 
@@ -918,39 +956,19 @@ private fun PlaylistsTabContent(
     }
 
     if (showCreateDialog) {
-        AlertDialog(
-            onDismissRequest = { showCreateDialog = false },
-            title = { Text("New playlist") },
-            text = {
-                OutlinedTextField(
-                    value = newPlaylistName,
-                    onValueChange = { newPlaylistName = it },
-                    singleLine = true,
-                    label = { Text("Playlist name") },
-                    modifier = Modifier.fillMaxWidth()
-                )
+        LumenInputDialog(
+            onDismiss = {
+                newPlaylistName = ""
+                showCreateDialog = false
             },
-            confirmButton = {
-                FilledTonalButton(
-                    onClick = {
-                        if (newPlaylistName.isNotBlank()) {
-                            viewModel.createPlaylist(newPlaylistName)
-                            newPlaylistName = ""
-                        }
-                        showCreateDialog = false
-                    },
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Create")
-                }
+            onConfirm = { name ->
+                viewModel.createPlaylist(name)
+                newPlaylistName = ""
+                showCreateDialog = false
             },
-            dismissButton = {
-                TextButton(onClick = { showCreateDialog = false }) {
-                    Text("Cancel")
-                }
-            },
-            shape = RoundedCornerShape(16.dp),
-            containerColor = MaterialTheme.colorScheme.surface
+            title = "New playlist",
+            label = "Playlist name",
+            confirmLabel = "Create"
         )
     }
 }

@@ -30,7 +30,6 @@ import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Shuffle
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.DropdownMenu
@@ -67,6 +66,7 @@ import com.lumen.player.core.theme.LumenTertiary
 import com.lumen.player.core.util.TimeFormatter
 import com.lumen.player.ui.components.DialogVariant
 import com.lumen.player.ui.components.LumenConfirmationDialog
+import com.lumen.player.ui.components.LumenInputDialog
 
 @OptIn(ExperimentalMaterial3Api::class)
 @UnstableApi
@@ -227,37 +227,20 @@ fun PlaylistDetailScreen(
     }
 
     if (showRenameDialog) {
-        AlertDialog(
-            onDismissRequest = { showRenameDialog = false },
-            title = { Text("Rename playlist") },
-            text = {
-                OutlinedTextField(
-                    value = renameText,
-                    onValueChange = { renameText = it },
-                    singleLine = true,
-                    label = { Text("Name") }
-                )
+        LumenInputDialog(
+            onDismiss = {
+                renameText = ""
+                showRenameDialog = false
             },
-            confirmButton = {
-                FilledTonalButton(
-                    onClick = {
-                        if (renameText.isNotBlank()) {
-                            viewModel.renamePlaylist(viewModel.playlistId, renameText)
-                        }
-                        showRenameDialog = false
-                    },
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text("Rename")
-                }
+            onConfirm = { name ->
+                viewModel.renamePlaylist(viewModel.playlistId, name)
+                renameText = ""
+                showRenameDialog = false
             },
-            dismissButton = {
-                androidx.compose.material3.TextButton(onClick = { showRenameDialog = false }) {
-                    Text("Cancel")
-                }
-            },
-            shape = RoundedCornerShape(16.dp),
-            containerColor = MaterialTheme.colorScheme.surface
+            title = "Rename playlist",
+            initialValue = renameText,
+            label = "Name",
+            confirmLabel = "Rename"
         )
     }
 }
