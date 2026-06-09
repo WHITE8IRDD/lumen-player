@@ -63,8 +63,8 @@ import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Speed
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilledIconButton
+import com.lumen.player.ui.components.LumenPickerDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -1046,33 +1046,13 @@ private fun formatSpeed(s: Float): String {
 @Composable
 private fun SpeedDialog(current: Float, onPick: (Float) -> Unit, onDismiss: () -> Unit) {
     val speeds = listOf(0.25f, 0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f, 2.5f, 3f, 4f)
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Playback speed") },
-        text = {
-            Column(Modifier.verticalScroll(rememberScrollState())) {
-                speeds.forEach { s ->
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .pointerInput(s) {
-                                awaitEachGesture {
-                                    awaitFirstDown(requireUnconsumed = false)
-                                    onPick(s)
-                                }
-                            }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(formatSpeed(s), color = Color.White, modifier = Modifier.weight(1f))
-                        if (s == current) {
-                            Icon(Icons.Rounded.Check, null, tint = MaterialTheme.colorScheme.primary)
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } }
+    LumenPickerDialog(
+        onDismiss = onDismiss,
+        title = "Playback speed",
+        options = speeds,
+        selectedValue = current,
+        optionLabel = { formatSpeed(it) },
+        onPick = { onPick(it) }
     )
 }
 
@@ -1084,33 +1064,13 @@ private fun AspectDialog(current: Int, onPick: (Int) -> Unit, onDismiss: () -> U
         AspectRatioFrameLayout.RESIZE_MODE_ZOOM to "Crop",
         AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH to "Stretch"
     )
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Aspect ratio") },
-        text = {
-            Column {
-                options.forEach { (mode, label) ->
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .pointerInput(mode) {
-                                awaitEachGesture {
-                                    awaitFirstDown(requireUnconsumed = false)
-                                    onPick(mode)
-                                }
-                            }
-                            .padding(vertical = 12.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text(label, color = Color.White, modifier = Modifier.weight(1f))
-                        if (mode == current) {
-                            Icon(Icons.Rounded.Check, null, tint = MaterialTheme.colorScheme.primary)
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Close") } }
+    LumenPickerDialog(
+        onDismiss = onDismiss,
+        title = "Aspect ratio",
+        options = options,
+        selectedValue = options.first { it.first == current },
+        optionLabel = { p -> p.second },
+        onPick = { p -> onPick(p.first) }
     )
 }
 
