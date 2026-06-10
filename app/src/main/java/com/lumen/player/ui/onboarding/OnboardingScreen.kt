@@ -167,7 +167,8 @@ private fun WelcomeSlide() {
             "Welcome to Lumen",
             style = MaterialTheme.typography.headlineLarge,
             fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurface
         )
         Spacer(Modifier.height(12.dp))
         Text(
@@ -197,7 +198,8 @@ private fun PermissionsSlide(onGrant: () -> Unit) {
             "Grant Media Access",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurface
         )
         Spacer(Modifier.height(12.dp))
         Text(
@@ -243,7 +245,8 @@ private fun SetupSlide(
             "Customize Your Experience",
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
+            textAlign = TextAlign.Center,
+            color = MaterialTheme.colorScheme.onSurface
         )
         Spacer(Modifier.height(32.dp))
         ToggleRow(
@@ -279,7 +282,7 @@ private fun ToggleRow(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(title, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
             Text(
                 subtitle,
                 style = MaterialTheme.typography.bodySmall,
