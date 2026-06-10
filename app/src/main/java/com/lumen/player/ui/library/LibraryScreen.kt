@@ -17,9 +17,16 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.statusBarsPadding
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.pager.HorizontalPager
@@ -34,9 +41,19 @@ import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.GridView
+import androidx.compose.material.icons.rounded.Language
+import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.QueueMusic
+import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material.icons.rounded.ViewList
+import androidx.compose.material.icons.rounded.Clear
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Shuffle
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -48,6 +65,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.ScrollableTabRow
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -83,6 +101,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import android.net.Uri
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
@@ -98,13 +119,14 @@ import android.provider.DocumentsContract
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.Surface
 import com.lumen.player.core.util.TimeFormatter
 import com.lumen.player.ui.components.LumenInfoDialog
 import com.lumen.player.ui.components.LumenInputDialog
 import java.util.Locale
 import kotlinx.coroutines.launch
 
-private val tabTitles = listOf("Videos", "Audio", "Folders", "Playlists")
+private val tabTitles = listOf("Videos", "Audio", "Folders", "Playlists", "Streams")
 
 @UnstableApi
 @Composable
@@ -119,6 +141,10 @@ fun LibraryScreen(
 ) {
     val pagerState = rememberPagerState(pageCount = { tabTitles.size })
     val scope = rememberCoroutineScope()
+
+    LaunchedEffect(hasPermission) {
+        if (hasPermission) viewModel.onPermissionGranted()
+    }
 
     Column(
         Modifier
@@ -207,7 +233,8 @@ fun LibraryScreen(
                     viewModel = viewModel
                 )
                 2 -> FoldersTabContent(onFolderClick = onFolderClick)
-                3 -> PlaylistsTabContent(onPlaylistClick = onPlaylistClick)
+                 3 -> PlaylistsTabContent(onPlaylistClick = onPlaylistClick)
+                 4 -> StreamsTabContent(onStreamPlay = onItemClick)
             }
         }
     }
@@ -805,7 +832,8 @@ private fun AudioTabContent(
             when {
                 hasPermission && isScanning && items.isEmpty() -> ScanningPlaceholder()
                 hasPermission && items.isEmpty() -> EmptyLibraryPlaceholder(onRescan = viewModel::rescan)
-                else -> LazyColumn(state = listState, modifier = Modifier.fillMaxSize()) {
+                else -> LazyColumn(state = listState, modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())) {
                     items(items, key = { it.id }) { item ->
                         MediaListItem(
                             item = item,
@@ -847,7 +875,7 @@ private fun FoldersTabContent(
 ) {
     val folders by viewModel.folders.collectAsStateWithLifecycle()
 
-    LazyColumn(Modifier.fillMaxSize()) {
+    LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())) {
         items(folders, key = { it.path }) { folder ->
             Row(
                 Modifier.fillMaxWidth()
@@ -881,7 +909,371 @@ private fun FoldersTabContent(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun StreamsTabContent(
+    onStreamPlay: (MediaItem) -> Unit,
+    viewModel: StreamsViewModel = hiltViewModel()
+) {
+    val snackbarHostState = remember { SnackbarHostState() }
+    val groups by viewModel.groupedStreams.collectAsStateWithLifecycle()
+    val query by viewModel.query.collectAsStateWithLifecycle()
+    val viewMode by viewModel.viewMode.collectAsStateWithLifecycle()
+    var showAddDialog by remember { mutableStateOf(false) }
+    var expandedGroups by remember { mutableStateOf(setOf<String>()) }
+
+    val ctx = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val m3uPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocument()
+    ) { uri ->
+        uri?.let { viewModel.importM3uFile(it, ctx) }
+    }
+
+    val bottomPadding = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+
+    Box(Modifier.fillMaxSize()) {
+        if (groups.isEmpty()) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                    Icon(Icons.Rounded.Language, null, Modifier.size(56.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("No streams yet",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Add a network stream URL or import an M3U playlist",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        FilledTonalButton(
+                            onClick = { m3uPicker.launch(arrayOf(
+                                "audio/x-mpegurl", "application/vnd.apple.mpegurl",
+                                "application/x-mpegurl", "*/*"
+                            )) },
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Rounded.Folder, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Import M3U")
+                        }
+                        FilledTonalButton(
+                            onClick = { showAddDialog = true },
+                            shape = RoundedCornerShape(12.dp)
+                        ) {
+                            Icon(Icons.Rounded.Add, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("Add URL")
+                        }
+                    }
+                }
+            }
+        } else {
+            Box(Modifier.fillMaxSize()) {
+                Column(Modifier.fillMaxSize()) {
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(start = 16.dp, end = 8.dp, top = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        OutlinedTextField(
+                            value = query,
+                            onValueChange = viewModel::setQuery,
+                            modifier = Modifier.weight(1f),
+                            placeholder = { Text("Search streams...") },
+                            leadingIcon = { Icon(Icons.Rounded.Search, null) },
+                            trailingIcon = {
+                                if (query.isNotEmpty()) {
+                                    IconButton(onClick = { viewModel.setQuery("") }) {
+                                        Icon(Icons.Rounded.Clear, null)
+                                    }
+                                }
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(28.dp),
+                            colors = OutlinedTextFieldDefaults.colors(
+                                focusedBorderColor = Color.Transparent,
+                                unfocusedBorderColor = Color.Transparent
+                            )
+                        )
+                        IconButton(onClick = {
+                            viewModel.setViewMode(
+                                if (viewMode == StreamViewMode.LIST) StreamViewMode.GRID
+                                else StreamViewMode.LIST
+                            )
+                        }) {
+                            Icon(
+                                if (viewMode == StreamViewMode.GRID) Icons.Rounded.ViewList
+                                else Icons.Rounded.GridView,
+                                "Toggle view"
+                            )
+                        }
+                    }
+                    if (viewMode == StreamViewMode.LIST) {
+                        LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = bottomPadding)) {
+                            groups.forEach { group ->
+                                item(key = "header_${group.name}") {
+                                    Row(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                expandedGroups = if (group.name in expandedGroups)
+                                                    expandedGroups - group.name
+                                                else expandedGroups + group.name
+                                            }
+                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            if (group.name in expandedGroups) Icons.Rounded.KeyboardArrowUp
+                                            else Icons.Rounded.Folder,
+                                            null, tint = MaterialTheme.colorScheme.primary
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(group.name,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.SemiBold,
+                                            modifier = Modifier.weight(1f))
+                                        Text("${group.streams.size}",
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                                if (group.name in expandedGroups || expandedGroups.isEmpty()) {
+                                    items(group.streams, key = { it.id }) { stream ->
+                                        Row(
+                                            Modifier
+                                                .fillMaxWidth()
+                                                .clickable { viewModel.playStream(stream, onStreamPlay) }
+                                                .padding(horizontal = 16.dp, vertical = 10.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            Box(
+                                                Modifier
+                                                    .size(48.dp)
+                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .background(MaterialTheme.colorScheme.surfaceVariant),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                if (stream.logoUrl != null) {
+                                                    AsyncImage(model = stream.logoUrl,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)))
+                                                } else {
+                                                    Icon(Icons.Rounded.Language, null, Modifier.size(24.dp),
+                                                        tint = MaterialTheme.colorScheme.primary)
+                                                }
+                                            }
+                                            Spacer(Modifier.width(12.dp))
+                                            Column(Modifier.weight(1f)) {
+                                                Text(stream.title, style = MaterialTheme.typography.bodyLarge,
+                                                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                if (stream.category != null) {
+                                                    Text(stream.category,
+                                                        style = MaterialTheme.typography.bodySmall,
+                                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                        maxLines = 1)
+                                                }
+                                            }
+                                            IconButton(onClick = { viewModel.toggleFavorite(stream.id) }) {
+                                                Icon(
+                                                    if (stream.isFavorite) Icons.Rounded.Favorite
+                                                    else Icons.Rounded.FavoriteBorder,
+                                                    null,
+                                                    tint = if (stream.isFavorite)
+                                                        MaterialTheme.colorScheme.primary
+                                                    else MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                            IconButton(onClick = { viewModel.deleteStream(stream.id) }) {
+                                                Icon(Icons.Rounded.Delete, null,
+                                                    tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        LazyVerticalGrid(
+                            columns = GridCells.Fixed(2),
+                            modifier = Modifier.weight(1f).fillMaxWidth(),
+                            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = bottomPadding),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            groups.forEach { group ->
+                                item(key = "header_grid_${group.name}", span = { GridItemSpan(2) }) {
+                                    Row(
+                                        Modifier
+                                            .fillMaxWidth()
+                                            .clickable {
+                                                expandedGroups = if (group.name in expandedGroups)
+                                                    expandedGroups - group.name
+                                                else expandedGroups + group.name
+                                            }
+                                            .background(MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f))
+                                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Icon(
+                                            if (group.name in expandedGroups) Icons.Rounded.KeyboardArrowUp
+                                            else Icons.Rounded.Folder,
+                                            null, tint = MaterialTheme.colorScheme.primary
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(group.name, style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                                        Text("${group.streams.size}", style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                                if (group.name in expandedGroups || expandedGroups.isEmpty()) {
+                                    val streams = group.streams
+                                    items(streams.size) { index ->
+                                        val stream = streams[index]
+                                        Card(
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .clickable { viewModel.playStream(stream, onStreamPlay) },
+                                            shape = RoundedCornerShape(12.dp),
+                                            colors = CardDefaults.cardColors(
+                                                containerColor = MaterialTheme.colorScheme.surfaceVariant
+                                            )
+                                        ) {
+                                            Box {
+                                                if (stream.logoUrl != null) {
+                                                    AsyncImage(model = stream.logoUrl,
+                                                        contentDescription = null,
+                                                        modifier = Modifier.fillMaxWidth().height(100.dp)
+                                                            .clip(RoundedCornerShape(topStart = 12.dp, topEnd = 12.dp)))
+                                                } else {
+                                                    Box(Modifier.fillMaxWidth().height(100.dp),
+                                                        contentAlignment = Alignment.Center) {
+                                                        Icon(Icons.Rounded.Language, null, Modifier.size(40.dp),
+                                                            tint = MaterialTheme.colorScheme.primary)
+                                                    }
+                                                }
+                                                IconButton(
+                                                    onClick = { viewModel.toggleFavorite(stream.id) },
+                                                    modifier = Modifier.align(Alignment.TopEnd)
+                                                ) {
+                                                    Icon(
+                                                        if (stream.isFavorite) Icons.Rounded.Favorite
+                                                        else Icons.Rounded.FavoriteBorder,
+                                                        null,
+                                                        tint = if (stream.isFavorite) MaterialTheme.colorScheme.primary
+                                                        else Color.White.copy(alpha = 0.7f)
+                                                    )
+                                                }
+                                            }
+                                            Text(stream.title,
+                                                modifier = Modifier.padding(8.dp),
+                                                style = MaterialTheme.typography.bodyMedium,
+                                                maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                SmallFloatingActionButton(
+                    onClick = { showAddDialog = true },
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(end = 16.dp, bottom = 16.dp),
+                    containerColor = MaterialTheme.colorScheme.primaryContainer,
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                ) {
+                    Icon(Icons.Rounded.Add, contentDescription = "Add stream")
+                }
+            }
+        }
+
+        SnackbarHost(
+            hostState = snackbarHostState,
+            modifier = Modifier.align(Alignment.BottomCenter).padding(bottom = 96.dp)
+        )
+    }
+
+    val importState by viewModel.importState.collectAsStateWithLifecycle()
+    when (val state = importState) {
+        is M3uImportState.Importing -> {
+            Dialog(
+                onDismissRequest = {},
+                properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = false, dismissOnClickOutside = false)
+            ) {
+                Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surface, tonalElevation = 4.dp) {
+                    Column(Modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(Modifier.size(40.dp))
+                        Spacer(Modifier.height(16.dp))
+                        Text("Importing channels\u2026", style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
+            }
+        }
+        is M3uImportState.Success -> {
+            LaunchedEffect(state) {
+                snackbarHostState.showSnackbar("Imported ${state.count} channels from ${state.fileName}")
+                viewModel.dismissImportState()
+            }
+        }
+        is M3uImportState.Error -> {
+            LaunchedEffect(state) {
+                snackbarHostState.showSnackbar("Import failed: ${state.message}")
+                viewModel.dismissImportState()
+            }
+        }
+        is M3uImportState.Idle -> {}
+    }
+
+    if (showAddDialog) {
+        var url by remember { mutableStateOf("") }
+        var title by remember { mutableStateOf("") }
+        Dialog(
+            onDismissRequest = { showAddDialog = false },
+            properties = DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(0.85f).imePadding(),
+                shape = RoundedCornerShape(20.dp),
+                color = MaterialTheme.colorScheme.surface,
+                tonalElevation = 4.dp, shadowElevation = 8.dp
+            ) {
+                Column(Modifier.padding(24.dp)) {
+                    Text("Add network stream", style = MaterialTheme.typography.titleLarge)
+                    Spacer(Modifier.height(16.dp))
+                    OutlinedTextField(value = url, onValueChange = { url = it },
+                        label = { Text("URL") }, singleLine = true,
+                        modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+                    Spacer(Modifier.height(12.dp))
+                    OutlinedTextField(value = title, onValueChange = { title = it },
+                        label = { Text("Title (optional)") }, singleLine = true,
+                        modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+                    Spacer(Modifier.height(24.dp))
+                    Row(modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.End) {
+                        TextButton(onClick = { showAddDialog = false }) { Text("Cancel") }
+                        Spacer(Modifier.width(8.dp))
+                        FilledTonalButton(
+                            onClick = {
+                                if (url.isNotBlank()) {
+                                    viewModel.addAndPlay(url.trim(), title.trim().ifEmpty { url.trim() }, onStreamPlay)
+                                    showAddDialog = false
+                                }
+                            },
+                            shape = RoundedCornerShape(12.dp),
+                            enabled = url.isNotBlank()
+                        ) { Text("Add & play") }
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun PlaylistsTabContent(
     onPlaylistClick: (Long) -> Unit = {},
@@ -912,7 +1304,7 @@ private fun PlaylistsTabContent(
                 }
             }
         } else {
-            LazyColumn(Modifier.fillMaxSize().padding(bottom = 80.dp)) {
+            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())) {
                 items(playlists, key = { it.id }) { playlist ->
                     Row(
                         Modifier.fillMaxWidth()

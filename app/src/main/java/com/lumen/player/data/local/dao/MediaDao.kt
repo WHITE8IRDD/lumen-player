@@ -1,8 +1,9 @@
 package com.lumen.player.data.local.dao
 
 import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
 import androidx.room.Query
-import androidx.room.Upsert
 import com.lumen.player.data.local.entity.MediaEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -70,7 +71,7 @@ interface MediaDao {
     @Query("SELECT COUNT(*) FROM media")
     suspend fun count(): Int
 
-    @Upsert
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun upsertAll(items: List<MediaEntity>)
 
     @Query("UPDATE media SET lastPositionMs = :pos WHERE id = :id")

@@ -30,14 +30,18 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
@@ -52,17 +56,22 @@ import androidx.compose.material.icons.rounded.ClosedCaption
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.FastForward
 import androidx.compose.material.icons.rounded.FastRewind
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Pause
+import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.PictureInPicture
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.Repeat
 import androidx.compose.material.icons.rounded.RepeatOne
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import com.lumen.player.ui.components.LumenPickerDialog
 import androidx.compose.material3.HorizontalDivider
@@ -72,11 +81,14 @@ import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Slider
 import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -116,10 +128,14 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.lumen.player.core.util.TimeFormatter
+import com.lumen.player.domain.model.NetworkStream
+import com.lumen.player.ui.components.LumenConfirmationDialog
+import com.lumen.player.ui.library.StreamsViewModel
 import com.lumen.player.ui.subtitles.SubtitlePanelSheet
 import kotlin.math.abs
 
 @UnstableApi
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VideoPlayerScreen(
     onClose: () -> Unit,
@@ -132,6 +148,7 @@ fun VideoPlayerScreen(
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
     val activity = context as? Activity
     val haptic = LocalHapticFeedback.current
+    val streamsVm: StreamsViewModel = hiltViewModel()
 
     // ---- Player state ----
     var controlsVisible by remember { mutableStateOf(true) }
@@ -145,6 +162,8 @@ fun VideoPlayerScreen(
     var subtitleDelayUs by remember { mutableStateOf(0L) }
     var seekDragging by remember { mutableStateOf(false) }
     var seekPreviewMs by remember { mutableStateOf<Float?>(null) }
+    var showChannelSwitcher by remember { mutableStateOf(false) }
+    var channelSwitcherQuery by remember { mutableStateOf("") }
 
     // ---- Brightness / volume (window + AudioManager) ----
     val audioManager = remember(context) {
@@ -290,6 +309,8 @@ fun VideoPlayerScreen(
     val hasPrevious by remember { derivedStateOf { state.hasPrevious } }
     val hasNext by remember { derivedStateOf { state.hasNext } }
     val playbackSpeed by remember { derivedStateOf { state.playbackSpeed } }
+    val channelContext by viewModel.streamContext.collectAsStateWithLifecycle()
+    val showChannelButton = channelContext.isNotEmpty()
 
     Box(
         Modifier
@@ -422,6 +443,11 @@ fun VideoPlayerScreen(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f)
                         )
+                        if (showChannelButton) {
+                            IconButton(onClick = { showChannelSwitcher = true }) {
+                                Icon(Icons.Rounded.LiveTv, "Channels", tint = Color.White)
+                            }
+                        }
                         IconButton(onClick = onEnterPip) {
                             Icon(Icons.Rounded.PictureInPicture, "PiP", tint = Color.White)
                         }
@@ -552,6 +578,92 @@ fun VideoPlayerScreen(
                 { rm -> resizeMode = rm; uiMode = VideoUiMode.MAIN },
                 { uiMode = VideoUiMode.MAIN })
             VideoUiMode.MAIN -> Unit
+        }
+
+        // === Channel switcher (M3U stream context) ===
+        if (showChannelSwitcher) {
+            val filtered = remember(channelContext, channelSwitcherQuery) {
+                if (channelSwitcherQuery.isBlank()) channelContext
+                else channelContext.filter {
+                    it.title.contains(channelSwitcherQuery, ignoreCase = true) ||
+                        (it.category?.contains(channelSwitcherQuery, ignoreCase = true) == true)
+                }
+            }
+            ModalBottomSheet(
+                onDismissRequest = { showChannelSwitcher = false; channelSwitcherQuery = "" },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                containerColor = MaterialTheme.colorScheme.surface,
+                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+            ) {
+                Column(
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 32.dp)
+                        .heightIn(max = 600.dp)
+                ) {
+                    Text("Switch Channel",
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))
+                    OutlinedTextField(
+                        value = channelSwitcherQuery,
+                        onValueChange = { channelSwitcherQuery = it },
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                        placeholder = { Text("Search channels...") },
+                        leadingIcon = { Icon(Icons.Rounded.Search, null) },
+                        singleLine = true,
+                        shape = RoundedCornerShape(28.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = Color.Transparent,
+                            unfocusedBorderColor = Color.Transparent
+                        )
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
+                        val grouped = filtered.groupBy { it.category ?: "Uncategorized" }
+                        grouped.forEach { (cat, streams) ->
+                            item(key = "h_$cat") {
+                                Text(cat,
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
+                            }
+                            items(streams, key = { it.id }) { stream ->
+                                Row(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            viewModel.switchToStream(stream)
+                                            showChannelSwitcher = false
+                                            channelSwitcherQuery = ""
+                                        }
+                                        .padding(horizontal = 24.dp, vertical = 10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(Modifier.weight(1f)) {
+                                        Text(stream.title,
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        if (stream.category != null) {
+                                            Text(stream.category,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                        }
+                                    }
+                                    IconButton(onClick = { streamsVm.toggleFavorite(stream.id) }) {
+                                        Icon(
+                                            if (stream.isFavorite) Icons.Rounded.Favorite
+                                            else Icons.Rounded.FavoriteBorder,
+                                            null,
+                                            tint = if (stream.isFavorite) MaterialTheme.colorScheme.primary
+                                            else MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // === Subtitle panel (3 sections: embedded, local files, OpenSubtitles download) ===

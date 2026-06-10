@@ -3,7 +3,9 @@ package com.lumen.player.player
 import android.app.PendingIntent
 import android.content.Intent
 import android.os.Build
+import android.util.Log
 import androidx.media3.common.Player
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaSession
@@ -70,8 +72,30 @@ class PlaybackService : MediaSessionService() {
                 }
             }
             override fun onPlaybackStateChanged(state: Int) {
+                val name = when (state) {
+                    Player.STATE_IDLE -> "IDLE"
+                    Player.STATE_BUFFERING -> "BUFFERING"
+                    Player.STATE_READY -> "READY"
+                    Player.STATE_ENDED -> "ENDED"
+                    else -> "UNKNOWN"
+                }
+                Log.d("STREAM_PLAY", "PlaybackState=$name")
                 if (state == Player.STATE_ENDED || state == Player.STATE_IDLE) {
                     saveResume(player)
+                }
+            }
+            override fun onPlayerError(error: PlaybackException) {
+                Log.e("STREAM_PLAY", "Playback error: ${error.errorCodeName} - ${error.message}", error)
+                Log.e("STREAM_PLAY", "Error code=${error.errorCode} cause=${error.cause?.message}")
+                when (error.errorCode) {
+                    PlaybackException.ERROR_CODE_IO_NETWORK_CONNECTION_FAILED ->
+                        Log.e("STREAM_PLAY", "Network connection failed — stream URL may be unreachable")
+                    PlaybackException.ERROR_CODE_PARSING_MANIFEST_MALFORMED ->
+                        Log.e("STREAM_PLAY", "Manifest malformed — stream format not recognized")
+                    PlaybackException.ERROR_CODE_DECODING_FAILED ->
+                        Log.e("STREAM_PLAY", "Decoding failed — codec issue")
+                    PlaybackException.ERROR_CODE_BEHIND_LIVE_WINDOW ->
+                        Log.e("STREAM_PLAY", "Behind live window — timing issue, auto-recoverable")
                 }
             }
         })

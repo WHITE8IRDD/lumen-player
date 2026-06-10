@@ -8,6 +8,9 @@ import com.lumen.player.domain.repository.SettingsRepository
 import com.lumen.player.domain.repository.ThemeMode
 import com.lumen.player.domain.repository.UserSettings
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -19,6 +22,15 @@ class SettingsViewModel @Inject constructor(
 ) : ViewModel() {
 
     val settings = repository.settings
+
+    private val _isReady = MutableStateFlow(false)
+    val isReady: StateFlow<Boolean> = _isReady.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            repository.settings.collect { _isReady.value = true }
+        }
+    }
 
     val isTmdbApiAvailable = BuildConfig.TMDB_API_KEY.isNotEmpty()
 
@@ -41,5 +53,48 @@ class SettingsViewModel @Inject constructor(
     fun setMetadataWifiOnly(v: Boolean) = viewModelScope.launch { repository.setMetadataWifiOnly(v) }
     fun clearMetadataCache() = viewModelScope.launch {
         mediaRepository.clearMetadataCache()
+    }
+
+    fun setOnboardingCompleted() = viewModelScope.launch { repository.setOnboardingCompleted(true) }
+    fun setFontSize(v: String) = viewModelScope.launch { repository.setFontSize(v) }
+    fun setAccentColorHex(v: String) = viewModelScope.launch { repository.setAccentColorHex(v) }
+    fun setAspectRatio(v: String) = viewModelScope.launch { repository.setAspectRatio(v) }
+    fun setBrightnessMode(v: String) = viewModelScope.launch { repository.setBrightnessMode(v) }
+    fun setSubtitleColor(v: String) = viewModelScope.launch { repository.setSubtitleColor(v) }
+    fun setSubtitleTextSize(v: Float) = viewModelScope.launch { repository.setSubtitleTextSize(v) }
+    fun setSubtitleDelayUs(v: Long) = viewModelScope.launch { repository.setSubtitleDelayUs(v) }
+    fun setSubtitleLanguage(v: String) = viewModelScope.launch { repository.setSubtitleLanguage(v) }
+    fun setOpensubtitlesApiKey(v: String) = viewModelScope.launch { repository.setOpensubtitlesApiKey(v) }
+    fun setAutoScanOnStartup(v: Boolean) = viewModelScope.launch { repository.setAutoScanOnStartup(v) }
+    fun setShowAudio(v: Boolean) = viewModelScope.launch { repository.setShowAudio(v) }
+    fun setReplayGain(v: Boolean) = viewModelScope.launch { repository.setReplayGain(v) }
+    fun setSectionExpanded(section: String, expanded: Boolean) = viewModelScope.launch {
+        repository.setSectionExpanded(section, expanded)
+    }
+
+    fun resetAllSettings() = viewModelScope.launch {
+        repository.setThemeMode(ThemeMode.SYSTEM)
+        repository.setDynamicColor(true)
+        repository.setResumePlayback(true)
+        repository.setRespectAudioFocus(true)
+        repository.setSkipSilence(false)
+        repository.setGaplessPlayback(true)
+        repository.setShowVideos(true)
+        repository.setHardwareAcceleration(true)
+        repository.setFetchOnlineMetadata(false)
+        repository.setMetadataWifiOnly(true)
+        repository.setFontSize("DEFAULT")
+        repository.setAspectRatio("AUTO")
+        repository.setBrightnessMode("SYSTEM")
+        repository.setSubtitleColor("WHITE")
+        repository.setSubtitleLanguage("English")
+        repository.setOpensubtitlesApiKey("")
+        repository.setAutoScanOnStartup(true)
+        repository.setShowAudio(true)
+        repository.setReplayGain(false)
+    }
+
+    fun resetOnboarding() = viewModelScope.launch {
+        repository.setOnboardingCompleted(false)
     }
 }

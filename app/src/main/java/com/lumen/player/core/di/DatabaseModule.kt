@@ -23,7 +23,10 @@ object DatabaseModule {
                 LumenDatabase.MIGRATION_2_3,
                 LumenDatabase.MIGRATION_3_4,
                 LumenDatabase.MIGRATION_4_5,
-                LumenDatabase.MIGRATION_5_6
+                LumenDatabase.MIGRATION_5_6,
+                LumenDatabase.MIGRATION_6_7,
+                LumenDatabase.MIGRATION_7_8,
+                LumenDatabase.MIGRATION_8_9
             )
             .fallbackToDestructiveMigration()
             .build()
@@ -32,4 +35,5 @@ object DatabaseModule {
     @Provides fun providePlaylistDao(db: LumenDatabase) = db.playlistDao()
     @Provides fun provideFolderDao(db: LumenDatabase) = db.folderDao()
     @Provides fun provideTmdbCacheDao(db: LumenDatabase) = db.tmdbCacheDao()
+    @Provides fun provideStreamDao(db: LumenDatabase) = db.streamDao()
 }

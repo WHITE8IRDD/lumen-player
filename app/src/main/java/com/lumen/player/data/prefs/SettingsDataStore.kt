@@ -43,8 +43,32 @@ class SettingsDataStore @Inject constructor(
         val SUBTITLE_DELAY_US = longPreferencesKey("subtitle_delay_us")
         val SUBTITLE_TEXT_SIZE = floatPreferencesKey("subtitle_text_size")
 
+        val ONBOARDING_COMPLETED = booleanPreferencesKey("onboarding_completed")
+
         val FETCH_ONLINE_METADATA = booleanPreferencesKey("fetch_online_metadata")
         val METADATA_WIFI_ONLY    = booleanPreferencesKey("metadata_wifi_only")
+
+        val FONT_SIZE        = stringPreferencesKey("font_size")
+        val ASPECT_RATIO     = stringPreferencesKey("aspect_ratio")
+        val BRIGHTNESS_MODE  = stringPreferencesKey("brightness_mode")
+        val SUBTITLE_COLOR   = stringPreferencesKey("subtitle_color")
+        val SUBTITLE_LANG    = stringPreferencesKey("subtitle_language")
+        val OPENSUBTITLES_KEY = stringPreferencesKey("opensubtitles_api_key")
+        val AUTO_SCAN        = booleanPreferencesKey("auto_scan_on_startup")
+        val SHOW_AUDIO       = booleanPreferencesKey("show_audio")
+        val REPLAY_GAIN      = booleanPreferencesKey("replay_gain")
+
+        val ACCENT_COLOR_HEX = stringPreferencesKey("accent_color_hex")
+
+        val SEC_APPEARANCE  = booleanPreferencesKey("section_appearance")
+        val SEC_PLAYBACK    = booleanPreferencesKey("section_playback")
+        val SEC_VIDEO       = booleanPreferencesKey("section_video")
+        val SEC_SUBTITLES   = booleanPreferencesKey("section_subtitles")
+        val SEC_LIBRARY     = booleanPreferencesKey("section_library")
+        val SEC_AUDIO       = booleanPreferencesKey("section_audio")
+        val SEC_NETWORK     = booleanPreferencesKey("section_network")
+        val SEC_ADVANCED    = booleanPreferencesKey("section_advanced")
+        val SEC_ABOUT       = booleanPreferencesKey("section_about")
 
         val EQ_ENABLED        = booleanPreferencesKey("eq_enabled")
         val EQ_PRESET         = intPreferencesKey("eq_preset")
@@ -69,6 +93,26 @@ class SettingsDataStore @Inject constructor(
             metadataWifiOnly = p[Keys.METADATA_WIFI_ONLY] ?: true,
             subtitleDelayUs = p[Keys.SUBTITLE_DELAY_US] ?: 0L,
             subtitleTextSize = p[Keys.SUBTITLE_TEXT_SIZE] ?: 16f,
+            onboardingCompleted = p[Keys.ONBOARDING_COMPLETED] ?: false,
+            accentColorHex = p[Keys.ACCENT_COLOR_HEX] ?: "#00E5C8",
+            fontSize = p[Keys.FONT_SIZE] ?: "DEFAULT",
+            aspectRatio = p[Keys.ASPECT_RATIO] ?: "AUTO",
+            brightnessMode = p[Keys.BRIGHTNESS_MODE] ?: "SYSTEM",
+            subtitleColor = p[Keys.SUBTITLE_COLOR] ?: "WHITE",
+            subtitleLanguage = p[Keys.SUBTITLE_LANG] ?: "English",
+            opensubtitlesApiKey = p[Keys.OPENSUBTITLES_KEY] ?: "",
+            autoScanOnStartup = p[Keys.AUTO_SCAN] ?: true,
+            showAudio = p[Keys.SHOW_AUDIO] ?: true,
+            replayGain = p[Keys.REPLAY_GAIN] ?: false,
+            sectionAppearance = p[Keys.SEC_APPEARANCE] ?: true,
+            sectionPlayback = p[Keys.SEC_PLAYBACK] ?: true,
+            sectionVideo = p[Keys.SEC_VIDEO] ?: false,
+            sectionSubtitles = p[Keys.SEC_SUBTITLES] ?: false,
+            sectionLibrary = p[Keys.SEC_LIBRARY] ?: false,
+            sectionAudio = p[Keys.SEC_AUDIO] ?: false,
+            sectionNetwork = p[Keys.SEC_NETWORK] ?: false,
+            sectionAdvanced = p[Keys.SEC_ADVANCED] ?: false,
+            sectionAbout = p[Keys.SEC_ABOUT] ?: false,
             audioEffects = AudioEffectsState(
                 enabled = p[Keys.EQ_ENABLED] ?: false,
                 preset = p[Keys.EQ_PRESET] ?: 0,
@@ -146,5 +190,65 @@ class SettingsDataStore @Inject constructor(
 
     suspend fun setMetadataWifiOnly(v: Boolean) {
         context.prefsDataStore.edit { it[Keys.METADATA_WIFI_ONLY] = v }
+    }
+
+    suspend fun setOnboardingCompleted(v: Boolean) {
+        context.prefsDataStore.edit { it[Keys.ONBOARDING_COMPLETED] = v }
+    }
+
+    suspend fun setAccentColorHex(v: String) {
+        context.prefsDataStore.edit { it[Keys.ACCENT_COLOR_HEX] = v }
+    }
+
+    suspend fun setFontSize(v: String) {
+        context.prefsDataStore.edit { it[Keys.FONT_SIZE] = v }
+    }
+
+    suspend fun setAspectRatio(v: String) {
+        context.prefsDataStore.edit { it[Keys.ASPECT_RATIO] = v }
+    }
+
+    suspend fun setBrightnessMode(v: String) {
+        context.prefsDataStore.edit { it[Keys.BRIGHTNESS_MODE] = v }
+    }
+
+    suspend fun setSubtitleColor(v: String) {
+        context.prefsDataStore.edit { it[Keys.SUBTITLE_COLOR] = v }
+    }
+
+    suspend fun setSubtitleLanguage(v: String) {
+        context.prefsDataStore.edit { it[Keys.SUBTITLE_LANG] = v }
+    }
+
+    suspend fun setOpensubtitlesApiKey(v: String) {
+        context.prefsDataStore.edit { it[Keys.OPENSUBTITLES_KEY] = v }
+    }
+
+    suspend fun setAutoScanOnStartup(v: Boolean) {
+        context.prefsDataStore.edit { it[Keys.AUTO_SCAN] = v }
+    }
+
+    suspend fun setShowAudio(v: Boolean) {
+        context.prefsDataStore.edit { it[Keys.SHOW_AUDIO] = v }
+    }
+
+    suspend fun setReplayGain(v: Boolean) {
+        context.prefsDataStore.edit { it[Keys.REPLAY_GAIN] = v }
+    }
+
+    suspend fun setSectionExpanded(section: String, expanded: Boolean) {
+        val key = when (section) {
+            "appearance" -> Keys.SEC_APPEARANCE
+            "playback" -> Keys.SEC_PLAYBACK
+            "video" -> Keys.SEC_VIDEO
+            "subtitles" -> Keys.SEC_SUBTITLES
+            "library" -> Keys.SEC_LIBRARY
+            "audio" -> Keys.SEC_AUDIO
+            "network" -> Keys.SEC_NETWORK
+            "advanced" -> Keys.SEC_ADVANCED
+            "about" -> Keys.SEC_ABOUT
+            else -> return
+        }
+        context.prefsDataStore.edit { it[key] = expanded }
     }
 }

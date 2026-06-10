@@ -15,60 +15,84 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
-private val LumenDark = darkColorScheme(
-    primary = LumenPrimary,
-    onPrimary = Color(0xFF1E1B2E),
-    primaryContainer = LumenPrimaryDim,
-    onPrimaryContainer = Color(0xFFEADDFF),
-    secondary = LumenTertiary,
-    onSecondary = Color(0xFF003733),
-    secondaryContainer = Color(0xFF005048),
-    onSecondaryContainer = Color(0xFF6FF7E0),
-    tertiary = LumenTertiary,
-    background = LumenNearBlack,
-    onBackground = LumenOnBackground,
-    surface = LumenSurface,
-    onSurface = LumenOnBackground,
-    surfaceVariant = LumenSurfaceVariant,
-    onSurfaceVariant = LumenOnSurfaceVariant,
-    outline = LumenOutline,
-    error = LumenError,
-    onError = Color(0xFF601410)
-)
-
-private val LumenLight = lightColorScheme(
-    primary = LumenPrimary,
-    onPrimary = Color.White,
-    primaryContainer = Color(0xFFEADDFF),
-    onPrimaryContainer = Color(0xFF21005D),
-    secondary = Color(0xFF006B5E),
-    onSecondary = Color.White,
-    secondaryContainer = Color(0xFF6FF7E0),
-    onSecondaryContainer = Color(0xFF00201B),
-    background = Color(0xFFFFFBFE),
-    onBackground = Color(0xFF1C1B1F),
-    surface = Color(0xFFFFFBFE),
-    onSurface = Color(0xFF1C1B1F),
-    surfaceVariant = Color(0xFFE7E0EC),
-    onSurfaceVariant = Color(0xFF49454F),
-    outline = Color(0xFF79747E),
-    error = Color(0xFFBA1A1A),
-    onError = Color.White
-)
-
 @Composable
 fun LumenTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
+    accentColor: Color = Color(0xFF00E5C8),
     content: @Composable () -> Unit
 ) {
     val view = LocalView.current
+    val bright = 0.299f * accentColor.red + 0.587f * accentColor.green + 0.114f * accentColor.blue
+    val onAccent = if (bright > 0.5f) Color(0xFF1C1B1F) else Color.White
 
     val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ->
-            if (darkTheme) dynamicDarkColorScheme(view.context) else dynamicLightColorScheme(view.context)
-        darkTheme -> LumenDark
-        else -> LumenLight
+        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+            if (darkTheme) {
+                dynamicDarkColorScheme(view.context).copy(
+                    primary = accentColor,
+                    secondary = accentColor,
+                    tertiary = accentColor,
+                    background = LumenDarkBackground,
+                    surface = LumenDarkSurface,
+                    surfaceVariant = LumenDarkSurfaceVariant,
+                    surfaceContainer = LumenDarkSurfaceContainer,
+                    surfaceContainerHigh = Color(0xFF1F1F28),
+                    surfaceContainerHighest = Color(0xFF252530),
+                    onSurface = LumenDarkOnSurface,
+                    onSurfaceVariant = LumenDarkOnSurfaceVariant,
+                    outline = LumenDarkOutline
+                )
+            } else {
+                dynamicLightColorScheme(view.context).copy(
+                    primary = accentColor,
+                    secondary = accentColor,
+                    tertiary = accentColor
+                )
+            }
+        }
+        darkTheme -> darkColorScheme(
+            primary = accentColor,
+            onPrimary = onAccent,
+            primaryContainer = Color(0xFF2A2A4A),
+            onPrimaryContainer = Color(0xFFDDE5FF),
+            secondary = accentColor,
+            onSecondary = Color(0xFF002B29),
+            secondaryContainer = accentColor.copy(alpha = 0.2f),
+            onSecondaryContainer = accentColor,
+            tertiary = accentColor,
+            background = LumenDarkBackground,
+            onBackground = LumenDarkOnSurface,
+            surface = LumenDarkSurface,
+            onSurface = LumenDarkOnSurface,
+            surfaceVariant = LumenDarkSurfaceVariant,
+            onSurfaceVariant = LumenDarkOnSurfaceVariant,
+            surfaceContainer = LumenDarkSurfaceContainer,
+            surfaceContainerHigh = Color(0xFF1F1F28),
+            surfaceContainerHighest = Color(0xFF252530),
+            outline = LumenDarkOutline,
+            error = Color(0xFFE84D8A),
+            onError = Color(0xFF2A1020)
+        )
+        else -> lightColorScheme(
+            primary = accentColor,
+            onPrimary = onAccent,
+            primaryContainer = Color(0xFFE0E0FF),
+            onPrimaryContainer = Color(0xFF1A0033),
+            secondary = accentColor,
+            onSecondary = Color.White,
+            secondaryContainer = accentColor.copy(alpha = 0.2f),
+            onSecondaryContainer = accentColor,
+            background = Color(0xFFFFFBFE),
+            onBackground = Color(0xFF1C1B1F),
+            surface = Color(0xFFFFFBFE),
+            onSurface = Color(0xFF1C1B1F),
+            surfaceVariant = Color(0xFFE2E2F0),
+            onSurfaceVariant = Color(0xFF50506A),
+            outline = Color(0xFF70708A),
+            error = Color(0xFFBA1A1A),
+            onError = Color.White
+        )
     }
 
     if (!view.isInEditMode) {

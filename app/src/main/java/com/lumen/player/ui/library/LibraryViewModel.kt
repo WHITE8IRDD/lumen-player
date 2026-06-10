@@ -16,6 +16,7 @@ import com.lumen.player.data.local.dao.PlaylistDao
 import com.lumen.player.data.local.entity.PlaylistItemEntity
 import com.lumen.player.domain.model.MediaItem
 import com.lumen.player.domain.repository.MediaRepository
+import com.lumen.player.domain.repository.SettingsRepository
 import com.lumen.player.domain.usecase.ScanMediaUseCase
 import com.lumen.player.player.PlayerController
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -34,31 +35,32 @@ class LibraryViewModel @Inject constructor(
     private val scanMedia: ScanMediaUseCase,
     private val controller: PlayerController,
     private val repository: MediaRepository,
+    private val settingsRepository: SettingsRepository,
     private val mediaDao: MediaDao,
     private val playlistDao: PlaylistDao
 ) : ViewModel() {
+
+    private val _isScanning = MutableStateFlow(false)
+    val isScanning = _isScanning.asStateFlow()
+
+    init {
+        rescan()
+    }
 
     val videoItems = repository.observeVideo()
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val audioItems = repository.observeAudio()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val sortedVideoItems = videoItems
         .map { list -> list.sortedByDescending { it.dateAdded } }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val videoFolders = repository.observeVideoFolders()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
-
-    private val _isScanning = MutableStateFlow(false)
-    val isScanning = _isScanning.asStateFlow()
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private var initialScanDone = false
-
-    init {
-        rescan()
-    }
 
     fun onPermissionGranted() {
         if (initialScanDone) return

@@ -28,12 +28,4 @@ data class MediaItem(
     val isHiddenFromHome: Boolean = false,
     val isHiddenFromContinueWatching: Boolean = false,
     val posterUrl: String? = null
-) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (other !is MediaItem) return false
-        return id == other.id
-    }
-
-    override fun hashCode(): Int = id.hashCode()
-}
+)

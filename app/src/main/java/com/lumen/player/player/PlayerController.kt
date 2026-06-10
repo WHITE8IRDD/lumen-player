@@ -16,6 +16,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
 import com.lumen.player.core.util.Constants
+import com.lumen.player.domain.model.NetworkStream
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +40,19 @@ class PlayerController @Inject constructor(
 
     private val _tracks = MutableStateFlow<Tracks?>(null)
     val tracks: StateFlow<Tracks?> = _tracks.asStateFlow()
+
+    private val _streamPlaylistContext = MutableStateFlow<List<NetworkStream>>(emptyList())
+    val streamPlaylistContext: StateFlow<List<NetworkStream>> = _streamPlaylistContext.asStateFlow()
+
+    fun setStreamPlaylistContext(channels: List<NetworkStream>) {
+        _streamPlaylistContext.value = channels
+    }
+
+    fun isPlayingM3uStream(): Boolean {
+        val c = controller ?: return false
+        val uri = c.currentMediaItem?.localConfiguration?.uri ?: return false
+        return uri.toString().startsWith("http") && _streamPlaylistContext.value.isNotEmpty()
+    }
 
     fun initialize() {
         if (controller != null) return

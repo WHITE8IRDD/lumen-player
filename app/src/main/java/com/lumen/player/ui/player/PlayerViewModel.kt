@@ -7,7 +7,9 @@ import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.util.UnstableApi
 import com.lumen.player.core.util.Constants
+import com.lumen.player.core.util.toMedia3Item
 import com.lumen.player.data.repository.MediaRepositoryImpl
+import com.lumen.player.domain.model.NetworkStream
 import com.lumen.player.domain.repository.MediaRepository
 import com.lumen.player.player.LyricsLine
 import com.lumen.player.player.PlaybackState
@@ -46,6 +48,28 @@ class PlayerViewModel @Inject constructor(
     val speeds = Constants.AVAILABLE_PLAYBACK_SPEEDS
 
     val exoPlayer get() = controller.getPlayer()
+    val streamContext = controller.streamPlaylistContext
+
+    fun switchToStream(stream: NetworkStream) {
+        viewModelScope.launch(Dispatchers.Main) {
+            if (stream.url.isBlank()) return@launch
+            val uri = android.net.Uri.parse(stream.url)
+            if (uri == null) return@launch
+            val item = com.lumen.player.domain.model.MediaItem(
+                id = stream.id,
+                uri = uri,
+                title = stream.title,
+                artist = null, album = null, albumArtUri = null,
+                durationMs = 0L,
+                mimeType = "video/unknown",
+                sizeBytes = 0L, folderPath = "",
+                type = com.lumen.player.domain.model.MediaType.VIDEO,
+                dateAdded = stream.dateAdded,
+                isVideo = true, lastPositionMs = 0L
+            )
+            controller.setQueue(listOf(item.toMedia3Item()), 0, 0L)
+        }
+    }
 
     init {
         // Tick position every 200ms for smooth scrub bar.

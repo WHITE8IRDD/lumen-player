@@ -7,11 +7,13 @@ import androidx.sqlite.db.SupportSQLiteDatabase
 import com.lumen.player.data.local.dao.FolderDao
 import com.lumen.player.data.local.dao.MediaDao
 import com.lumen.player.data.local.dao.PlaylistDao
+import com.lumen.player.data.local.dao.StreamDao
 import com.lumen.player.data.local.dao.TmdbCacheDao
 import com.lumen.player.data.local.entity.FolderEntity
 import com.lumen.player.data.local.entity.MediaEntity
 import com.lumen.player.data.local.entity.PlaylistEntity
 import com.lumen.player.data.local.entity.PlaylistItemEntity
+import com.lumen.player.data.local.entity.StreamEntity
 import com.lumen.player.data.local.entity.TmdbCacheEntity
 
 @Database(
@@ -20,9 +22,10 @@ import com.lumen.player.data.local.entity.TmdbCacheEntity
         PlaylistEntity::class,
         PlaylistItemEntity::class,
         FolderEntity::class,
-        TmdbCacheEntity::class
+        TmdbCacheEntity::class,
+        StreamEntity::class
     ],
-    version = 6,
+    version = 9,
     exportSchema = false
 )
 abstract class LumenDatabase : RoomDatabase() {
@@ -30,6 +33,7 @@ abstract class LumenDatabase : RoomDatabase() {
     abstract fun playlistDao(): PlaylistDao
     abstract fun folderDao(): FolderDao
     abstract fun tmdbCacheDao(): TmdbCacheDao
+    abstract fun streamDao(): StreamDao
 
     companion object {
         val MIGRATION_1_2 = Migration(1, 2) { db ->
@@ -53,6 +57,20 @@ abstract class LumenDatabase : RoomDatabase() {
         val MIGRATION_5_6 = Migration(5, 6) { db ->
             db.execSQL("CREATE TABLE IF NOT EXISTS tmdb_cache (cacheKey TEXT PRIMARY KEY NOT NULL, posterPath TEXT, overview TEXT, backdropPath TEXT, cachedAt INTEGER NOT NULL DEFAULT 0)")
             db.execSQL("ALTER TABLE media ADD COLUMN posterUrl TEXT DEFAULT NULL")
+        }
+
+        val MIGRATION_6_7 = Migration(6, 7) { db ->
+            db.execSQL("CREATE TABLE IF NOT EXISTS streams (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, url TEXT NOT NULL, title TEXT NOT NULL, dateAdded INTEGER NOT NULL DEFAULT 0, lastPositionMs INTEGER NOT NULL DEFAULT 0)")
+        }
+
+        val MIGRATION_7_8 = Migration(7, 8) { db ->
+            db.execSQL("ALTER TABLE streams ADD COLUMN playlistName TEXT DEFAULT NULL")
+        }
+
+        val MIGRATION_8_9 = Migration(8, 9) { db ->
+            db.execSQL("ALTER TABLE streams ADD COLUMN isFavorite INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE streams ADD COLUMN category TEXT DEFAULT NULL")
+            db.execSQL("ALTER TABLE streams ADD COLUMN logoUrl TEXT DEFAULT NULL")
         }
     }
 }

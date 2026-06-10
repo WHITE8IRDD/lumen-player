@@ -8,11 +8,13 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -36,14 +38,32 @@ import com.lumen.player.ui.player.VideoPlayerScreen
 import com.lumen.player.ui.playlist.PlaylistDetailScreen
 import com.lumen.player.ui.player.enterPip
 import com.lumen.player.ui.search.SearchScreen
+import com.lumen.player.ui.onboarding.OnboardingScreen
 import com.lumen.player.ui.settings.SettingsHiddenItemsScreen
 import com.lumen.player.ui.settings.SettingsScreen
+import com.lumen.player.ui.settings.SettingsViewModel
 
 @UnstableApi
 @Composable
 fun LumenNavHost(
     hasMediaPermission: Boolean
 ) {
+    val settingsVm: SettingsViewModel = hiltViewModel()
+    val isReady by settingsVm.isReady.collectAsStateWithLifecycle()
+    val settings by settingsVm.settings.collectAsStateWithLifecycle()
+
+    if (!isReady) {
+        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+            CircularProgressIndicator()
+        }
+        return
+    }
+
+    if (!settings.onboardingCompleted) {
+        OnboardingScreen()
+        return
+    }
+
     val rootNav: NavHostController = rememberNavController()
     val homeVm: HomeViewModel = hiltViewModel()
     val playback by homeVm.playbackState.collectAsStateWithLifecycle()

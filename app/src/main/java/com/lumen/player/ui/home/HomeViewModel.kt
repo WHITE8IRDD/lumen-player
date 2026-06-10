@@ -8,6 +8,7 @@ import com.lumen.player.core.util.toMedia3Item
 import com.lumen.player.domain.model.Folder
 import com.lumen.player.domain.model.MediaItem
 import com.lumen.player.domain.repository.MediaRepository
+import com.lumen.player.domain.repository.SettingsRepository
 import com.lumen.player.player.PlayerController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.delay
@@ -23,26 +24,27 @@ import javax.inject.Inject
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val controller: PlayerController,
-    private val repository: MediaRepository
+    private val repository: MediaRepository,
+    private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
     val playbackState = controller.state
 
     val continueWatching: StateFlow<List<MediaItem>> =
         repository.observeContinueWatching()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val recentlyAdded: StateFlow<List<MediaItem>> =
         repository.observeRecentlyAdded()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val topFolders: StateFlow<List<Folder>> =
         repository.observeTopFolders()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val recentAudio: StateFlow<List<MediaItem>> =
         repository.observeRecentAudio()
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
@@ -54,26 +56,7 @@ class HomeViewModel @Inject constructor(
                 controller.refreshPosition()
             }
         }
-        viewModelScope.launch {
-            repository.observeContinueWatching().collect {
-                android.util.Log.d("HOME", "continueWatching: ${it.size} items")
-            }
-        }
-        viewModelScope.launch {
-            repository.observeRecentlyAdded().collect {
-                android.util.Log.d("HOME", "recentlyAdded: ${it.size} items")
-            }
-        }
-        viewModelScope.launch {
-            repository.observeRecentAudio().collect {
-                android.util.Log.d("HOME", "recentAudio: ${it.size} items")
-            }
-        }
-        viewModelScope.launch {
-            repository.observeTopFolders().collect {
-                android.util.Log.d("HOME", "topFolders: ${it.size} folders")
-            }
-        }
+        refresh()
     }
 
     fun playPause() = controller.playPause()

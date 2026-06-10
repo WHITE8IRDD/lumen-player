@@ -19,6 +19,26 @@ data class UserSettings(
     val audioEffects: AudioEffectsState = AudioEffectsState(),
     val fetchOnlineMetadata: Boolean = false,
     val metadataWifiOnly: Boolean = true,
+    val onboardingCompleted: Boolean = false,
+    val accentColorHex: String = "#00E5C8",
+    val fontSize: String = "DEFAULT",
+    val aspectRatio: String = "AUTO",
+    val brightnessMode: String = "SYSTEM",
+    val subtitleColor: String = "WHITE",
+    val subtitleLanguage: String = "English",
+    val opensubtitlesApiKey: String = "",
+    val autoScanOnStartup: Boolean = true,
+    val showAudio: Boolean = true,
+    val replayGain: Boolean = false,
+    val sectionAppearance: Boolean = true,
+    val sectionPlayback: Boolean = true,
+    val sectionVideo: Boolean = false,
+    val sectionSubtitles: Boolean = false,
+    val sectionLibrary: Boolean = false,
+    val sectionAudio: Boolean = false,
+    val sectionNetwork: Boolean = false,
+    val sectionAdvanced: Boolean = false,
+    val sectionAbout: Boolean = false,
 )
 
 interface SettingsRepository {
@@ -36,4 +56,16 @@ interface SettingsRepository {
     suspend fun setAudioEffects(state: AudioEffectsState)
     suspend fun setFetchOnlineMetadata(enabled: Boolean)
     suspend fun setMetadataWifiOnly(enabled: Boolean)
+    suspend fun setOnboardingCompleted(enabled: Boolean)
+    suspend fun setFontSize(value: String)
+    suspend fun setAccentColorHex(value: String)
+    suspend fun setAspectRatio(value: String)
+    suspend fun setBrightnessMode(value: String)
+    suspend fun setSubtitleColor(value: String)
+    suspend fun setSubtitleLanguage(value: String)
+    suspend fun setOpensubtitlesApiKey(value: String)
+    suspend fun setAutoScanOnStartup(enabled: Boolean)
+    suspend fun setShowAudio(enabled: Boolean)
+    suspend fun setReplayGain(enabled: Boolean)
+    suspend fun setSectionExpanded(section: String, expanded: Boolean)
 }

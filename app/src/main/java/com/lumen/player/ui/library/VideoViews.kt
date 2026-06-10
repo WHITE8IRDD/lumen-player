@@ -18,8 +18,11 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.runtime.key
@@ -71,7 +74,6 @@ import androidx.compose.ui.unit.sp
 import androidx.media3.common.util.UnstableApi
 import coil.compose.SubcomposeAsyncImage
 import com.lumen.player.core.theme.LumenOnSurfaceDim
-import com.lumen.player.core.theme.LumenTertiary
 import com.lumen.player.core.util.TimeFormatter
 import com.lumen.player.domain.model.Folder
 import com.lumen.player.domain.model.MediaItem
@@ -82,8 +84,7 @@ import com.lumen.player.ui.util.FolderThumbnailType
 import com.lumen.player.ui.util.MosaicFetcherInput
 import com.lumen.player.ui.util.VideoThumbnail
 
-private val GridContentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 96.dp)
-private val ListContentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 96.dp)
+
 
 @OptIn(ExperimentalFoundationApi::class)
 @UnstableApi
@@ -101,16 +102,17 @@ fun VideoGrid(
     onOpenFileLocation: ((MediaItem) -> Unit)? = null,
     onProperties: ((MediaItem) -> Unit)? = null,
     onHideFromHome: ((MediaItem) -> Unit)? = null,
-    contentPadding: PaddingValues = GridContentPadding
+    contentPadding: PaddingValues? = null
 ) {
+    val effectiveContentPadding = contentPadding ?: PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
-        contentPadding = contentPadding,
+        contentPadding = effectiveContentPadding,
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxSize()
     ) {
-        items(items, key = { "${it.id}_${it.posterUrl ?: ""}" }) { item ->
+        items(items, key = { it.id }) { item ->
             VideoGridCard(
                 item = item,
                 onClick = { onClick(item) },
@@ -192,7 +194,7 @@ fun VideoGridCard(
                                 .fillMaxWidth(progress)
                                 .height(3.dp)
                                 .clip(RoundedCornerShape(2.dp))
-                                .background(LumenTertiary)
+                                .background(MaterialTheme.colorScheme.tertiary)
                         )
                     }
                 }
@@ -203,7 +205,7 @@ fun VideoGridCard(
                             .padding(6.dp)
                             .size(8.dp)
                             .clip(RoundedCornerShape(50))
-                            .background(LumenTertiary)
+                            .background(MaterialTheme.colorScheme.tertiary)
                     )
                 }
                 if (isSelected) {
@@ -213,7 +215,7 @@ fun VideoGridCard(
                             .padding(6.dp)
                             .size(24.dp)
                             .clip(CircleShape)
-                            .background(LumenTertiary),
+                            .background(MaterialTheme.colorScheme.tertiary),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -331,10 +333,11 @@ fun VideoList(
     onRename: ((MediaItem) -> Unit)? = null,
     onProperties: ((MediaItem) -> Unit)? = null,
     onHideFromHome: ((MediaItem) -> Unit)? = null,
-    contentPadding: PaddingValues = ListContentPadding
+    contentPadding: PaddingValues? = null
 ) {
+    val effectiveContentPadding = contentPadding ?: PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())
     LazyColumn(
-        contentPadding = contentPadding,
+        contentPadding = effectiveContentPadding,
         verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier.fillMaxSize()
     ) {
@@ -423,7 +426,7 @@ fun VideoListRow(
                                 .fillMaxWidth(progress)
                                 .height(3.dp)
                                 .clip(RoundedCornerShape(2.dp))
-                                .background(LumenTertiary)
+                                .background(MaterialTheme.colorScheme.tertiary)
                         )
                     }
                 }
@@ -434,7 +437,7 @@ fun VideoListRow(
                             .padding(3.dp)
                             .size(20.dp)
                             .clip(CircleShape)
-                            .background(LumenTertiary),
+                            .background(MaterialTheme.colorScheme.tertiary),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -661,14 +664,15 @@ fun FolderGrid(
     onProperties: ((MediaItem) -> Unit)? = null,
     onHideFromHome: ((MediaItem) -> Unit)? = null,
     selectedIds: Set<Long> = emptySet(),
-    contentPadding: PaddingValues = GridContentPadding
+    contentPadding: PaddingValues? = null
 ) {
+    val effectiveContentPadding = contentPadding ?: PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())
     val singleFolders = folders.filter { it.mediaCount == 1 && it.firstVideoUri != null }
     val multiFolders = folders.filter { it.mediaCount != 1 || it.firstVideoUri == null }
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),
-        contentPadding = contentPadding,
+        contentPadding = effectiveContentPadding,
         verticalArrangement = Arrangement.spacedBy(12.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxSize()
