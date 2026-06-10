@@ -38,4 +38,9 @@ interface MediaRepository {
     suspend fun setHiddenFromContinueWatching(id: Long, hidden: Boolean)
     fun observeHiddenItems(): Flow<List<MediaItem>>
     suspend fun clearAllHiddenFlags()
+
+    suspend fun getVideosWithNullPoster(): List<MediaItem>
+    suspend fun updatePosterUrl(id: Long, posterUrl: String?)
+    suspend fun clearMetadataCache()
+    fun triggerMetadataEnrichment()
 }

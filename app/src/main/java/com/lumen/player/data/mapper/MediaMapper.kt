@@ -2,18 +2,18 @@ package com.lumen.player.data.mapper
 
 import android.net.Uri
 import com.lumen.player.data.local.entity.MediaEntity
+import com.lumen.player.data.metadata.MediaTitleParser
 import com.lumen.player.domain.model.MediaItem
 import com.lumen.player.domain.model.MediaType
-import com.lumen.player.domain.repository.MetadataResolver
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class MediaMapper @Inject constructor(
-    private val metadataResolver: MetadataResolver
+    private val titleParser: MediaTitleParser
 ) {
     suspend fun toDomain(entity: MediaEntity): MediaItem {
-        val meta = metadataResolver.resolve(entity.title)
+        val meta = titleParser.resolve(entity.title)
         return MediaItem(
             id = entity.id,
             uri = Uri.parse(entity.uri),
@@ -21,7 +21,7 @@ class MediaMapper @Inject constructor(
             cleanTitle = meta.cleanTitle,
             year = meta.year,
             seasonEpisode = meta.seasonEpisode,
-            posterUrl = entity.posterUrl ?: meta.posterUrl,
+            posterUrl = entity.posterUrl,
             artist = entity.artist,
             album = entity.album,
             albumArtUri = entity.albumArtUri?.let { Uri.parse(it) },

@@ -12,9 +12,11 @@ import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.lumen.player.data.local.dao.FolderDao
 import com.lumen.player.data.local.dao.MediaDao
+import com.lumen.player.data.local.dao.TmdbCacheDao
 import com.lumen.player.data.mapper.MediaMapper
 import com.lumen.player.data.mediastore.MediaStoreScanner
 import com.lumen.player.data.worker.ThumbnailPreGenWorker
+import com.lumen.player.data.worker.TmdbEnrichmentWorker
 import com.lumen.player.domain.model.Folder
 import com.lumen.player.domain.model.MediaItem
 import com.lumen.player.domain.model.MediaType
@@ -42,6 +44,7 @@ import javax.inject.Singleton
 class MediaRepositoryImpl @Inject constructor(
     private val mediaDao: MediaDao,
     private val folderDao: FolderDao,
+    private val tmdbCacheDao: TmdbCacheDao,
     private val scanner: MediaStoreScanner,
     private val mapper: MediaMapper,
     @ApplicationContext private val context: Context
@@ -107,10 +110,10 @@ class MediaRepositoryImpl @Inject constructor(
         mediaDao.observeByType(type.name).mapLatest { rows -> mapper.toDomain(rows) }
 
     override fun observeVideo(): Flow<List<MediaItem>> =
-        mediaDao.observeVideo().mapLatest { mapper.toDomain(it) }
+        mediaDao.observeVideo().debounce(500).mapLatest { mapper.toDomain(it) }
 
     override fun observeAudio(): Flow<List<MediaItem>> =
-        mediaDao.observeAudio().mapLatest { mapper.toDomain(it) }
+        mediaDao.observeAudio().debounce(500).mapLatest { mapper.toDomain(it) }
 
     override fun observeFavorites(): Flow<List<MediaItem>> =
         mediaDao.observeFavorites().mapLatest { mapper.toDomain(it) }
@@ -146,7 +149,8 @@ class MediaRepositoryImpl @Inject constructor(
                     firstVideoTitle = row.firstVideoTitle,
                     firstVideoDurationMs = row.firstVideoDurationMs,
                     firstVideoSizeBytes = row.firstVideoSizeBytes,
-                    firstVideoProgress = progress
+                    firstVideoProgress = progress,
+                    firstVideoPosterUrl = row.firstVideoPosterUrl
                 )
             }
         }
@@ -242,5 +246,34 @@ class MediaRepositoryImpl @Inject constructor(
 
     override suspend fun clearAllHiddenFlags() {
         mediaDao.clearAllHiddenFlags()
+    }
+
+    override suspend fun getVideosWithNullPoster(): List<MediaItem> =
+        mapper.toDomain(mediaDao.getVideosWithNullPoster())
+
+    override suspend fun updatePosterUrl(id: Long, posterUrl: String?) {
+        mediaDao.updatePosterUrl(id, posterUrl)
+    }
+
+    override suspend fun clearMetadataCache() {
+        tmdbCacheDao.deleteAll()
+        val allVideos = mediaDao.getAllVideos()
+        for (video in allVideos) {
+            mediaDao.updatePosterUrl(video.id, null)
+        }
+    }
+
+    override fun triggerMetadataEnrichment() {
+        val constraints = Constraints.Builder()
+            .setRequiresBatteryNotLow(true)
+            .build()
+        val request = OneTimeWorkRequestBuilder<TmdbEnrichmentWorker>()
+            .setConstraints(constraints)
+            .build()
+        WorkManager.getInstance(context).enqueueUniqueWork(
+            "tmdb_enrichment",
+            ExistingWorkPolicy.REPLACE,
+            request
+        )
     }
 }

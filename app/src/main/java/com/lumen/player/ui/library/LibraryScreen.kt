@@ -226,6 +226,7 @@ private fun VideosTabContent(
 ) {
     val items by viewModel.videoItems.collectAsStateWithLifecycle()
     val folders by viewModel.videoFolders.collectAsStateWithLifecycle()
+    val videosByFolder = remember(items) { items.groupBy { it.folderPath } }
     val isScanning by viewModel.isScanning.collectAsStateWithLifecycle()
     var selectedIds by remember { mutableStateOf(setOf<Long>()) }
     var selectionMode by remember { mutableStateOf(false) }
@@ -415,14 +416,14 @@ private fun VideosTabContent(
         if (isGridView && isGroupedByFolder) {
             FolderGrid(
                 folders = folders,
+                videosByFolder = videosByFolder,
                 onFolderClick = { onFolderClick(it.path) },
                 onSingleVideoClick = { item ->
                     if (inSelectionMode) {
                         selectionMode = true
                         selectedIds = if (item.id in selectedIds) selectedIds - item.id else selectedIds + item.id
                     } else {
-                        android.util.Log.d("CLICK", "title=${item.title} isVideo=${item.isVideo} mimeType=${item.mimeType} uri=${item.uri}")
-                        val idx = displayItems.indexOf(item).coerceAtLeast(0)
+                        val idx = displayItems.indexOfFirst { it.id == item.id }.coerceAtLeast(0)
                         viewModel.playAtIndex(displayItems, idx)
                         onVideoClick(item)
                     }
@@ -490,8 +491,7 @@ private fun VideosTabContent(
                         selectionMode = true
                         selectedIds = if (item.id in selectedIds) selectedIds - item.id else selectedIds + item.id
                     } else {
-                        android.util.Log.d("CLICK", "title=${item.title} isVideo=${item.isVideo} mimeType=${item.mimeType} uri=${item.uri}")
-                        val idx = displayItems.indexOf(item).coerceAtLeast(0)
+                        val idx = displayItems.indexOfFirst { it.id == item.id }.coerceAtLeast(0)
                         viewModel.playAtIndex(displayItems, idx)
                         onVideoClick(item)
                     }
@@ -559,8 +559,7 @@ private fun VideosTabContent(
                         selectionMode = true
                         selectedIds = if (item.id in selectedIds) selectedIds - item.id else selectedIds + item.id
                     } else {
-                        android.util.Log.d("CLICK", "title=${item.title} isVideo=${item.isVideo} mimeType=${item.mimeType} uri=${item.uri}")
-                        val idx = displayItems.indexOf(item).coerceAtLeast(0)
+                        val idx = displayItems.indexOfFirst { it.id == item.id }.coerceAtLeast(0)
                         viewModel.playAtIndex(displayItems, idx)
                         onVideoClick(item)
                     }
@@ -811,7 +810,8 @@ private fun AudioTabContent(
                         MediaListItem(
                             item = item,
                             onClick = {
-                                viewModel.play(items, items.indexOf(item))
+                                val idx = items.indexOfFirst { it.id == item.id }.coerceAtLeast(0)
+                                viewModel.play(items, idx)
                                 onItemClick(item)
                             }
                         )

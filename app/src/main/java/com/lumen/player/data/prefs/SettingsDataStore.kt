@@ -13,18 +13,24 @@ import com.lumen.player.domain.model.AudioEffectsState
 import com.lumen.player.domain.repository.ThemeMode
 import com.lumen.player.domain.repository.UserSettings
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import javax.inject.Inject
 import javax.inject.Singleton
 
 private val Context.prefsDataStore by preferencesDataStore(name = Constants.PREFS_NAME)
+private val settingsScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
 @Singleton
 class SettingsDataStore @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
-
     private object Keys {
         val THEME_MODE        = stringPreferencesKey("theme_mode")
         val DYNAMIC_COLOR     = booleanPreferencesKey("dynamic_color")
@@ -76,6 +82,12 @@ class SettingsDataStore @Inject constructor(
             )
         )
     }
+
+    val sharedFlow: StateFlow<UserSettings> = flow.stateIn(
+        scope = settingsScope,
+        started = SharingStarted.Eagerly,
+        initialValue = UserSettings()
+    )
 
     suspend fun setThemeMode(mode: ThemeMode) {
         context.prefsDataStore.edit { it[Keys.THEME_MODE] = mode.name }

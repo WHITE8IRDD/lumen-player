@@ -1,7 +1,7 @@
 package com.lumen.player.domain.repository
 
 import com.lumen.player.domain.model.AudioEffectsState
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
@@ -22,7 +22,7 @@ data class UserSettings(
 )
 
 interface SettingsRepository {
-    val settings: Flow<UserSettings>
+    val settings: StateFlow<UserSettings>
     suspend fun setThemeMode(mode: ThemeMode)
     suspend fun setDynamicColor(enabled: Boolean)
     suspend fun setResumePlayback(enabled: Boolean)

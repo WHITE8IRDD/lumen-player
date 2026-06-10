@@ -5,7 +5,7 @@ import com.lumen.player.domain.model.AudioEffectsState
 import com.lumen.player.domain.repository.SettingsRepository
 import com.lumen.player.domain.repository.ThemeMode
 import com.lumen.player.domain.repository.UserSettings
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.StateFlow
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -14,7 +14,7 @@ class SettingsRepositoryImpl @Inject constructor(
     private val store: SettingsDataStore
 ) : SettingsRepository {
 
-    override val settings: Flow<UserSettings> = store.flow
+    override val settings: StateFlow<UserSettings> = store.sharedFlow
 
     override suspend fun setThemeMode(mode: ThemeMode) = store.setThemeMode(mode)
     override suspend fun setDynamicColor(enabled: Boolean) = store.setDynamicColor(enabled)

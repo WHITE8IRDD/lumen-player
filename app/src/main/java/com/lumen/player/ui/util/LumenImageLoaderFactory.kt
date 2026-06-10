@@ -42,6 +42,9 @@ object LumenImageLoaderFactory {
                 // folder-path + first-file mtime so a folder with many
                 // videos always reuses one JPEG.
                 add(FolderThumbnailFetcher.Factory())
+                // MosaicFetcher handles 2x2 composited thumbnails for
+                // folder cards with 4+ videos.
+                add(MosaicFetcher.Factory())
             }
             .memoryCache {
                 MemoryCache.Builder(context)

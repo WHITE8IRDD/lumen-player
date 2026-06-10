@@ -16,5 +16,6 @@ data class Folder(
     val firstVideoTitle: String? = null,
     val firstVideoDurationMs: Long = 0L,
     val firstVideoSizeBytes: Long = 0L,
-    val firstVideoProgress: Float = 0f
+    val firstVideoProgress: Float = 0f,
+    val firstVideoPosterUrl: String? = null
 )

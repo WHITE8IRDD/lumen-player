@@ -86,7 +86,8 @@ fun FolderDetailScreen(
         if (inSelectionMode) {
             selectedIds = if (item.id in selectedIds) selectedIds - item.id else selectedIds + item.id
         } else {
-            viewModel.play(sorted, sorted.indexOf(item))
+            val idx = sorted.indexOfFirst { it.id == item.id }.coerceAtLeast(0)
+            viewModel.play(sorted, idx)
             onVideoClick(item)
         }
     }

@@ -16,4 +16,7 @@ interface TmdbCacheDao {
 
     @Query("DELETE FROM tmdb_cache WHERE cachedAt < :threshold")
     suspend fun deleteExpired(threshold: Long)
+
+    @Query("DELETE FROM tmdb_cache")
+    suspend fun deleteAll()
 }

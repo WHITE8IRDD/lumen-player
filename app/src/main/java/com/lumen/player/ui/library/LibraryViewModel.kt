@@ -23,6 +23,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -38,7 +39,7 @@ class LibraryViewModel @Inject constructor(
 ) : ViewModel() {
 
     val videoItems = repository.observeVideo()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+        .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val audioItems = repository.observeAudio()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())

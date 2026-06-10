@@ -21,6 +21,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.key
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -51,6 +53,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -74,6 +77,9 @@ import com.lumen.player.domain.model.Folder
 import com.lumen.player.domain.model.MediaItem
 import com.lumen.player.ui.components.ShimmerBox
 import com.lumen.player.ui.util.FolderThumbnail
+import com.lumen.player.ui.util.FolderThumbnailResolver
+import com.lumen.player.ui.util.FolderThumbnailType
+import com.lumen.player.ui.util.MosaicFetcherInput
 import com.lumen.player.ui.util.VideoThumbnail
 
 private val GridContentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 96.dp)
@@ -104,7 +110,7 @@ fun VideoGrid(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxSize()
     ) {
-        items(items, key = { it.id }) { item ->
+        items(items, key = { "${it.id}_${it.posterUrl ?: ""}" }) { item ->
             VideoGridCard(
                 item = item,
                 onClick = { onClick(item) },
@@ -166,7 +172,7 @@ fun VideoGridCard(
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 SubcomposeAsyncImage(
-                    model = item.posterUrl?.let { it } ?: VideoThumbnail(item.id, item.uri),
+                    model = item.posterUrl ?: VideoThumbnail(item.id, item.uri),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),
@@ -402,6 +408,7 @@ fun VideoListRow(
                     modifier = Modifier.fillMaxSize(),
                     loading = { ShimmerBox(modifier = Modifier.fillMaxSize()) }
                 )
+
                 if (progress > 0f) {
                     Box(
                         Modifier
@@ -527,9 +534,36 @@ fun VideoListRow(
 @Composable
 fun FolderCard(
     folder: Folder,
+    videos: List<MediaItem>,
     onClick: () -> Unit
 ) {
-    val thumbUri = folder.firstVideoUri
+    val thumbType = remember(folder.path, videos) {
+        FolderThumbnailResolver.resolve(folder, videos)
+    }
+
+    var cleanDisplayName by remember { mutableStateOf(folder.displayName) }
+    LaunchedEffect(folder.displayName) {
+        val parser = com.lumen.player.data.metadata.MediaTitleParser()
+        val meta = parser.resolve(folder.displayName)
+        cleanDisplayName = meta.cleanTitle.ifEmpty { folder.displayName }
+    }
+
+    val model = remember(thumbType) {
+        when (thumbType) {
+            is FolderThumbnailType.TmdbPoster -> thumbType.url
+            is FolderThumbnailType.Mosaic -> MosaicFetcherInput(
+                folderPath = folder.path,
+                videoIds = thumbType.videoIds,
+                uris = thumbType.thumbnailUris
+            )
+            is FolderThumbnailType.Single -> VideoThumbnail(
+                id = folder.firstVideoId ?: 0L,
+                uri = thumbType.videoUri
+            )
+            is FolderThumbnailType.Placeholder -> null
+        }
+    }
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -548,16 +582,20 @@ fun FolderCard(
                     .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
-                if (thumbUri != null) {
+                if (model != null) {
                     SubcomposeAsyncImage(
-                        model = FolderThumbnail(
-                            folderPath = folder.path,
-                            firstVideoUri = thumbUri
-                        ),
+                        model = model,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
-                        loading = { ShimmerBox(modifier = Modifier.fillMaxSize()) }
+                        loading = { ShimmerBox(modifier = Modifier.fillMaxSize()) },
+                        error = {
+                            Icon(
+                                Icons.Rounded.Folder, contentDescription = null,
+                                modifier = Modifier.align(Alignment.Center).size(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     )
                 } else {
                     Icon(
@@ -591,9 +629,9 @@ fun FolderCard(
             }
             Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
                 Text(
-                    folder.displayName,
+                    cleanDisplayName,
                     style = MaterialTheme.typography.titleSmall,
-                    maxLines = 1,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
@@ -610,6 +648,7 @@ fun FolderCard(
 @Composable
 fun FolderGrid(
     folders: List<Folder>,
+    videosByFolder: Map<String, List<MediaItem>>,
     onFolderClick: (Folder) -> Unit,
     onSingleVideoClick: (MediaItem) -> Unit,
     onVideoLongClick: ((MediaItem) -> Unit)? = null,
@@ -652,7 +691,12 @@ fun FolderGrid(
             )
         }
         items(multiFolders, key = { it.path }) { folder ->
-            FolderCard(folder = folder, onClick = { onFolderClick(folder) })
+            val folderVideos = videosByFolder[folder.path].orEmpty()
+            FolderCard(
+                folder = folder,
+                videos = folderVideos,
+                onClick = { onFolderClick(folder) }
+            )
         }
     }
 }
@@ -773,7 +817,8 @@ fun Folder.toSingleVideo(): MediaItem = MediaItem(
     isFavorite = false,
     isVideo = true,
     isHiddenFromHome = false,
-    isHiddenFromContinueWatching = false
+    isHiddenFromContinueWatching = false,
+    posterUrl = firstVideoPosterUrl
 )
 
 enum class VideoSort { TITLE, DATE, DURATION, SIZE, RESOLUTION }

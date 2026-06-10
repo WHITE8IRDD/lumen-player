@@ -52,7 +52,8 @@ interface MediaDao {
             (SELECT title       FROM media m2 WHERE m2.folderPath = m.folderPath AND m2.isVideo = 1 ORDER BY m2.dateAdded DESC, m2.title COLLATE NOCASE LIMIT 1) AS firstVideoTitle,
             (SELECT durationMs  FROM media m2 WHERE m2.folderPath = m.folderPath AND m2.isVideo = 1 ORDER BY m2.dateAdded DESC, m2.title COLLATE NOCASE LIMIT 1) AS firstVideoDurationMs,
             (SELECT sizeBytes   FROM media m2 WHERE m2.folderPath = m.folderPath AND m2.isVideo = 1 ORDER BY m2.dateAdded DESC, m2.title COLLATE NOCASE LIMIT 1) AS firstVideoSizeBytes,
-            (SELECT lastPositionMs FROM media m2 WHERE m2.folderPath = m.folderPath AND m2.isVideo = 1 ORDER BY m2.dateAdded DESC, m2.title COLLATE NOCASE LIMIT 1) AS firstVideoLastPositionMs
+            (SELECT lastPositionMs FROM media m2 WHERE m2.folderPath = m.folderPath AND m2.isVideo = 1 ORDER BY m2.dateAdded DESC, m2.title COLLATE NOCASE LIMIT 1) AS firstVideoLastPositionMs,
+            (SELECT posterUrl    FROM media m2 WHERE m2.folderPath = m.folderPath AND m2.isVideo = 1 ORDER BY m2.dateAdded DESC, m2.title COLLATE NOCASE LIMIT 1) AS firstVideoPosterUrl
         FROM media m
         WHERE m.isVideo = 1
         GROUP BY m.folderPath
@@ -133,6 +134,12 @@ interface MediaDao {
 
     @Query("UPDATE media SET isHiddenFromHome = 0, isHiddenFromContinueWatching = 0")
     suspend fun clearAllHiddenFlags()
+
+    @Query("SELECT * FROM media WHERE posterUrl IS NULL AND isVideo = 1")
+    suspend fun getVideosWithNullPoster(): List<MediaEntity>
+
+    @Query("UPDATE media SET posterUrl = :posterUrl WHERE id = :id")
+    suspend fun updatePosterUrl(id: Long, posterUrl: String?)
 }
 
 data class FolderSummary(
@@ -152,5 +159,6 @@ data class VideoFolderSummary(
     val firstVideoTitle: String?,
     val firstVideoDurationMs: Long,
     val firstVideoSizeBytes: Long,
-    val firstVideoLastPositionMs: Long
+    val firstVideoLastPositionMs: Long,
+    val firstVideoPosterUrl: String?
 )

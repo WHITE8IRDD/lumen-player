@@ -58,4 +58,42 @@ class TmdbApi @Inject constructor(
             }
         }
     }
+
+    suspend fun searchTv(query: String, year: Int?): TmdbMovieResult? {
+        return withContext(Dispatchers.IO) {
+            try {
+                val urlBuilder = HttpUrl.Builder()
+                    .scheme("https")
+                    .host("api.themoviedb.org")
+                    .addPathSegments("3/search/tv")
+                    .addQueryParameter("api_key", BuildConfig.TMDB_API_KEY)
+                    .addQueryParameter("query", query)
+                if (year != null) {
+                    urlBuilder.addQueryParameter("first_air_date_year", year.toString())
+                }
+
+                val request = Request.Builder()
+                    .url(urlBuilder.build())
+                    .build()
+
+                val response = okHttpClient.newCall(request).execute()
+                if (!response.isSuccessful) return@withContext null
+
+                val body = response.body?.string() ?: return@withContext null
+                val json = JSONObject(body)
+                val results = json.optJSONArray("results") ?: return@withContext null
+                if (results.length() == 0) return@withContext null
+
+                val first = results.getJSONObject(0)
+                TmdbMovieResult(
+                    title = first.optString("name", ""),
+                    posterPath = first.optString("poster_path", null),
+                    overview = first.optString("overview", null),
+                    backdropPath = first.optString("backdrop_path", null)
+                )
+            } catch (_: Exception) {
+                null
+            }
+        }
+    }
 }
