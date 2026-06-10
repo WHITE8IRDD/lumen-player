@@ -66,6 +66,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -73,6 +75,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.media3.common.util.UnstableApi
 import coil.compose.SubcomposeAsyncImage
+import coil.request.ImageRequest
 import com.lumen.player.core.theme.LumenOnSurfaceDim
 import com.lumen.player.core.util.TimeFormatter
 import com.lumen.player.domain.model.Folder
@@ -404,8 +407,19 @@ fun VideoListRow(
                     .clip(RoundedCornerShape(8.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
+                val ctx = LocalContext.current
+                val thumbPxW = with(LocalDensity.current) { 96.dp.roundToPx() }
+                val thumbPxH = with(LocalDensity.current) { 54.dp.roundToPx() }
+                val thumbModel = remember(item.id, item.posterUrl, item.uri) {
+                    val data = item.posterUrl ?: VideoThumbnail(item.id, item.uri)
+                    ImageRequest.Builder(ctx)
+                        .data(data)
+                        .size(thumbPxW, thumbPxH)
+                        .crossfade(true)
+                        .build()
+                }
                 SubcomposeAsyncImage(
-                    model = item.posterUrl?.let { it } ?: VideoThumbnail(item.id, item.uri),
+                    model = thumbModel,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),
@@ -667,8 +681,8 @@ fun FolderGrid(
     contentPadding: PaddingValues? = null
 ) {
     val effectiveContentPadding = contentPadding ?: PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())
-    val singleFolders = folders.filter { it.mediaCount == 1 && it.firstVideoUri != null }
-    val multiFolders = folders.filter { it.mediaCount != 1 || it.firstVideoUri == null }
+    val singleFolders = remember(folders) { folders.filter { it.mediaCount == 1 && it.firstVideoUri != null } }
+    val multiFolders = remember(folders) { folders.filter { it.mediaCount != 1 || it.firstVideoUri == null } }
 
     LazyVerticalGrid(
         columns = GridCells.Fixed(2),

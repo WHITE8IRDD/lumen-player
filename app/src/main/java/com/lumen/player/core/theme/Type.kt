@@ -9,7 +9,7 @@ import androidx.compose.ui.unit.sp
 import com.lumen.player.R
 
 private val Inter = FontFamily(
-    Font(R.font.inter_variable, FontWeight.Normal)
+    Font(R.font.inter_variable)
 )
 
 val LumenTypography = Typography(

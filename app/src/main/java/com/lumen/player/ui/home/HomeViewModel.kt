@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -32,18 +33,22 @@ class HomeViewModel @Inject constructor(
 
     val continueWatching: StateFlow<List<MediaItem>> =
         repository.observeContinueWatching()
+            .distinctUntilChanged()
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val recentlyAdded: StateFlow<List<MediaItem>> =
         repository.observeRecentlyAdded()
+            .distinctUntilChanged()
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val topFolders: StateFlow<List<Folder>> =
         repository.observeTopFolders()
+            .distinctUntilChanged()
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     val recentAudio: StateFlow<List<MediaItem>> =
         repository.observeRecentAudio()
+            .distinctUntilChanged()
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
     private val _isRefreshing = MutableStateFlow(false)

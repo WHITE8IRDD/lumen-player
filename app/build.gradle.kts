@@ -25,8 +25,9 @@ android {
         versionCode = 1
         versionName = "1.0.0"
         vectorDrawables { useSupportLibrary = true }
-        ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64") }
+        ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64") }
         buildConfigField("String", "TMDB_API_KEY", "\"$tmdbKey\"")
+        resourceConfigurations += listOf("en")
     }
 
     buildTypes {
@@ -37,6 +38,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
+            signingConfig = signingConfigs.getByName("debug")
         }
         debug {
             applicationIdSuffix = ".debug"
@@ -48,6 +50,14 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
         isCoreLibraryDesugaringEnabled = true
+    }
+    splits {
+        abi {
+            isEnable = true
+            reset()
+            include("arm64-v8a", "armeabi-v7a", "x86_64")
+            isUniversalApk = true
+        }
     }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures {

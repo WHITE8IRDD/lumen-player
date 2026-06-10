@@ -86,10 +86,11 @@ class PlayerController @Inject constructor(
     private fun pushState() {
         val c = controller ?: return
         val md = c.mediaMetadata
+        val item = c.currentMediaItem
         _state.value = PlaybackState(
             isPlaying = c.isPlaying,
             isBuffering = c.playbackState == Player.STATE_BUFFERING,
-            currentItemId = c.currentMediaItem?.mediaId,
+            currentItemId = item?.mediaId,
             title = md.title?.toString().orEmpty(),
             artist = md.artist?.toString().orEmpty(),
             album = md.albumTitle?.toString().orEmpty(),
@@ -100,7 +101,7 @@ class PlayerController @Inject constructor(
             playbackSpeed = c.playbackParameters.speed,
             repeatMode = c.repeatMode,
             shuffle = c.shuffleModeEnabled,
-            isVideo = c.videoSize.height > 0,
+            isVideo = c.videoSize.height > 0 || item?.mediaMetadata?.mediaType == MediaMetadata.MEDIA_TYPE_VIDEO,
             hasNext = c.hasNextMediaItem(),
             hasPrevious = c.hasPreviousMediaItem()
         )
@@ -112,6 +113,20 @@ class PlayerController @Inject constructor(
             prepare()
             playWhenReady = true
         }
+        val item = items.getOrNull(startIndex)
+        _state.value = PlaybackState(
+            isPlaying = true,
+            currentItemId = item?.mediaId,
+            title = item?.mediaMetadata?.title?.toString().orEmpty(),
+            artist = item?.mediaMetadata?.artist?.toString().orEmpty(),
+            album = item?.mediaMetadata?.albumTitle?.toString().orEmpty(),
+            artworkUri = item?.mediaMetadata?.artworkUri,
+            durationMs = (item?.mediaMetadata?.durationMs ?: 0L).coerceAtLeast(0L),
+            positionMs = positionMs,
+            isVideo = item?.mediaMetadata?.mediaType == MediaMetadata.MEDIA_TYPE_VIDEO,
+            hasNext = items.size > startIndex + 1,
+            hasPrevious = startIndex > 0
+        )
     }
 
     fun addToQueue(item: MediaItem) { controller?.addMediaItem(item) }

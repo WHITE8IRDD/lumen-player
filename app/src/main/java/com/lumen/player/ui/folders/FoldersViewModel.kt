@@ -12,11 +12,14 @@ import androidx.lifecycle.viewModelScope
 import androidx.media3.common.util.UnstableApi
 import com.lumen.player.core.util.toMedia3Item
 import com.lumen.player.core.util.toMedia3Items
+import com.lumen.player.data.local.dao.MediaDao
 import com.lumen.player.domain.model.MediaItem
 import com.lumen.player.domain.repository.MediaRepository
 import com.lumen.player.player.PlayerController
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 import java.io.File
 import javax.inject.Inject
@@ -28,15 +31,17 @@ class FoldersViewModel @Inject constructor(
 ) : ViewModel() {
 
     val folders = getFolders()
+        .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList<com.lumen.player.domain.model.Folder>())
 }
 
 @UnstableApi
 @HiltViewModel
 class FolderDetailViewModel @Inject constructor(
-    repository: MediaRepository,
+    private val repository: MediaRepository,
     savedState: SavedStateHandle,
-    private val controller: PlayerController
+    private val controller: PlayerController,
+    private val mediaDao: MediaDao
 ) : ViewModel() {
 
     private val encoded: String = savedState["path"] ?: ""
@@ -44,11 +49,18 @@ class FolderDetailViewModel @Inject constructor(
     val folderName: String = File(path).name.ifBlank { path }
 
     val items = repository.observeByFolder(path)
+        .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList<MediaItem>())
 
     fun play(items: List<MediaItem>, startIndex: Int) {
-        if (items.isEmpty()) return
-        controller.setQueue(items.toMedia3Items(), startIndex)
+        if (items.isEmpty() || startIndex !in items.indices) return
+        val item = items[startIndex]
+        viewModelScope.launch {
+            val saved = runCatching { mediaDao.get(item.id)?.lastPositionMs ?: 0L }.getOrDefault(0L)
+            val pos = if (saved > 5_000L) saved else 0L
+            controller.setQueue(items.toMedia3Items(), startIndex, pos)
+            runCatching { repository.incrementPlayCount(item.id) }
+        }
     }
 
     fun playNext(selected: List<MediaItem>) {

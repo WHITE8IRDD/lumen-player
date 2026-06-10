@@ -1,67 +1,39 @@
-# Hilt
--keep class dagger.hilt.** { *; }
--keep class * extends dagger.hilt.android.lifecycle.HiltViewModel
--keepclasseswithmembers class * {
-    @dagger.hilt.android.lifecycle.HiltViewModel <init>(...);
-}
--keepclassmembers class * {
-    @dagger.hilt.android.internal.managers.ViewComponentManager$FragmentContextWrapper <init>(...);
-}
-
-# Media3
+# Media3 ExoPlayer
 -keep class androidx.media3.** { *; }
 -dontwarn androidx.media3.**
--keep class * implements androidx.media3.common.Player.Listener { *; }
+
+# Hilt
+-keep class dagger.hilt.** { *; }
+-keep class javax.inject.** { *; }
+-keepclasseswithmembers class * { @dagger.* <fields>; }
+-keepclasseswithmembers class * { @javax.inject.* <fields>; }
 
 # Room
--keep class * extends androidx.room.RoomDatabase
--keep @androidx.room.Entity class *
--keep @androidx.room.Dao class *
--dontwarn androidx.room.paging.**
--keepclassmembers class * {
-    @androidx.room.* <fields>;
-}
-
-# Kotlinx Coroutines
--keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
--keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
--keepclassmembernames class kotlinx.coroutines.** {
-    volatile <fields>;
-}
-
-# Jetpack Compose
--keep class androidx.compose.runtime.** { *; }
--keep class androidx.compose.ui.tooling.** { *; }
-
-# Parcelable
--keepclassmembers class * implements android.os.Parcelable {
-    public static final ** CREATOR;
-}
-
-# Enums
--keepclassmembers enum * { *; }
-
-# DataStore / Proto
--keep class * extends androidx.datastore.core.Serializer { *; }
--dontwarn androidx.datastore.**
+-keep class androidx.room.** { *; }
+-keep @androidx.room.* class * { *; }
 
 # Coil
 -keep class coil.** { *; }
--dontwarn coil.**
 
-# OkHttp
+# OkHttp / OkIO
 -dontwarn okhttp3.**
 -dontwarn okio.**
 
-# Cast
--keep class com.google.android.gms.cast.** { *; }
--dontwarn com.google.android.gms.cast.**
+# Kotlinx Coroutines
+-keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
+-keepclassmembers class kotlinx.coroutines.** { volatile <fields>; }
 
-# Gson (if used)
--keepattributes Signature
--keepattributes *Annotation*
--dontwarn com.google.gson.**
+# Compose
+-dontwarn androidx.compose.**
 
-# Kotlin reflection
--keep class kotlin.reflect.** { *; }
--keep class kotlin.Metadata { *; }
+# Lumen models (preserve for Room + Compose state)
+-keep class com.lumen.player.domain.model.** { *; }
+-keep class com.lumen.player.data.local.entity.** { *; }
+-keep class com.lumen.player.data.local.dao.** { *; }
+
+# Android
+-keepattributes Signature, SourceFile, LineNumberTable
+-keep public class * extends android.app.Activity
+-keep public class * extends android.app.Service
+-keep public class * extends androidx.work.Worker
+-keep public class * extends androidx.work.CoroutineWorker

@@ -8,6 +8,7 @@ import com.lumen.player.data.local.entity.PlaylistItemEntity
 import com.lumen.player.domain.model.Playlist
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -27,7 +28,8 @@ class PlaylistViewModel @Inject constructor(
                 itemCount = pwc.itemCount
             )
         }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    }.distinctUntilChanged()
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun createPlaylist(name: String, onCreated: (Long) -> Unit = {}) {
         viewModelScope.launch {

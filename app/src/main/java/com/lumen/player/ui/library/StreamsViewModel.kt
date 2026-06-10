@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -45,7 +46,8 @@ class StreamsViewModel @Inject constructor(
 
     private val allStreams = streamDao.observeAll().map { entities ->
         entities.map { it.toDomain() }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    }.distinctUntilChanged()
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _importState = MutableStateFlow<M3uImportState>(M3uImportState.Idle)
     val importState: StateFlow<M3uImportState> = _importState.asStateFlow()
@@ -66,7 +68,8 @@ class StreamsViewModel @Inject constructor(
 
     val favorites = streamDao.observeFavorites().map { entities ->
         entities.map { it.toDomain() }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    }.distinctUntilChanged()
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     val groupedStreams = combine(allStreams, _query) { streams, query ->
         val filtered = if (query.isBlank()) streams
@@ -81,7 +84,8 @@ class StreamsViewModel @Inject constructor(
             groups.add(StreamGroup(cat, list))
         }
         groups
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    }.distinctUntilChanged()
+    .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun toggleFavorite(id: Long) {
         viewModelScope.launch { streamDao.toggleFavorite(id) }
@@ -174,8 +178,8 @@ class StreamsViewModel @Inject constructor(
                         dateAdded = System.currentTimeMillis()
                     )
                 }
-                streamDao.insertAll(entities)
-                val domainStreams = entities.map { it.toDomain() }
+                val ids = streamDao.insertAll(entities)
+                val domainStreams = entities.mapIndexed { i, e -> e.copy(id = ids[i]).toDomain() }
                 controller.setStreamPlaylistContext(domainStreams)
                 _importState.value = M3uImportState.Success(entities.size, fileName)
             } catch (e: Exception) {
@@ -204,8 +208,8 @@ class StreamsViewModel @Inject constructor(
                         dateAdded = System.currentTimeMillis()
                     )
                 }
-                streamDao.insertAll(entities)
-                val domainStreams = entities.map { it.toDomain() }
+                val ids = streamDao.insertAll(entities)
+                val domainStreams = entities.mapIndexed { i, e -> e.copy(id = ids[i]).toDomain() }
                 controller.setStreamPlaylistContext(domainStreams)
                 Log.d("StreamsVM", "Imported ${entities.size} channels from $fileName")
                 if (entities.isNotEmpty()) {

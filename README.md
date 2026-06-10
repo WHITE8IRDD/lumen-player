@@ -1,102 +1,121 @@
-# Lumen Player
+# Lumen
 
-A premium, dark-first media player for Android built with **Jetpack Compose**, **Media3 / ExoPlayer**, **Hilt**, **Room**, and **Material You**.
+A premium local-first media player for Android with TMDB integration and IPTV streaming.
 
-## Highlights
+## Features
 
-- **Audio + Video** playback with a unified queue and a disjoint-ID MediaStore scanner
-- **Media3**-backed `MediaSessionService` for lock-screen, Android Auto (in-app), Cast and `MediaController` UI
-- **PiP**, gestures (volume / brightness / double-tap seek), and a fullscreen video surface
-- **10-band equalizer**, bass boost, virtualizer, and loudness gain — persisted in DataStore
-- **Material You** dynamic theming, with a custom violet/cyan night palette fallback
-- **Clean Architecture**: `ui → viewmodel → usecase → repository → data` with Hilt
-- **Room** for media metadata, playlists, and folder aggregates
-- **DataStore** preferences for theme, resume, audio focus, gapless, skip-silence, EQ
+### Local Media
+- Beautiful library for videos and audio
+- Automatic folder grouping with mosaic thumbnails
+- Smart filename parsing (cleans `Movie.2024.1080p.x265.mkv` to `Movie (2024)`)
+- Resume playback where you left off
+- Playlists with drag-to-reorder
+- Long-press multi-select with bulk actions
+- Hide videos from Home with undo
+
+### Premium Visuals
+- TMDB integration for real movie/show posters
+- True cool dark mode (no warm tones)
+- Customizable accent colors with HEX input
+- Inter typography
+- Glassmorphism navigation
+- 60fps Material 3 design
+
+### Network Streaming
+- HTTP/HTTPS stream playback
+- M3U playlist import (IPTV)
+- In-player channel switcher (VLC-style)
+- Favorites with category grouping
+- Grid and list views with channel logos
+
+### Player
+- Hardware-accelerated video (Media3 ExoPlayer)
+- Subtitle support (embedded, local files, OpenSubtitles)
+- Subtitle delay adjustment
+- Equalizer (bass boost, virtualizer, loudness)
+- Gesture controls (brightness, volume, seek)
+- Picture-in-Picture
+- Mini-player with notification controls
+- Sleep timer
 
 ## Tech Stack
 
-| Layer       | Tools                                                              |
-|-------------|--------------------------------------------------------------------|
-| UI          | Jetpack Compose, Material 3, Adaptive layouts, Coil                |
-| Player      | Media3 1.4.1 (ExoPlayer + UI + Datasource-okhttp + SmoothStreaming)|
-| DI          | Hilt + KSP2                                                        |
-| DB          | Room 2.6.x                                                         |
-| Prefs       | DataStore Preferences                                              |
-| Async       | Kotlin Coroutines + Flow                                           |
-| Build       | Gradle 8.7, AGP 8.5.2, Kotlin 2.0.20, JDK 17, version catalog      |
+- **Language:** Kotlin
+- **UI:** Jetpack Compose + Material 3
+- **Architecture:** MVVM + Clean Architecture
+- **DI:** Hilt
+- **Database:** Room (9 migrations, data preserving)
+- **Player:** Media3 ExoPlayer
+- **Image Loading:** Coil
+- **Networking:** OkHttp
+- **Background Work:** WorkManager
+- **Persistence:** DataStore
+- **Min SDK:** 26 (Android 8.0)
+- **Target SDK:** 35 (Android 15)
 
-## Build & Run
+## Setup
 
-1. Open the project root in **Android Studio Ladybug (2024.2)** or newer.
-2. From the project root run once:
-   ```bash
-   gradle wrapper --gradle-version 8.7
-   ```
-   This generates the `gradle-wrapper.jar` (the binary is intentionally not committed).
-3. Sync Gradle, then `Run` ▶ `app` on a device or emulator with API 23+.
+### Prerequisites
+- Android Studio Hedgehog or newer
+- JDK 17
+- Android SDK 35
 
-## Optional: FFmpeg extension renderer
-
-The default `LumenRenderersFactory` enables decoder fallback and prefers the
-official Media3 extensions. To enable FFmpeg-backed formats (FLAC, ALAC, etc.
-in custom containers):
-
-1. Build the Media3 FFmpeg AAR:
-   ```bash
-   git clone https://github.com/androidx/media.git
-   cd media && ./gradlew :libraries:extension-ffmpeg:assembleRelease
-   ```
-2. Copy the produced AAR into `app/libs/media3-extension-ffmpeg-release.aar`.
-3. In `app/build.gradle.kts`, uncomment the `files("libs/media3-extension-ffmpeg-release.aar")` line.
-4. In `LumenRenderersFactory`, load it:
-   ```kotlin
-   val ffmpegRenderer = FfmpegAudioRenderer(
-       FfmpegAudioProcessor.Builder().build(),
-       /* ... */
-   )
-   setExtensionRendererMode(EXTENSION_RENDERER_MODE_PREFER)
-   ```
-5. Rebuild.
-
-## Module Map
+### TMDB API Key (Optional)
+For movie poster integration:
+1. Sign up at https://www.themoviedb.org/signup
+2. Get your v3 API key from https://www.themoviedb.org/settings/api
+3. Add to `local.properties`:
 
 ```
-app/
-└── src/main/java/com/lumen/player/
-    ├── LumenApplication.kt          Hilt entry, notification channel
-    ├── MainActivity.kt              Edge-to-edge host, permission check
-    ├── core/
-    │   ├── di/                      Hilt modules (App, Database, Player, Repository)
-    │   ├── theme/                   Material You + violet/cyan palette
-    │   └── util/                    Constants, time formatting, extensions
-    ├── domain/                      Pure-Kotlin models, repository contracts, use-cases
-    ├── data/                        Room, DataStore, MediaStore scanner, repository impls
-    ├── player/                      ExoPlayer wiring, equalizer, Cast, notification, session
-    └── ui/                          Compose screens, view-models, navigation
-        ├── home/                    Scaffold + tabs
-        ├── library/                 Music library + video grid
-        ├── folders/                 Folder browser + detail
-        ├── settings/                Theme, playback, library, audio
-        ├── equalizer/               10-band EQ + bass/virt/loudness
-        └── player/                  Full-screen audio player + video surface
+TMDB_API_KEY=your_key_here
 ```
+
+App works without a TMDB key — posters simply won't load.
+
+### Build
+```bash
+git clone https://github.com/YOUR_USERNAME/lumen-player.git
+cd lumen-player
+./gradlew assembleRelease
+```
+
+APK output: `app/build/outputs/apk/release/app-universal-release.apk`
 
 ## Permissions
 
-| Permission | Why |
-|------------|-----|
-| `READ_MEDIA_AUDIO/VIDEO` (API 33+) | Library scan on modern Android |
-| `READ_EXTERNAL_STORAGE` (API ≤ 32) | Legacy library scan |
-| `POST_NOTIFICATIONS` (API 33+) | Media notification on Android 13+ |
-| `FOREGROUND_SERVICE` / `FOREGROUND_SERVICE_MEDIA_PLAYBACK` | Background playback |
-| `WAKE_LOCK` | Keep screen on for video |
+- `READ_MEDIA_VIDEO` / `READ_MEDIA_AUDIO` — scan local media
+- `POST_NOTIFICATIONS` — playback notifications
+- `INTERNET` — TMDB metadata, network streams
+- `FOREGROUND_SERVICE` — background playback
 
-## Theming
+## Architecture
 
-- `dynamicColor = true` follows Material You on Android 12+
-- Falls back to a custom night-first palette: violet primary (`#9F7BFF`), cyan secondary (`#5EE7DF`)
-- Light variant uses a soft cream background with the same accent
+```
+app/src/main/java/com/lumen/player/
+├── core/          # DI modules, theme, utilities
+├── data/          # Room database, repositories, MediaStore scanner
+├── domain/        # Domain models, repository interfaces
+├── player/        # Media3 player, controller, playback service
+├── ui/            # Compose screens, ViewModels, components
+└── LumenApplication.kt
+```
+
+## Compatibility
+
+Universal APK runs on all Android architectures:
+
+- arm64-v8a (modern phones, 2017+)
+- armeabi-v7a (older phones, 2014-2017)
+- x86_64 (emulators)
+
+Works on Android 8.0 (API 26) through Android 15 (API 35).
 
 ## License
 
-For personal use. Wire up your own license before distribution.
+All rights reserved. Personal use only.
+
+## Acknowledgments
+
+- TMDB for movie metadata
+- OpenSubtitles for subtitle downloads
+- Inter Font by Rasmus Andersson

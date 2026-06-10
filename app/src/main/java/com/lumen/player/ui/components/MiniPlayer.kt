@@ -39,11 +39,13 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
+import coil.request.ImageRequest
 import com.lumen.player.player.PlaybackState
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -145,8 +147,17 @@ fun MiniPlayer(
                 Modifier.fillMaxWidth().height(60.dp).padding(horizontal = 8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                val ctx = LocalContext.current
+                val thumbPx = with(LocalDensity.current) { 48.dp.roundToPx() }
+                val artRequest = remember(state.artworkUri) {
+                    ImageRequest.Builder(ctx)
+                        .data(state.artworkUri)
+                        .size(thumbPx)
+                        .crossfade(true)
+                        .build()
+                }
                 SubcomposeAsyncImage(
-                    model = state.artworkUri,
+                    model = artRequest,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier

@@ -17,7 +17,7 @@ interface StreamDao {
     suspend fun insert(stream: StreamEntity): Long
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun insertAll(streams: List<StreamEntity>)
+    suspend fun insertAll(streams: List<StreamEntity>): List<Long>
 
     @Query("DELETE FROM streams WHERE id = :id")
     suspend fun delete(id: Long)

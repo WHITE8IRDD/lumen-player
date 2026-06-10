@@ -23,6 +23,11 @@ keystore.properties
 .DS_Store
 Thumbs.db
 
+# Debug dumps
+crash.txt
+crash.log
+switcher_crash.log
+
 # Kotlin
 .kotlin/
 

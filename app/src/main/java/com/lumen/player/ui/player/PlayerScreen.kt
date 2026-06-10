@@ -54,6 +54,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -94,6 +95,24 @@ fun PlayerScreen(
     val ui by viewModel.ui.collectAsStateWithLifecycle()
     val lyrics by viewModel.lyrics.collectAsStateWithLifecycle()
     val tracks by viewModel.tracks.collectAsStateWithLifecycle()
+
+    // Derived stable fields — avoids reading `state` in parent scope,
+    // so children only recompose when their actual value changes.
+    val title by remember { derivedStateOf { state.title } }
+    val artist by remember { derivedStateOf { state.artist } }
+    val album by remember { derivedStateOf { state.album } }
+    val artworkUri by remember { derivedStateOf { state.artworkUri } }
+    val isPlaying by remember { derivedStateOf { state.isPlaying } }
+    val isBuffering by remember { derivedStateOf { state.isBuffering } }
+    val durationMs by remember { derivedStateOf { state.durationMs } }
+    val shuffle by remember { derivedStateOf { state.shuffle } }
+    val repeatMode by remember { derivedStateOf { state.repeatMode } }
+    val hasPrevious by remember { derivedStateOf { state.hasPrevious } }
+    val hasNext by remember { derivedStateOf { state.hasNext } }
+    val playbackSpeed by remember { derivedStateOf { state.playbackSpeed } }
+    val subtitleLine = remember(artist, album) {
+        listOf(artist, album).filter { it.isNotBlank() }.joinToString(" • ")
+    }
 
     val activity = context as? Activity
     DisposableEffect(ui.controlsVisible) {
@@ -140,7 +159,7 @@ fun PlayerScreen(
                 )
     ) {
         AsyncImage(
-            model = state.artworkUri,
+            model = artworkUri,
             contentDescription = null,
             contentScale = ContentScale.Crop,
             modifier = Modifier
@@ -179,8 +198,8 @@ fun PlayerScreen(
                     )
                     else -> {
                         AnimatedAlbumArt(
-                            artworkUri = state.artworkUri,
-                            isPlaying = state.isPlaying
+                            artworkUri = artworkUri,
+                            isPlaying = isPlaying
                         )
                     }
                 }
@@ -188,14 +207,14 @@ fun PlayerScreen(
 
             Column(Modifier.fillMaxWidth().padding(horizontal = 24.dp)) {
                 Text(
-                    state.title.ifBlank { stringResource(R.string.nothing_playing) },
+                    title.ifBlank { stringResource(R.string.nothing_playing) },
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.SemiBold,
                     color = Color.White,
                     maxLines = 2
                 )
                 Text(
-                    listOf(state.artist, state.album).filter { it.isNotBlank() }.joinToString(" • "),
+                    subtitleLine,
                     style = MaterialTheme.typography.bodyMedium,
                     color = Color.White.copy(alpha = 0.75f),
                     maxLines = 1
@@ -204,37 +223,26 @@ fun PlayerScreen(
 
             Spacer(Modifier.height(12.dp))
 
-            if (state.isBuffering) {
+            if (isBuffering) {
                 LinearProgressIndicator(
                     modifier = Modifier.fillMaxWidth().height(2.dp)
                 )
             }
 
-            ScrubbingSlider(
-                progress = if (state.durationMs > 0L)
-                    state.positionMs.toFloat() / state.durationMs.toFloat()
-                else 0f,
-                onSeek = { frac -> viewModel.seekTo((frac * state.durationMs).toLong()) }
+            PlayerPositionBar(
+                positionMsProvider = { state.positionMs },
+                durationMs = durationMs,
+                onSeek = viewModel::seekTo
             )
-
-            Row(
-                Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Text(TimeFormatter.msToClock(state.positionMs), color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.labelMedium)
-                Text(TimeFormatter.msToClock(state.durationMs), color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.labelMedium)
-            }
 
             Spacer(Modifier.height(8.dp))
 
             PlayerControlsBar(
-                isPlaying = state.isPlaying,
-                shuffle = state.shuffle,
-                repeatMode = state.repeatMode,
-                hasPrevious = state.hasPrevious,
-                hasNext = state.hasNext,
+                isPlaying = isPlaying,
+                shuffle = shuffle,
+                repeatMode = repeatMode,
+                hasPrevious = hasPrevious,
+                hasNext = hasNext,
                 onPlayPause = viewModel::playPause,
                 onNext = viewModel::next,
                 onPrevious = viewModel::previous,
@@ -245,7 +253,7 @@ fun PlayerScreen(
             Spacer(Modifier.height(4.dp))
 
             SecondaryActions(
-                speed = state.playbackSpeed,
+                speed = playbackSpeed,
                 lyricsMode = ui.uiMode == UiMode.LYRICS,
                 onSpeed = viewModel::cyclePlaybackSpeed,
                 onLyrics = { viewModel.setUiMode(if (ui.uiMode == UiMode.LYRICS) UiMode.MAIN else UiMode.LYRICS) },
@@ -505,16 +513,19 @@ private fun SleepTimerMenu(viewModel: PlayerViewModel) {
 }
 
 @Composable
-private fun ScrubbingSlider(
-    progress: Float,
-    onSeek: (Float) -> Unit
+private fun PlayerPositionBar(
+    positionMsProvider: () -> Long,
+    durationMs: Long,
+    onSeek: (Long) -> Unit
 ) {
+    val positionMs by remember { derivedStateOf { positionMsProvider() } }
+    val progress = if (durationMs > 0L) positionMs.toFloat() / durationMs.toFloat() else 0f
     var drag by remember { mutableStateOf<Float?>(null) }
     Slider(
         value = (drag ?: progress).coerceIn(0f, 1f),
         onValueChange = { drag = it },
         onValueChangeFinished = {
-            drag?.let { onSeek(it) }
+            drag?.let { onSeek((it * durationMs).toLong()) }
             drag = null
         },
         colors = SliderDefaults.colors(
@@ -526,6 +537,17 @@ private fun ScrubbingSlider(
             .fillMaxWidth()
             .padding(horizontal = 12.dp)
     )
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 24.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Text(TimeFormatter.msToClock(positionMs),
+            color = Color.White.copy(alpha = 0.8f),
+            style = MaterialTheme.typography.labelMedium)
+        Text(TimeFormatter.msToClock(durationMs),
+            color = Color.White.copy(alpha = 0.8f),
+            style = MaterialTheme.typography.labelMedium)
+    }
 }
 
 @OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)

@@ -7,6 +7,7 @@ import com.lumen.player.domain.repository.MediaRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -18,6 +19,7 @@ class SettingsHiddenItemsViewModel @Inject constructor(
 
     val hiddenItems: StateFlow<List<MediaItem>> =
         repository.observeHiddenItems()
+            .distinctUntilChanged()
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     fun unhideItem(id: Long) {

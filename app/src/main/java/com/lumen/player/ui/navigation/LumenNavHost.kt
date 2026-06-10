@@ -95,6 +95,7 @@ fun LumenNavHost(
                         onSearchClick = { searchVisible = true },
                         onItemClick = { item ->
                             android.util.Log.d("HOME", "item ${item.title} isVideo=${item.isVideo}")
+                            homeVm.playItem(item)
                             if (item.isVideo) videoFullscreen = true
                             else playerExpanded = true
                         },

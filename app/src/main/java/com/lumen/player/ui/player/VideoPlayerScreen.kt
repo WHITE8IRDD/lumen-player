@@ -618,8 +618,8 @@ fun VideoPlayerScreen(
                         )
                     )
                     Spacer(Modifier.height(8.dp))
+                    val grouped = remember(filtered) { filtered.groupBy { it.category ?: "Uncategorized" } }
                     LazyColumn(Modifier.fillMaxWidth().weight(1f)) {
-                        val grouped = filtered.groupBy { it.category ?: "Uncategorized" }
                         grouped.forEach { (cat, streams) ->
                             item(key = "h_$cat") {
                                 Text(cat,
@@ -627,7 +627,7 @@ fun VideoPlayerScreen(
                                     color = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
                             }
-                            items(streams, key = { it.id }) { stream ->
+                            items(streams, key = { "ch_${it.id}_${it.url}" }) { stream ->
                                 Row(
                                     Modifier
                                         .fillMaxWidth()
