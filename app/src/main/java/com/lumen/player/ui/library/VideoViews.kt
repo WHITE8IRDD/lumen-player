@@ -81,6 +81,8 @@ import com.lumen.player.core.util.TimeFormatter
 import com.lumen.player.domain.model.Folder
 import com.lumen.player.domain.model.MediaItem
 import com.lumen.player.ui.components.ShimmerBox
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import com.lumen.player.ui.util.FolderThumbnail
 import com.lumen.player.ui.util.FolderThumbnailResolver
 import com.lumen.player.ui.util.FolderThumbnailType
@@ -155,9 +157,14 @@ fun VideoGridCard(
     val progress = if (item.durationMs > 0L)
         (item.lastPositionMs.toFloat() / item.durationMs).coerceIn(0f, 1f)
     else 0f
+    val selectionBorder = if (isSelected) Modifier.border(
+        BorderStroke(2.dp, MaterialTheme.colorScheme.tertiary), RoundedCornerShape(14.dp)
+    ) else Modifier
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)), RoundedCornerShape(14.dp))
+            .then(selectionBorder)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
@@ -212,6 +219,11 @@ fun VideoGridCard(
                     )
                 }
                 if (isSelected) {
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f))
+                    )
                     Box(
                         Modifier
                             .align(Alignment.TopEnd)
@@ -384,9 +396,14 @@ fun VideoListRow(
     val progress = if (item.durationMs > 0L)
         (item.lastPositionMs.toFloat() / item.durationMs).coerceIn(0f, 1f)
     else 0f
+    val selectionBorder = if (isSelected) Modifier.border(
+        BorderStroke(2.dp, MaterialTheme.colorScheme.tertiary), RoundedCornerShape(12.dp)
+    ) else Modifier
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)), RoundedCornerShape(12.dp))
+            .then(selectionBorder)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
@@ -445,6 +462,11 @@ fun VideoListRow(
                     }
                 }
                 if (isSelected) {
+                    Box(
+                        Modifier
+                            .fillMaxSize()
+                            .background(MaterialTheme.colorScheme.tertiary.copy(alpha = 0.15f))
+                    )
                     Box(
                         Modifier
                             .align(Alignment.TopEnd)
@@ -584,6 +606,7 @@ fun FolderCard(
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)), RoundedCornerShape(14.dp))
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(

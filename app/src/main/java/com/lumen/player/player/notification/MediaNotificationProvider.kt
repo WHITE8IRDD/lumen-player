@@ -40,7 +40,7 @@ class LumenMediaNotificationProvider(
                 .setContentTitle(title)
                 .setSubText("Video")
                 .setContentIntent(sessionIntent)
-                .setSmallIcon(android.R.drawable.ic_media_play)
+                .setSmallIcon(com.lumen.player.R.drawable.ic_notification)
                 .setOngoing(player.isPlaying)
                 .setVisibility(androidx.core.app.NotificationCompat.VISIBILITY_PUBLIC)
                 .setSilent(true)

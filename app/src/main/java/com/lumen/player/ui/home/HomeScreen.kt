@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
@@ -22,6 +23,8 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -50,7 +53,6 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
@@ -69,13 +71,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
@@ -90,22 +94,27 @@ import com.lumen.player.domain.model.MediaItem
 import com.lumen.player.player.PlaybackState
 import com.lumen.player.ui.components.DialogVariant
 import com.lumen.player.ui.components.GlassNavigationBar
+import com.lumen.player.ui.components.NavTab
 import com.lumen.player.ui.components.LumenConfirmationDialog
+import com.lumen.player.ui.components.SectionLabel
 import com.lumen.player.ui.components.MiniPlayer
 import com.lumen.player.ui.components.ShimmerBox
+import com.lumen.player.core.theme.LumenBlue
+import com.lumen.player.core.theme.LumenBlueDeep
+import com.lumen.player.core.theme.LumenGreen
+import com.lumen.player.core.theme.LumenPurple
+import com.lumen.player.core.theme.LumenPurpleDeep
+import com.lumen.player.core.theme.LumenRed
+import com.lumen.player.core.theme.LumenYellow
+import com.lumen.player.core.theme.LumenYellowDeep
+import com.lumen.player.ui.components.GradientBlob
 import com.lumen.player.ui.navigation.Destinations
 import com.lumen.player.ui.util.VideoThumbnail
 
-private data class Tab(
-    val route: String,
-    val labelRes: Int,
-    val icon: androidx.compose.ui.graphics.vector.ImageVector
-)
-
-private val TABS = listOf(
-    Tab(Destinations.HOME, R.string.tab_home, Icons.Rounded.Home),
-    Tab(Destinations.LIBRARY, R.string.tab_library, Icons.Rounded.LibraryMusic),
-    Tab(Destinations.SETTINGS, R.string.tab_settings, Icons.Rounded.Settings)
+private val NAV_TABS = listOf(
+    NavTab(Destinations.HOME, R.string.tab_home, Icons.Rounded.Home, Icons.Rounded.Home, LumenYellow, LumenYellowDeep),
+    NavTab(Destinations.LIBRARY, R.string.tab_library, Icons.Rounded.LibraryMusic, Icons.Rounded.LibraryMusic, LumenBlue, LumenBlueDeep),
+    NavTab(Destinations.SETTINGS, R.string.tab_settings, Icons.Rounded.Settings, Icons.Rounded.Settings, LumenPurple, LumenPurpleDeep)
 )
 
 @UnstableApi
@@ -123,7 +132,7 @@ fun HomeScaffold(
 
     Scaffold(
         bottomBar = {
-            Column {
+            Column(Modifier.navigationBarsPadding()) {
                 AnimatedVisibility(
                     visible = playback.currentItemId != null,
                     enter = slideInVertically { it },
@@ -136,26 +145,19 @@ fun HomeScaffold(
                         onDismiss = onDismissMini
                     )
                 }
-                GlassNavigationBar {
-                    TABS.forEach { tab ->
-                        NavigationBarItem(
-                            selected = currentRoute == tab.route,
-                            onClick = {
-                                if (currentRoute != tab.route) {
-                                    rootNav.navigate(tab.route) {
-                                        popUpTo(rootNav.graph.startDestinationId) {
-                                            saveState = true
-                                        }
-                                        launchSingleTop = true
-                                        restoreState = true
-                                    }
-                                }
-                            },
-                            icon = { Icon(tab.icon, contentDescription = stringResource(tab.labelRes)) },
-                            label = { Text(stringResource(tab.labelRes)) }
-                        )
+                GlassNavigationBar(
+                    currentRoute = currentRoute,
+                    tabs = NAV_TABS,
+                    onTabSelected = { route ->
+                        rootNav.navigate(route) {
+                            popUpTo(rootNav.graph.startDestinationId) {
+                                saveState = true
+                            }
+                            launchSingleTop = true
+                            restoreState = true
+                        }
                     }
-                }
+                )
             }
         },
         content = content
@@ -216,15 +218,19 @@ fun HomeScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .statusBarsPadding(),
-            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())
+            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 24.dp, bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())
         ) {
+            item {
+                HomeGreetingSection()
+            }
+
             item {
                 SearchBar(onClick = onSearchClick)
             }
 
             if (!allEmpty) {
                 if (cw.isNotEmpty()) {
-                    item { SectionHeader("Continue Watching", onSeeAll = { onSeeAll("continue_watching") }) }
+                    item { SectionHeader("Continue Watching", color = LumenRed, onSeeAll = { onSeeAll("continue_watching") }) }
                     item {
                         ContinueWatchingRow(
                             items = cw,
@@ -235,7 +241,7 @@ fun HomeScreen(
                 }
 
                 if (recent.isNotEmpty()) {
-                    item { SectionHeader("Recently Added", onSeeAll = { onSeeAll("recently_added") }) }
+                    item { SectionHeader("Recently Added", color = LumenBlue, onSeeAll = { onSeeAll("recently_added") }) }
                     item {
                         RecentlyAddedRow(
                             items = recent,
@@ -246,7 +252,7 @@ fun HomeScreen(
                 }
 
                 if (folders.isNotEmpty()) {
-                    item { SectionHeader("Your Folders", onSeeAll = { onSeeAll("folders") }) }
+                    item { SectionHeader("Your Folders", color = LumenYellow, onSeeAll = { onSeeAll("folders") }) }
                     item {
                         HomeFolderRow(
                             folders = folders,
@@ -256,7 +262,7 @@ fun HomeScreen(
                 }
 
                 if (audio.isNotEmpty()) {
-                    item { SectionHeader("Recent Audio", onSeeAll = { onSeeAll("recent_audio") }) }
+                    item { SectionHeader("Recent Audio", color = LumenGreen, onSeeAll = { onSeeAll("recent_audio") }) }
                     item {
                         RecentAudioColumn(
                             items = audio,
@@ -268,8 +274,19 @@ fun HomeScreen(
                 item { HomeEmptyState(refreshing = refreshing, onRefresh = viewModel::refresh) }
             }
 
-            item { Spacer(Modifier.height(16.dp)) }
+            item {
+                Box(Modifier.fillMaxWidth().height(1.dp))
+            }
         }
+
+        GradientBlob(
+            color = LumenPurple,
+            size = 180.dp,
+            alpha = 0.25f,
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .offset(x = (-60).dp, y = 60.dp)
+        )
 
         SnackbarHost(
             hostState = snackbarHostState,
@@ -328,6 +345,46 @@ fun HomeScreen(
 }
 
 @Composable
+private fun HomeGreetingSection() {
+    val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+    val greeting = when (hour) {
+        in 0..11 -> "Good morning"
+        in 12..16 -> "Good afternoon"
+        else -> "Good evening"
+    }
+    Box(modifier = Modifier.fillMaxWidth()) {
+        GradientBlob(
+            color = LumenYellow,
+            size = 200.dp,
+            alpha = 0.25f,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = 80.dp, y = (-40).dp)
+        )
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp)
+        ) {
+            Text(
+                text = greeting,
+                style = MaterialTheme.typography.labelMedium.copy(
+                    letterSpacing = 2.sp,
+                    fontWeight = FontWeight.SemiBold
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(8.dp))
+            Text(
+                text = "What are you in the mood for?",
+                style = MaterialTheme.typography.displayMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+        }
+    }
+}
+
+@Composable
 private fun SearchBar(onClick: () -> Unit) {
     Card(
         modifier = Modifier
@@ -338,10 +395,13 @@ private fun SearchBar(onClick: () -> Unit) {
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Row(
-            Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+            Modifier
+                .height(52.dp)
+                .padding(horizontal = 16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Icon(
@@ -360,21 +420,34 @@ private fun SearchBar(onClick: () -> Unit) {
 }
 
 @Composable
-private fun SectionHeader(title: String, onSeeAll: () -> Unit) {
-    Row(
+private fun SectionHeader(title: String, color: Color, onSeeAll: () -> Unit) {
+    Column(
         Modifier
             .fillMaxWidth()
-            .padding(start = 16.dp, end = 8.dp, top = 20.dp, bottom = 8.dp),
-        verticalAlignment = Alignment.CenterVertically
+            .padding(start = 16.dp, end = 8.dp, top = 24.dp, bottom = 12.dp)
     ) {
         Text(
-            title,
-            style = MaterialTheme.typography.titleMedium.copy(fontWeight = FontWeight.SemiBold),
-            color = MaterialTheme.colorScheme.onSurface,
-            modifier = Modifier.weight(1f)
+            text = title.uppercase(),
+            style = MaterialTheme.typography.labelSmall.copy(
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 2.sp
+            ),
+            color = color.copy(alpha = 0.8f),
+            modifier = Modifier.padding(bottom = 4.dp)
         )
-        TextButton(onClick = onSeeAll) {
-            Text("See all", style = MaterialTheme.typography.labelLarge)
+        Row(
+            Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(onClick = onSeeAll) {
+                Text("See all", color = color, style = MaterialTheme.typography.labelLarge)
+            }
         }
     }
 }
@@ -407,6 +480,7 @@ private fun ContinueWatchingCard(item: MediaItem, onClick: () -> Unit, onLongCli
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
@@ -496,6 +570,7 @@ private fun RecentlyAddedCard(item: MediaItem, onClick: () -> Unit, onLongClick:
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
@@ -555,6 +630,7 @@ private fun HomeFolderCard(folder: Folder, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column {
@@ -642,6 +718,7 @@ private fun RecentAudioRow(item: MediaItem, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
     ) {
         Row(
@@ -743,3 +820,5 @@ private fun HomeEmptyState(refreshing: Boolean, onRefresh: () -> Unit) {
         }
     }
 }
+
+

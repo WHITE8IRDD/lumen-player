@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import com.lumen.player.ui.components.LumenPrimaryButton
 import androidx.compose.ui.window.DialogProperties
 
 enum class DialogVariant {
@@ -102,17 +103,8 @@ fun LumenConfirmationDialog(
 
                     Spacer(Modifier.width(8.dp))
 
-                    FilledTonalButton(
-                        onClick = onConfirm,
-                        colors = ButtonDefaults.filledTonalButtonColors(
-                            containerColor = if (variant == DialogVariant.DESTRUCTIVE)
-                                MaterialTheme.colorScheme.error.copy(alpha = 0.15f)
-                            else MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
-                            contentColor = if (variant == DialogVariant.DESTRUCTIVE)
-                                MaterialTheme.colorScheme.error
-                            else MaterialTheme.colorScheme.primary
-                        ),
-                        shape = RoundedCornerShape(12.dp)
+                    LumenPrimaryButton(
+                        onClick = onConfirm
                     ) {
                         Text(confirmLabel)
                     }

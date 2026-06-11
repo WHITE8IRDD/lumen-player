@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -111,7 +112,9 @@ import coil.compose.AsyncImage
 import com.lumen.player.R
 import com.lumen.player.domain.model.MediaItem
 import com.lumen.player.domain.model.MediaType
+import com.lumen.player.ui.components.CategoryChip
 import com.lumen.player.ui.components.MediaListItem
+import com.lumen.player.ui.components.SectionLabel
 import com.lumen.player.ui.folders.FoldersViewModel
 import com.lumen.player.ui.playlist.PlaylistViewModel
 import android.content.Intent
@@ -125,8 +128,29 @@ import com.lumen.player.ui.components.LumenInfoDialog
 import com.lumen.player.ui.components.LumenInputDialog
 import java.util.Locale
 import kotlinx.coroutines.launch
+import com.lumen.player.core.theme.LumenBlue
+import com.lumen.player.core.theme.LumenBlueDeep
+import com.lumen.player.core.theme.LumenGreen
+import com.lumen.player.core.theme.LumenGreenDeep
+import com.lumen.player.core.theme.LumenYellow
+import com.lumen.player.core.theme.LumenYellowDeep
+import com.lumen.player.core.theme.LumenRed
+import com.lumen.player.core.theme.LumenRedDeep
+import com.lumen.player.core.theme.LumenPurple
+import com.lumen.player.core.theme.LumenPurpleDeep
+import com.lumen.player.ui.components.ShapeIcon
+import com.lumen.player.ui.components.ColoredFAB
+import com.lumen.player.ui.components.GradientBlob
+import androidx.compose.foundation.layout.offset
 
 private val tabTitles = listOf("Videos", "Audio", "Folders", "Playlists", "Streams")
+private val tabIcons = listOf(
+    Icons.Rounded.Movie,
+    Icons.Rounded.MusicNote,
+    Icons.Rounded.Folder,
+    Icons.Rounded.QueueMusic,
+    Icons.Rounded.Language
+)
 
 @UnstableApi
 @Composable
@@ -146,27 +170,38 @@ fun LibraryScreen(
         if (hasPermission) viewModel.onPermissionGranted()
     }
 
-    Column(
+    Box(
         Modifier
             .fillMaxSize()
             .statusBarsPadding()
     ) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 12.dp),
-            verticalAlignment = Alignment.CenterVertically
+        GradientBlob(
+            color = LumenYellow,
+            size = 250.dp,
+            alpha = 0.2f,
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .offset(x = 100.dp, y = (-100).dp)
+        )
+        Column(
+            Modifier.fillMaxSize()
         ) {
-            Text(
-                stringResource(R.string.library),
-                style = MaterialTheme.typography.headlineMedium,
-                color = MaterialTheme.colorScheme.onBackground
-            )
-        }
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    stringResource(R.string.library),
+                    style = MaterialTheme.typography.displayMedium,
+                    color = MaterialTheme.colorScheme.onBackground
+                )
+            }
 
         ScrollableTabRow(
             selectedTabIndex = pagerState.currentPage,
-            edgePadding = 16.dp,
+            edgePadding = 0.dp,
             containerColor = Color.Transparent,
             contentColor = MaterialTheme.colorScheme.onSurface,
             divider = {
@@ -193,6 +228,23 @@ fun LibraryScreen(
                         scope.launch {
                             pagerState.animateScrollToPage(index)
                         }
+                    },
+                    icon = {
+                        val (iconGradientStart, iconGradientEnd) = when (index) {
+                            0 -> LumenBlue to LumenBlueDeep
+                            1 -> LumenGreen to LumenGreenDeep
+                            2 -> LumenYellow to LumenYellowDeep
+                            3 -> LumenRed to LumenRedDeep
+                            4 -> LumenPurple to LumenPurpleDeep
+                            else -> LumenBlue to LumenBlueDeep
+                        }
+                        ShapeIcon(
+                            icon = tabIcons[index],
+                            gradientStart = iconGradientStart,
+                            gradientEnd = iconGradientEnd,
+                            size = 36.dp,
+                            iconSize = 20.dp
+                        )
                     },
                     text = {
                         Text(
@@ -236,6 +288,7 @@ fun LibraryScreen(
                  3 -> PlaylistsTabContent(onPlaylistClick = onPlaylistClick)
                  4 -> StreamsTabContent(onStreamPlay = onItemClick)
             }
+        }
         }
     }
 }
@@ -931,6 +984,15 @@ private fun StreamsTabContent(
 
     val bottomPadding = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
+    val categories = remember(groups) {
+        groups.map { it.name }.filter { it != "\u2605 Favorites" }
+    }
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
+    val filteredGroups = remember(groups, selectedCategory) {
+        if (selectedCategory == null) groups
+        else groups.filter { it.name == selectedCategory || it.name == "\u2605 Favorites" }
+    }
+
     Box(Modifier.fillMaxSize()) {
         if (groups.isEmpty()) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -1009,9 +1071,28 @@ private fun StreamsTabContent(
                             )
                         }
                     }
+                    LazyRow(
+                        contentPadding = PaddingValues(horizontal = 16.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        item {
+                            CategoryChip(
+                                label = "All",
+                                selected = selectedCategory == null,
+                                onClick = { selectedCategory = null }
+                            )
+                        }
+                        items(categories) { category ->
+                            CategoryChip(
+                                label = category,
+                                selected = category == selectedCategory,
+                                onClick = { selectedCategory = category }
+                            )
+                        }
+                    }
                     if (viewMode == StreamViewMode.LIST) {
                         LazyColumn(Modifier.weight(1f).fillMaxWidth(), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = bottomPadding)) {
-                            groups.forEach { group ->
+                            filteredGroups.forEach { group ->
                                 item(key = "header_${group.name}") {
                                     Row(
                                         Modifier
@@ -1031,10 +1112,7 @@ private fun StreamsTabContent(
                                             null, tint = MaterialTheme.colorScheme.primary
                                         )
                                         Spacer(Modifier.width(8.dp))
-                                        Text(group.name,
-                                            style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = FontWeight.SemiBold,
-                                            modifier = Modifier.weight(1f))
+                                        SectionLabel(text = group.name, modifier = Modifier.weight(1f))
                                         Text("${group.streams.size}",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -1103,7 +1181,7 @@ private fun StreamsTabContent(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            groups.forEach { group ->
+                            filteredGroups.forEach { group ->
                                 item(key = "header_grid_${group.name}", span = { GridItemSpan(2) }) {
                                     Row(
                                         Modifier
@@ -1123,8 +1201,7 @@ private fun StreamsTabContent(
                                             null, tint = MaterialTheme.colorScheme.primary
                                         )
                                         Spacer(Modifier.width(8.dp))
-                                        Text(group.name, style = MaterialTheme.typography.titleSmall,
-                                            fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                                        SectionLabel(text = group.name, modifier = Modifier.weight(1f))
                                         Text("${group.streams.size}", style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                                     }
@@ -1179,16 +1256,15 @@ private fun StreamsTabContent(
                         }
                     }
                 }
-                SmallFloatingActionButton(
+                ColoredFAB(
+                    icon = Icons.Rounded.Add,
+                    contentDescription = "Add stream",
+                    color = LumenPurple,
                     onClick = { showAddDialog = true },
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(end = 16.dp, bottom = 16.dp),
-                    containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-                ) {
-                    Icon(Icons.Rounded.Add, contentDescription = "Add stream")
-                }
+                        .padding(end = 16.dp, bottom = 16.dp)
+                )
             }
         }
 
@@ -1334,16 +1410,15 @@ private fun PlaylistsTabContent(
                 }
             }
 
-            SmallFloatingActionButton(
+            ColoredFAB(
+                icon = Icons.Rounded.Add,
+                contentDescription = "Create playlist",
+                color = LumenRed,
                 onClick = { showCreateDialog = true },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 16.dp, bottom = 16.dp),
-                containerColor = MaterialTheme.colorScheme.primaryContainer,
-                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
-            ) {
-                Icon(Icons.Rounded.Add, contentDescription = "Create playlist")
-            }
+                    .padding(end = 16.dp, bottom = 16.dp)
+            )
         }
     }
 

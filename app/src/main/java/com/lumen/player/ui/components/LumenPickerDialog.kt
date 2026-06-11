@@ -1,5 +1,6 @@
 package com.lumen.player.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,6 +22,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -42,6 +44,7 @@ fun <T> LumenPickerDialog(
             modifier = Modifier.fillMaxWidth(0.85f),
             shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)),
             tonalElevation = 4.dp,
             shadowElevation = 8.dp
         ) {

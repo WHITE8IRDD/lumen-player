@@ -45,6 +45,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -129,6 +131,7 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import com.lumen.player.core.util.TimeFormatter
 import com.lumen.player.domain.model.NetworkStream
+import com.lumen.player.ui.components.FloatingGlassCard
 import com.lumen.player.ui.components.LumenConfirmationDialog
 import com.lumen.player.ui.library.StreamsViewModel
 import com.lumen.player.ui.subtitles.SubtitlePanelSheet
@@ -589,6 +592,9 @@ fun VideoPlayerScreen(
                         (it.category?.contains(channelSwitcherQuery, ignoreCase = true) == true)
                 }
             }
+            val currentStream = remember(channelContext, title) {
+                channelContext.find { it.title == title }
+            }
             ModalBottomSheet(
                 onDismissRequest = { showChannelSwitcher = false; channelSwitcherQuery = "" },
                 sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
@@ -600,7 +606,27 @@ fun VideoPlayerScreen(
                         .fillMaxWidth()
                         .padding(bottom = 32.dp)
                         .heightIn(max = 600.dp)
+                        .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)), RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
                 ) {
+                    if (currentStream != null) {
+                        FloatingGlassCard(
+                            title = currentStream.title,
+                            subtitle = currentStream.category,
+                            trailing = {
+                                IconButton(onClick = { streamsVm.toggleFavorite(currentStream.id) }) {
+                                    Icon(
+                                        if (currentStream.isFavorite) Icons.Rounded.Favorite
+                                        else Icons.Rounded.FavoriteBorder,
+                                        null,
+                                        tint = if (currentStream.isFavorite) MaterialTheme.colorScheme.primary
+                                        else MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            },
+                            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                        )
+                        Spacer(Modifier.height(8.dp))
+                    }
                     Text("Switch Channel",
                         style = MaterialTheme.typography.titleMedium,
                         modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp))

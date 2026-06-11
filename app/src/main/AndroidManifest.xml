@@ -39,7 +39,7 @@
             android:launchMode="singleTask"
             android:supportsPictureInPicture="true"
             android:resizeableActivity="true"
-            android:theme="@style/Theme.Lumen.Splash">
+            android:theme="@style/Theme.Lumen.Starting">
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

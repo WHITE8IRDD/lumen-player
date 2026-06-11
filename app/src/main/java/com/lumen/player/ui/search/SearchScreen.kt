@@ -45,7 +45,9 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -65,6 +67,15 @@ import com.lumen.player.domain.model.MediaItem
 import com.lumen.player.domain.model.Playlist
 import com.lumen.player.ui.components.ShimmerBox
 import com.lumen.player.ui.util.VideoThumbnail
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.lazy.LazyRow
+import com.lumen.player.core.theme.CategoryBlue
+import com.lumen.player.core.theme.CategoryGreen
+import com.lumen.player.core.theme.CategoryOrange
+import com.lumen.player.core.theme.CategoryPurple
+import com.lumen.player.ui.components.CategoryChip
+import com.lumen.player.ui.components.CircularIconButton
+import com.lumen.player.ui.components.FloatingGlassCard
 
 @Composable
 fun SearchScreen(
@@ -96,9 +107,7 @@ fun SearchScreen(
                 .padding(start = 4.dp, end = 16.dp, top = 8.dp, bottom = 4.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
-            }
+            CircularIconButton(onClick = onBack, icon = Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
             OutlinedTextField(
                 value = query,
                 onValueChange = viewModel::setQuery,
@@ -222,10 +231,91 @@ private fun SearchResultsContent(
     onItemClick: (MediaItem) -> Unit,
     onFolderClick: (String) -> Unit
 ) {
-    val hasResults = results.videos.isNotEmpty() || results.audio.isNotEmpty() ||
-            results.folders.isNotEmpty() || results.playlists.isNotEmpty()
+    var selectedCategory by remember { mutableStateOf("All") }
+
+    val filteredResults = remember(results, selectedCategory) {
+        when (selectedCategory) {
+            "Videos" -> SearchResults(
+                videos = results.videos,
+                audio = emptyList(),
+                folders = emptyList(),
+                playlists = emptyList()
+            )
+            "Audio" -> SearchResults(
+                videos = emptyList(),
+                audio = results.audio,
+                folders = emptyList(),
+                playlists = emptyList()
+            )
+            "Folders" -> SearchResults(
+                videos = emptyList(),
+                audio = emptyList(),
+                folders = results.folders,
+                playlists = emptyList()
+            )
+            "Playlists" -> SearchResults(
+                videos = emptyList(),
+                audio = emptyList(),
+                folders = emptyList(),
+                playlists = results.playlists
+            )
+            else -> results
+        }
+    }
+
+    val hasResults = filteredResults.videos.isNotEmpty() || filteredResults.audio.isNotEmpty() ||
+            filteredResults.folders.isNotEmpty() || filteredResults.playlists.isNotEmpty()
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())) {
+        item {
+            LazyRow(
+                modifier = Modifier.padding(vertical = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(horizontal = 16.dp)
+            ) {
+                item {
+                    CategoryChip(
+                        label = "All",
+                        selected = selectedCategory == "All",
+                        onClick = { selectedCategory = "All" },
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                }
+                item {
+                    CategoryChip(
+                        label = "Videos",
+                        selected = selectedCategory == "Videos",
+                        onClick = { selectedCategory = "Videos" },
+                        color = CategoryBlue
+                    )
+                }
+                item {
+                    CategoryChip(
+                        label = "Audio",
+                        selected = selectedCategory == "Audio",
+                        onClick = { selectedCategory = "Audio" },
+                        color = CategoryGreen
+                    )
+                }
+                item {
+                    CategoryChip(
+                        label = "Folders",
+                        selected = selectedCategory == "Folders",
+                        onClick = { selectedCategory = "Folders" },
+                        color = CategoryOrange
+                    )
+                }
+                item {
+                    CategoryChip(
+                        label = "Playlists",
+                        selected = selectedCategory == "Playlists",
+                        onClick = { selectedCategory = "Playlists" },
+                        color = CategoryPurple
+                    )
+                }
+            }
+        }
+
         if (isSearching) {
             item {
                 Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
@@ -234,49 +324,49 @@ private fun SearchResultsContent(
             }
         }
 
-        if (results.videos.isNotEmpty()) {
+        if (filteredResults.videos.isNotEmpty()) {
             item {
-                SectionHeader(title = "Videos", count = results.videos.size)
+                SectionHeader(title = "Videos", count = filteredResults.videos.size)
             }
-            items(results.videos.take(5), key = { "v${it.id}" }) { item ->
+            items(filteredResults.videos.take(5), key = { "v${it.id}" }) { item ->
                 VideoSearchRow(item = item, onClick = { onItemClick(item) })
             }
         }
 
-        if (results.audio.isNotEmpty()) {
+        if (filteredResults.audio.isNotEmpty()) {
             item {
-                SectionHeader(title = "Audio", count = results.audio.size)
+                SectionHeader(title = "Audio", count = filteredResults.audio.size)
             }
-            items(results.audio.take(5), key = { "a${it.id}" }) { item ->
+            items(filteredResults.audio.take(5), key = { "a${it.id}" }) { item ->
                 AudioSearchRow(item = item, onClick = { onItemClick(item) })
             }
         }
 
-        if (results.folders.isNotEmpty()) {
+        if (filteredResults.folders.isNotEmpty()) {
             item {
-                SectionHeader(title = "Folders", count = results.folders.size)
+                SectionHeader(title = "Folders", count = filteredResults.folders.size)
             }
-            items(results.folders.take(5), key = { "f${it.path}" }) { folder ->
+            items(filteredResults.folders.take(5), key = { "f${it.path}" }) { folder ->
                 FolderSearchRow(folder = folder, onClick = { onFolderClick(folder.path) })
             }
         }
 
-        if (results.playlists.isNotEmpty()) {
+        if (filteredResults.playlists.isNotEmpty()) {
             item {
-                SectionHeader(title = "Playlists", count = results.playlists.size)
+                SectionHeader(title = "Playlists", count = filteredResults.playlists.size)
             }
-            items(results.playlists.take(5), key = { "p${it.id}" }) { playlist ->
+            items(filteredResults.playlists.take(5), key = { "p${it.id}" }) { playlist ->
                 PlaylistSearchRow(playlist = playlist)
             }
         }
 
         if (!hasResults && !isSearching) {
             item {
-                Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) {
-                    Text(
-                        "No results found",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                Box(Modifier.fillMaxWidth().padding(24.dp)) {
+                    FloatingGlassCard(
+                        title = "No results found",
+                        subtitle = "Try a different search term",
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
@@ -317,7 +407,8 @@ private fun VideoSearchRow(item: MediaItem, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f))
     ) {
         Row(
             Modifier.padding(8.dp),
@@ -374,7 +465,8 @@ private fun AudioSearchRow(item: MediaItem, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f))
     ) {
         Row(
             Modifier.padding(8.dp),
@@ -436,7 +528,8 @@ private fun FolderSearchRow(folder: Folder, onClick: () -> Unit) {
             .clickable(onClick = onClick),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f))
     ) {
         Row(
             Modifier.padding(12.dp),
@@ -475,7 +568,8 @@ private fun PlaylistSearchRow(playlist: Playlist) {
             .padding(horizontal = 16.dp, vertical = 4.dp),
         shape = RoundedCornerShape(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f))
     ) {
         Row(
             Modifier.padding(12.dp),

@@ -46,6 +46,9 @@ import com.lumen.player.domain.model.MediaItem
 import com.lumen.player.ui.library.VideoGrid
 import com.lumen.player.ui.library.VideoList
 import com.lumen.player.ui.library.VideoSort
+import com.lumen.player.ui.components.CircularIconButton
+import com.lumen.player.ui.components.FloatingGlassCard
+import com.lumen.player.core.util.TimeFormatter
 import java.util.Locale
 
 @UnstableApi
@@ -120,75 +123,54 @@ fun FolderDetailScreen(
         )
 
         if (!inSelectionMode) {
-        Row(
-            Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
-            }
-            Column(Modifier.weight(1f)) {
-                Text(
-                    viewModel.folderName,
-                    style = MaterialTheme.typography.titleMedium,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    viewModel.path,
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            Box {
-                IconButton(onClick = { sortMenuExpanded = true }) {
-                    Icon(Icons.AutoMirrored.Rounded.Sort, contentDescription = "Sort")
+            Row(
+                Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, top = 4.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                CircularIconButton(onClick = onBack, icon = Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
+                Spacer(Modifier.weight(1f))
+                Box {
+                    IconButton(onClick = { sortMenuExpanded = true }) {
+                        Icon(Icons.AutoMirrored.Rounded.Sort, contentDescription = "Sort")
+                    }
+                    DropdownMenu(
+                        expanded = sortMenuExpanded,
+                        onDismissRequest = { sortMenuExpanded = false }
+                    ) {
+                        VideoSort.values().forEach { s ->
+                            DropdownMenuItem(
+                                text = { Text(s.label()) },
+                                onClick = {
+                                    sort = s
+                                    sortMenuExpanded = false
+                                }
+                            )
+                        }
+                    }
                 }
-                DropdownMenu(
-                    expanded = sortMenuExpanded,
-                    onDismissRequest = { sortMenuExpanded = false }
-                ) {
-                    VideoSort.values().forEach { s ->
-                        DropdownMenuItem(
-                            text = { Text(s.label()) },
-                            onClick = {
-                                sort = s
-                                sortMenuExpanded = false
-                            }
-                        )
+                SingleChoiceSegmentedButtonRow {
+                    SegmentedButton(
+                        selected = isGridView,
+                        onClick = { if (!isGridView) onToggleViewMode() },
+                        shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
+                    ) {
+                        Icon(Icons.Rounded.ViewModule, contentDescription = "Grid")
+                    }
+                    SegmentedButton(
+                        selected = !isGridView,
+                        onClick = { if (isGridView) onToggleViewMode() },
+                        shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
+                    ) {
+                        Icon(Icons.Rounded.ViewAgenda, contentDescription = "List")
                     }
                 }
             }
-            SingleChoiceSegmentedButtonRow {
-                SegmentedButton(
-                    selected = isGridView,
-                    onClick = { if (!isGridView) onToggleViewMode() },
-                    shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
-                ) {
-                    Icon(Icons.Rounded.ViewModule, contentDescription = "Grid")
-                }
-                SegmentedButton(
-                    selected = !isGridView,
-                    onClick = { if (isGridView) onToggleViewMode() },
-                    shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
-                ) {
-                    Icon(Icons.Rounded.ViewAgenda, contentDescription = "List")
-                }
-            }
-        }
-
-        }
-
-        if (!inSelectionMode) {
-            Text(
-                "${items.size} videos",
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+            FloatingGlassCard(
+                title = viewModel.folderName,
+                subtitle = "${items.size} videos · ${TimeFormatter.format(items.sumOf { it.durationMs })}",
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
             )
+            Spacer(Modifier.height(8.dp))
         }
 
         if (items.isEmpty()) {

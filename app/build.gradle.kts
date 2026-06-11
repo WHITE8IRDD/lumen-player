@@ -141,6 +141,9 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
 
+    // Splash Screen
+    implementation("androidx.core:core-splashscreen:1.0.1")
+
     // Coil, DataStore, Accompanist
     implementation(libs.coil.compose)
     implementation(libs.coil.video)

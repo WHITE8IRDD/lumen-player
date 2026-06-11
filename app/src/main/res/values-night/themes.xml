@@ -12,4 +12,8 @@
     <style name="Theme.Lumen.Splash" parent="Theme.Lumen">
         <item name="android:windowBackground">@drawable/splash_background</item>
     </style>
+
+    <style name="Theme.Lumen.Starting" parent="Theme.Lumen">
+        <item name="android:windowBackground">@drawable/splash_background</item>
+    </style>
 </resources>

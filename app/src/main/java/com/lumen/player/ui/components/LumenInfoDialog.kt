@@ -1,5 +1,6 @@
 package com.lumen.player.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -15,9 +16,11 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.lumen.player.ui.components.LumenPrimaryButton
 
 @Composable
 fun LumenInfoDialog(
@@ -33,6 +36,7 @@ fun LumenInfoDialog(
             modifier = Modifier.fillMaxWidth(0.85f),
             shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)),
             tonalElevation = 4.dp,
             shadowElevation = 8.dp
         ) {
@@ -50,10 +54,9 @@ fun LumenInfoDialog(
                     content()
                 }
                 Spacer(Modifier.height(24.dp))
-                FilledTonalButton(
+                LumenPrimaryButton(
                     onClick = onDismiss,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    modifier = Modifier.fillMaxWidth()
                 ) {
                     Text("Close")
                 }

@@ -17,8 +17,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -37,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lumen.player.R
+import com.lumen.player.ui.components.CategoryChip
+import com.lumen.player.ui.components.CircularIconButton
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,14 +103,10 @@ fun EqualizerScreen(
                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                 ) {
                     state.presets.forEachIndexed { idx, name ->
-                        FilterChip(
+                        CategoryChip(
+                            label = name,
                             selected = idx == state.selectedPreset,
-                            onClick = { if (state.enabled) viewModel.usePreset(idx) },
-                            enabled = state.enabled,
-                            label = { Text(name) },
-                            colors = FilterChipDefaults.filterChipColors(
-                                disabledSelectedContainerColor = MaterialTheme.colorScheme.surfaceVariant
-                            )
+                            onClick = { if (state.enabled) viewModel.usePreset(idx) }
                         )
                     }
                 }

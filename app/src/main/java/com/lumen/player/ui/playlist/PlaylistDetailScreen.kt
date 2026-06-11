@@ -67,9 +67,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import coil.compose.AsyncImage
 import com.lumen.player.core.util.TimeFormatter
+import com.lumen.player.ui.components.CircularIconButton
 import com.lumen.player.ui.components.DialogVariant
+import com.lumen.player.ui.components.FloatingGlassCard
 import com.lumen.player.ui.components.LumenConfirmationDialog
 import com.lumen.player.ui.components.LumenInputDialog
+import androidx.compose.foundation.BorderStroke
 
 @OptIn(ExperimentalMaterial3Api::class)
 @UnstableApi
@@ -106,15 +109,14 @@ fun PlaylistDetailScreen(
                 } else {
                     Text(
                         playlistName.ifEmpty { "Playlist" },
+                        style = MaterialTheme.typography.headlineSmall,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis
                     )
                 }
             },
             navigationIcon = {
-                IconButton(onClick = onBack) {
-                    Icon(Icons.Rounded.ArrowBack, contentDescription = "Back")
-                }
+                CircularIconButton(onClick = onBack, icon = Icons.Rounded.ArrowBack, contentDescription = "Back")
             },
             actions = {
                 if (isEditingName) {
@@ -171,6 +173,11 @@ fun PlaylistDetailScreen(
             }
         } else {
             Column(Modifier.fillMaxSize()) {
+                FloatingGlassCard(
+                    title = playlistName.ifEmpty { "Playlist" },
+                    subtitle = "${items.size} items · ${TimeFormatter.format(items.sumOf { it.durationMs })}",
+                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                )
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
@@ -265,7 +272,8 @@ private fun PlaylistItemRow(
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
-        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+        elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
+        border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f))
     ) {
         Row(
             Modifier.padding(8.dp),

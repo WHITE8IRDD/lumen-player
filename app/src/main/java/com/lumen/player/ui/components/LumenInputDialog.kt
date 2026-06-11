@@ -1,5 +1,6 @@
 package com.lumen.player.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -21,9 +22,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.lumen.player.ui.components.LumenPrimaryButton
 
 @Composable
 fun LumenInputDialog(
@@ -44,6 +47,7 @@ fun LumenInputDialog(
             modifier = Modifier.fillMaxWidth(0.85f),
             shape = RoundedCornerShape(20.dp),
             color = MaterialTheme.colorScheme.surface,
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)),
             tonalElevation = 4.dp,
             shadowElevation = 8.dp
         ) {
@@ -70,14 +74,13 @@ fun LumenInputDialog(
                         Text("Cancel")
                     }
                     Spacer(Modifier.width(8.dp))
-                    FilledTonalButton(
+                    LumenPrimaryButton(
                         onClick = {
                             val trimmed = text.trim()
                             if (trimmed.isNotBlank()) {
                                 onConfirm(trimmed)
                             }
                         },
-                        shape = RoundedCornerShape(12.dp),
                         enabled = text.trim().isNotBlank()
                     ) {
                         Text(confirmLabel)

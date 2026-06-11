@@ -16,14 +16,16 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.rounded.Cloud
 import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.ArrowForwardIos
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
 import androidx.compose.material.icons.rounded.LibraryMusic
@@ -35,7 +37,6 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.RestartAlt
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Subtitles
-import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -43,7 +44,6 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
@@ -60,17 +60,18 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -80,6 +81,25 @@ import com.lumen.player.domain.repository.ThemeMode
 import com.lumen.player.ui.components.LumenConfirmationDialog
 import com.lumen.player.ui.components.LumenInputDialog
 import com.lumen.player.ui.components.LumenPickerDialog
+import androidx.compose.foundation.BorderStroke
+import com.lumen.player.core.theme.LumenBlue
+import com.lumen.player.core.theme.LumenBlueDeep
+import com.lumen.player.core.theme.LumenGreen
+import com.lumen.player.core.theme.LumenGreenDeep
+import com.lumen.player.core.theme.LumenYellow
+import com.lumen.player.core.theme.LumenYellowDeep
+import com.lumen.player.core.theme.LumenOrange
+import com.lumen.player.core.theme.LumenOrangeDeep
+import com.lumen.player.core.theme.LumenPink
+import com.lumen.player.core.theme.LumenPinkDeep
+import com.lumen.player.core.theme.LumenCyan
+import com.lumen.player.core.theme.LumenCyanDeep
+import com.lumen.player.core.theme.LumenRed
+import com.lumen.player.core.theme.LumenRedDeep
+import com.lumen.player.core.theme.LumenPurple
+import com.lumen.player.core.theme.LumenPurpleDeep
+import com.lumen.player.core.theme.LumenDarkOnSurfaceVariant
+import com.lumen.player.ui.components.ShapeIcon
 
 private fun themeLabel(mode: ThemeMode): String = when (mode) {
     ThemeMode.SYSTEM -> "System"
@@ -113,17 +133,19 @@ fun SettingsScreen(
         Modifier
             .fillMaxSize()
             .verticalScroll(rememberScrollState())
-            .padding(vertical = 8.dp)
+            .padding(top = 40.dp, bottom = 8.dp)
     ) {
         Text(
             stringResource(R.string.settings),
-            style = MaterialTheme.typography.headlineMedium,
-            modifier = Modifier.padding(16.dp)
+            style = MaterialTheme.typography.displayMedium,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp)
         )
 
         SettingsSection(
             title = "Appearance",
+            subtitle = "Theme, colors, typography",
             icon = Icons.Rounded.Palette,
+            color = LumenPurple,
             expanded = s.sectionAppearance,
             onToggle = { viewModel.setSectionExpanded("appearance", !s.sectionAppearance) }
         ) {
@@ -143,16 +165,17 @@ fun SettingsScreen(
                 subtitle = s.fontSize.lowercase().replaceFirstChar { it.uppercase() },
                 onClick = { showFontSizePicker = true }
             )
-            ClickableRow(
-                title = "Accent Color",
-                subtitle = s.accentColorHex,
+            AccentColorRow(
+                hex = s.accentColorHex,
                 onClick = { showAccentColorPicker = true }
             )
         }
 
         SettingsSection(
             title = "Playback",
+            subtitle = "Resume, focus, gapless",
             icon = Icons.Rounded.PlayCircle,
+            color = LumenGreen,
             expanded = s.sectionPlayback,
             onToggle = { viewModel.setSectionExpanded("playback", !s.sectionPlayback) }
         ) {
@@ -164,7 +187,9 @@ fun SettingsScreen(
 
         SettingsSection(
             title = "Video",
+            subtitle = "Hardware acceleration, aspect ratio",
             icon = Icons.Rounded.Movie,
+            color = LumenBlue,
             expanded = s.sectionVideo,
             onToggle = { viewModel.setSectionExpanded("video", !s.sectionVideo) }
         ) {
@@ -175,7 +200,9 @@ fun SettingsScreen(
 
         SettingsSection(
             title = "Subtitles",
+            subtitle = "Text size, color, language, delay",
             icon = Icons.Rounded.Subtitles,
+            color = LumenYellow,
             expanded = s.sectionSubtitles,
             onToggle = { viewModel.setSectionExpanded("subtitles", !s.sectionSubtitles) }
         ) {
@@ -188,7 +215,9 @@ fun SettingsScreen(
 
         SettingsSection(
             title = "Library",
+            subtitle = "Excluded folders, auto-scan",
             icon = Icons.Rounded.LibraryMusic,
+            color = LumenOrange,
             expanded = s.sectionLibrary,
             onToggle = { viewModel.setSectionExpanded("library", !s.sectionLibrary) }
         ) {
@@ -200,7 +229,9 @@ fun SettingsScreen(
 
         SettingsSection(
             title = "Audio",
+            subtitle = "Equalizer, replay gain",
             icon = Icons.Rounded.MusicNote,
+            color = LumenPink,
             expanded = s.sectionAudio,
             onToggle = { viewModel.setSectionExpanded("audio", !s.sectionAudio) }
         ) {
@@ -210,21 +241,18 @@ fun SettingsScreen(
 
         SettingsSection(
             title = "Network",
+            subtitle = "Streams, TMDB metadata",
             icon = Icons.Rounded.Cloud,
+            color = LumenCyan,
             expanded = s.sectionNetwork,
             onToggle = { viewModel.setSectionExpanded("network", !s.sectionNetwork) }
         ) {
-            Row(
-                Modifier.fillMaxWidth().clickable { }.padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Rounded.Wifi, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.padding(start = 12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Open Network Stream", style = MaterialTheme.typography.bodyLarge)
-                    Text("Enter a URL to stream", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
+            ClickableRow(
+                title = "Open Network Stream",
+                subtitle = "Enter a URL to stream",
+                onClick = { },
+                icon = Icons.Rounded.Wifi
+            )
             SwitchRow(
                 title = "TMDB Metadata",
                 summary = "Download posters and descriptions from TMDB",
@@ -246,51 +274,72 @@ fun SettingsScreen(
 
         SettingsSection(
             title = "Advanced",
+            subtitle = "Cache, reset all settings",
             icon = Icons.Rounded.Settings,
+            color = LumenRed,
             expanded = s.sectionAdvanced,
             onToggle = { viewModel.setSectionExpanded("advanced", !s.sectionAdvanced) }
         ) {
-            Row(
-                Modifier.fillMaxWidth().clickable { showClearCacheDialog = true }.padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Rounded.Delete, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.padding(start = 12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Clear metadata cache", style = MaterialTheme.typography.bodyLarge)
-                    Text("Remove cached poster URLs", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            Row(
-                Modifier.fillMaxWidth().clickable { showResetSettingsDialog = true }.padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Rounded.RestartAlt, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-                Spacer(Modifier.padding(start = 12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Reset All Settings", style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.error)
-                    Text("Restore defaults", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
-            Row(
-                Modifier.fillMaxWidth().clickable { showResetOnboardingDialog = true }.padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Rounded.Refresh, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.padding(start = 12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Reset Onboarding", style = MaterialTheme.typography.bodyLarge)
-                    Text("Show welcome screen on next launch", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            }
+            ClickableRow(
+                title = "Clear metadata cache",
+                subtitle = "Remove cached poster URLs",
+                onClick = { showClearCacheDialog = true },
+                icon = Icons.Rounded.Delete
+            )
+            ClickableRow(
+                title = "Reset All Settings",
+                subtitle = "Restore defaults",
+                onClick = { showResetSettingsDialog = true },
+                icon = Icons.Rounded.RestartAlt,
+                iconTint = MaterialTheme.colorScheme.error,
+                titleColor = MaterialTheme.colorScheme.error
+            )
+            ClickableRow(
+                title = "Reset Onboarding",
+                subtitle = "Show welcome screen on next launch",
+                onClick = { showResetOnboardingDialog = true },
+                icon = Icons.Rounded.Refresh
+            )
         }
 
         SettingsSection(
             title = "About",
+            subtitle = "Version, licenses, source code",
             icon = Icons.Rounded.Info,
+            color = MaterialTheme.colorScheme.onSurface,
             expanded = s.sectionAbout,
             onToggle = { viewModel.setSectionExpanded("about", !s.sectionAbout) }
         ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(vertical = 20.dp)
+            ) {
+                Image(
+                    painter = painterResource(R.drawable.lumen_logo_rounded),
+                    contentDescription = null,
+                    modifier = Modifier.size(80.dp)
+                )
+                Spacer(Modifier.height(16.dp))
+                Text(
+                    "Lumen",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+                Text(
+                    "v1.0.0",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    "A premium local-first media player",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    textAlign = TextAlign.Center
+                )
+            }
             AboutRow(title = "Version", value = "${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})")
             val ctx = LocalContext.current
             ClickableRow(title = "Open Source Licenses", subtitle = "View third-party licenses", onClick = {
@@ -305,7 +354,7 @@ fun SettingsScreen(
                 try {
                     ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/anomalco/lumen")))
                 } catch (_: Exception) { }
-            })
+            }, chevronIcon = Icons.AutoMirrored.Rounded.OpenInNew)
         }
     }
 
@@ -469,56 +518,80 @@ private fun SubtitleDelaySlider(
 @Composable
 private fun SettingsSection(
     title: String,
+    subtitle: String,
     icon: ImageVector,
+    color: Color,
     expanded: Boolean,
     onToggle: () -> Unit,
     content: @Composable () -> Unit
 ) {
+    val iconEnd = when (icon) {
+        Icons.Rounded.Palette -> LumenPurpleDeep
+        Icons.Rounded.PlayCircle -> LumenGreenDeep
+        Icons.Rounded.Movie -> LumenBlueDeep
+        Icons.Rounded.Subtitles -> LumenYellowDeep
+        Icons.Rounded.LibraryMusic -> LumenOrangeDeep
+        Icons.Rounded.MusicNote -> LumenPinkDeep
+        Icons.Rounded.Cloud -> LumenCyanDeep
+        Icons.Rounded.Settings -> LumenRedDeep
+        Icons.Rounded.Info -> LumenDarkOnSurfaceVariant
+        else -> LumenPurpleDeep
+    }
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 6.dp)
+            .padding(horizontal = 16.dp, vertical = 4.dp)
             .animateContentSize(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-        )
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onToggle)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                icon,
-                contentDescription = null,
-                tint = MaterialTheme.colorScheme.primary,
-                modifier = Modifier.size(22.dp)
-            )
-            Spacer(Modifier.width(12.dp))
-            Text(
-                title,
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.SemiBold,
-                modifier = Modifier.weight(1f)
-            )
-            Icon(
-                if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
-                contentDescription = if (expanded) "Collapse" else "Expand",
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-        AnimatedVisibility(visible = expanded) {
-            Column {
-                HorizontalDivider(
-                    color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
-                    modifier = Modifier.padding(horizontal = 16.dp)
+        Column {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable(onClick = onToggle)
+                    .height(72.dp)
+                    .padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                ShapeIcon(
+                    icon = icon,
+                    gradientStart = color,
+                    gradientEnd = iconEnd
                 )
-                Spacer(Modifier.height(4.dp))
-                content()
-                Spacer(Modifier.height(4.dp))
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(
+                        title,
+                        style = MaterialTheme.typography.titleMedium,
+                        color = color
+                    )
+                    Spacer(Modifier.height(2.dp))
+                    Text(
+                        subtitle,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Icon(
+                    if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
+                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+            AnimatedVisibility(visible = expanded) {
+                Column {
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
+                        modifier = Modifier.padding(horizontal = 16.dp)
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    content()
+                    Spacer(Modifier.height(4.dp))
+                }
             }
         }
     }
@@ -534,11 +607,12 @@ private fun SwitchRow(
     Row(
         Modifier
             .fillMaxWidth()
+            .defaultMinSize(minHeight = 56.dp)
             .clickable { onToggle(!checked) }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(Modifier.weight(1f)) {
+        Column(Modifier.weight(1f).padding(end = 16.dp)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
             if (!summary.isNullOrEmpty()) {
                 Text(
@@ -556,23 +630,80 @@ private fun SwitchRow(
 private fun ClickableRow(
     title: String,
     subtitle: String,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    icon: ImageVector? = null,
+    iconTint: Color = MaterialTheme.colorScheme.primary,
+    titleColor: Color? = null,
+    chevronIcon: ImageVector = Icons.Rounded.ArrowForwardIos
 ) {
     Row(
         Modifier
             .fillMaxWidth()
+            .defaultMinSize(minHeight = 56.dp)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        if (icon != null) {
+            Icon(icon, contentDescription = null, tint = iconTint)
+            Spacer(Modifier.width(12.dp))
+        }
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                title,
+                style = MaterialTheme.typography.bodyLarge,
+                color = titleColor ?: MaterialTheme.colorScheme.onSurface
+            )
             Text(
                 subtitle,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
+        Spacer(Modifier.width(8.dp))
+        Icon(
+            chevronIcon,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+@Composable
+private fun AccentColorRow(
+    hex: String,
+    onClick: () -> Unit
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 56.dp)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text("Accent Color", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Box(
+            modifier = Modifier
+                .size(24.dp)
+                .clip(CircleShape)
+                .background(Color(android.graphics.Color.parseColor(hex)))
+                .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+        )
+        Spacer(Modifier.width(6.dp))
+        Text(
+            hex,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+        Spacer(Modifier.width(8.dp))
+        Icon(
+            Icons.Rounded.ArrowForwardIos,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
+        )
     }
 }
 
@@ -584,6 +715,7 @@ private fun AboutRow(
     Row(
         Modifier
             .fillMaxWidth()
+            .defaultMinSize(minHeight = 56.dp)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
