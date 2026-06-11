@@ -48,8 +48,7 @@ import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -64,6 +63,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -88,6 +88,13 @@ import com.lumen.player.ui.util.FolderThumbnailResolver
 import com.lumen.player.ui.util.FolderThumbnailType
 import com.lumen.player.ui.util.MosaicFetcherInput
 import com.lumen.player.ui.util.VideoThumbnail
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.PlayArrow
+import androidx.compose.material.icons.rounded.VisibilityOff
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.ui.graphics.vector.ImageVector
 
 
 
@@ -190,6 +197,17 @@ fun VideoGridCard(
                     modifier = Modifier.fillMaxSize(),
                     loading = { ShimmerBox(modifier = Modifier.fillMaxSize()) }
                 )
+                Box(
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(70.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f))
+                            )
+                        )
+                )
                 if (progress > 0f) {
                     Box(
                         Modifier
@@ -248,86 +266,124 @@ fun VideoGridCard(
                                 tint = Color.White
                             )
                         }
-                        DropdownMenu(
-                            expanded = showMenu,
-                            onDismissRequest = { showMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Play") },
-                                onClick = { showMenu = false; onClick() }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Play next") },
-                                onClick = { showMenu = false; onPlayNext?.invoke() },
-                                enabled = onPlayNext != null
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Add to queue") },
-                                onClick = { showMenu = false; onAddToQueue?.invoke() },
-                                enabled = onAddToQueue != null
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Add to playlist") },
-                                onClick = { showMenu = false; onAddToPlaylist?.invoke() },
-                                enabled = onAddToPlaylist != null
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Open file location") },
-                                onClick = { showMenu = false; onOpenFileLocation?.invoke() },
-                                enabled = onOpenFileLocation != null
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Properties") },
-                                onClick = { showMenu = false; onProperties?.invoke() },
-                                enabled = onProperties != null
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Hide from Home") },
-                                onClick = { showMenu = false; onHideFromHome?.invoke() },
-                                enabled = onHideFromHome != null
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Share") },
-                                onClick = { showMenu = false; onShare?.invoke() },
-                                enabled = onShare != null
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
-                                onClick = { showMenu = false; onDelete?.invoke() },
-                                enabled = onDelete != null
-                            )
-                        }
                     }
                 }
             }
             Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
                 Text(
-                    item.cleanTitle.ifEmpty { item.title },
+                    text = item.cleanTitle.ifBlank { item.title },
                     style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (item.year != null || item.seasonEpisode != null) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (item.year != null) {
-                            Text(
-                                item.year.toString(),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = LumenOnSurfaceDim
-                            )
-                        }
-                        if (item.seasonEpisode != null) {
-                            if (item.year != null) Text(" \u00B7 ", color = LumenOnSurfaceDim)
-                            Text(
-                                item.seasonEpisode!!,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = LumenOnSurfaceDim
-                            )
-                        }
-                    }
+                val sub = buildString {
+                    item.year?.let { append(it) }
+                    if (item.year != null && item.seasonEpisode != null) append(" \u00B7 ")
+                    item.seasonEpisode?.let { append(it) }
+                }
+                if (sub.isNotEmpty()) {
+                    Text(
+                        text = sub,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
+    }
+    VideoCardMenuSheet(
+        show = showMenu,
+        onDismiss = { showMenu = false },
+        item = item,
+        onClick = onClick,
+        onPlayNext = onPlayNext,
+        onAddToQueue = onAddToQueue,
+        onAddToPlaylist = onAddToPlaylist,
+        onOpenFileLocation = onOpenFileLocation,
+        onProperties = onProperties,
+        onHideFromHome = onHideFromHome,
+        onShare = onShare,
+        onDelete = onDelete
+    )
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun VideoCardMenuSheet(
+    show: Boolean,
+    onDismiss: () -> Unit,
+    item: MediaItem,
+    onClick: () -> Unit,
+    onPlayNext: (() -> Unit)?,
+    onAddToQueue: (() -> Unit)?,
+    onAddToPlaylist: (() -> Unit)?,
+    onOpenFileLocation: (() -> Unit)?,
+    onProperties: (() -> Unit)?,
+    onHideFromHome: (() -> Unit)?,
+    onShare: (() -> Unit)?,
+    onDelete: (() -> Unit)?
+) {
+    if (show) {
+        ModalBottomSheet(
+            onDismissRequest = onDismiss,
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+            containerColor = MaterialTheme.colorScheme.surface,
+            shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+        ) {
+            Column(Modifier.padding(bottom = 24.dp)) {
+                Text(
+                    item.cleanTitle.ifBlank { item.title },
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                SheetMenuItem(Icons.Rounded.PlayArrow, "Play", onClick = { onDismiss(); onClick() })
+                SheetMenuItem(Icons.Rounded.QueuePlayNext, "Play next", enabled = onPlayNext != null, onClick = { onDismiss(); onPlayNext?.invoke() })
+                SheetMenuItem(Icons.Rounded.PlaylistAdd, "Add to queue", enabled = onAddToQueue != null, onClick = { onDismiss(); onAddToQueue?.invoke() })
+                SheetMenuItem(Icons.Rounded.PlaylistAdd, "Add to playlist", enabled = onAddToPlaylist != null, onClick = { onDismiss(); onAddToPlaylist?.invoke() })
+                SheetMenuItem(Icons.Rounded.Folder, "Open file location", enabled = onOpenFileLocation != null, onClick = { onDismiss(); onOpenFileLocation?.invoke() })
+                SheetMenuItem(Icons.Rounded.Info, "Properties", enabled = onProperties != null, onClick = { onDismiss(); onProperties?.invoke() })
+                SheetMenuItem(Icons.Rounded.VisibilityOff, "Hide from Home", enabled = onHideFromHome != null, onClick = { onDismiss(); onHideFromHome?.invoke() })
+                SheetMenuItem(Icons.Rounded.Share, "Share", enabled = onShare != null, onClick = { onDismiss(); onShare?.invoke() })
+                HorizontalDivider(
+                    modifier = Modifier.padding(horizontal = 24.dp, vertical = 2.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
+                )
+                SheetMenuItem(Icons.Rounded.Delete, "Delete", enabled = onDelete != null, onClick = { onDismiss(); onDelete?.invoke() }, tint = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SheetMenuItem(
+    icon: ImageVector,
+    title: String,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    tint: Color = MaterialTheme.colorScheme.onSurface
+) {
+    val alpha = if (enabled) 1f else 0.38f
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(enabled = enabled) { onClick() }
+            .padding(horizontal = 24.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            icon, contentDescription = null,
+            modifier = Modifier.size(24.dp),
+            tint = tint.copy(alpha = alpha)
+        )
+        Spacer(Modifier.width(16.dp))
+        Text(
+            title,
+            style = MaterialTheme.typography.bodyLarge,
+            color = tint.copy(alpha = alpha)
+        )
     }
 }
 
@@ -442,7 +498,17 @@ fun VideoListRow(
                     modifier = Modifier.fillMaxSize(),
                     loading = { ShimmerBox(modifier = Modifier.fillMaxSize()) }
                 )
-
+                Box(
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(20.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f))
+                            )
+                        )
+                )
                 if (progress > 0f) {
                     Box(
                         Modifier
@@ -487,26 +553,24 @@ fun VideoListRow(
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    item.cleanTitle.ifEmpty { item.title },
+                    text = item.cleanTitle.ifBlank { item.title },
                     style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
-                Spacer(Modifier.height(2.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                val sub = buildString {
+                    item.year?.let { append(it) }
+                    if (item.year != null && item.seasonEpisode != null) append(" \u00B7 ")
+                    item.seasonEpisode?.let { append(it) }
+                }
+                if (sub.isNotEmpty()) {
+                    Spacer(Modifier.height(2.dp))
                     Text(
-                        humanSize(item.sizeBytes),
+                        text = sub,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
-                    if (item.durationMs > 0L) {
-                        Text(" \u00B7 ", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(
-                            TimeFormatter.format(item.durationMs),
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
                 }
             }
             Box {
@@ -516,58 +580,23 @@ fun VideoListRow(
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-                DropdownMenu(
-                    expanded = showMenu,
-                    onDismissRequest = { showMenu = false }
-                ) {
-                    DropdownMenuItem(
-                        text = { Text("Play") },
-                        onClick = { showMenu = false; onClick() }
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Play next") },
-                        onClick = { showMenu = false; onPlayNext?.invoke() },
-                        enabled = onPlayNext != null
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Add to queue") },
-                        onClick = { showMenu = false; onAddToQueue?.invoke() },
-                        enabled = onAddToQueue != null
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Add to playlist") },
-                        onClick = { showMenu = false; onAddToPlaylist?.invoke() },
-                        enabled = onAddToPlaylist != null
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Open file location") },
-                        onClick = { showMenu = false; onOpenFileLocation?.invoke() },
-                        enabled = onOpenFileLocation != null
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Properties") },
-                        onClick = { showMenu = false; onProperties?.invoke() },
-                        enabled = onProperties != null
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Hide from Home") },
-                        onClick = { showMenu = false; onHideFromHome?.invoke() },
-                        enabled = onHideFromHome != null
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Share") },
-                        onClick = { showMenu = false; onShare?.invoke() },
-                        enabled = onShare != null
-                    )
-                    DropdownMenuItem(
-                        text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
-                        onClick = { showMenu = false; onDelete?.invoke() },
-                        enabled = onDelete != null
-                    )
-                }
             }
         }
     }
+    VideoCardMenuSheet(
+        show = showMenu,
+        onDismiss = { showMenu = false },
+        item = item,
+        onClick = onClick,
+        onPlayNext = onPlayNext,
+        onAddToQueue = onAddToQueue,
+        onAddToPlaylist = onAddToPlaylist,
+        onOpenFileLocation = onOpenFileLocation,
+        onProperties = onProperties,
+        onHideFromHome = onHideFromHome,
+        onShare = onShare,
+        onDelete = onDelete
+    )
 }
 
 @Composable

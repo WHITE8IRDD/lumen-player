@@ -48,8 +48,7 @@ import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -58,6 +57,8 @@ import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -109,6 +110,9 @@ import com.lumen.player.core.theme.LumenYellow
 import com.lumen.player.core.theme.LumenYellowDeep
 import com.lumen.player.ui.components.GradientBlob
 import com.lumen.player.ui.navigation.Destinations
+import com.lumen.player.ui.util.FolderThumbnailResolver
+import com.lumen.player.ui.util.FolderThumbnailType
+import com.lumen.player.ui.util.MosaicFetcherInput
 import com.lumen.player.ui.util.VideoThumbnail
 
 private val NAV_TABS = listOf(
@@ -164,7 +168,7 @@ fun HomeScaffold(
     )
 }
 
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @UnstableApi
 @Composable
 fun HomeScreen(
@@ -181,6 +185,9 @@ fun HomeScreen(
     val audio by viewModel.recentAudio.collectAsStateWithLifecycle()
     val refreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
 
+    val homeVideosByFolder = remember(cw, recent) {
+        (cw + recent).groupBy { it.folderPath }
+    }
     var contextMenuItem by remember { mutableStateOf<MediaItem?>(null) }
     var showHideFromHomeDialog by remember { mutableStateOf<MediaItem?>(null) }
     val snackbarHostState = remember { SnackbarHostState() }
@@ -256,6 +263,7 @@ fun HomeScreen(
                     item {
                         HomeFolderRow(
                             folders = folders,
+                            videosByFolder = homeVideosByFolder,
                             onClick = onFolderClick
                         )
                     }
@@ -301,44 +309,85 @@ fun HomeScreen(
         )
 
         contextMenuItem?.let { item ->
-            DropdownMenu(
-                expanded = true,
-                onDismissRequest = { contextMenuItem = null }
+            ModalBottomSheet(
+                onDismissRequest = { contextMenuItem = null },
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                containerColor = MaterialTheme.colorScheme.surface,
+                shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
             ) {
-                DropdownMenuItem(
-                    text = { Text("Play") },
-                    onClick = {
-                        contextMenuItem = null
-                        onItemClick(item)
-                    },
-                    leadingIcon = { Icon(Icons.Rounded.PlayArrow, contentDescription = null) }
-                )
-                DropdownMenuItem(
-                    text = { Text("Hide from this list") },
-                    onClick = {
-                        contextMenuItem = null
-                        viewModel.hideFromContinueWatching(item)
-                    },
-                    leadingIcon = { Icon(Icons.Rounded.VisibilityOff, contentDescription = null) }
-                )
-                DropdownMenuItem(
-                    text = { Text("Hide from Home") },
-                    onClick = {
-                        contextMenuItem = null
-                        showHideFromHomeDialog = item
-                    },
-                    leadingIcon = { Icon(Icons.Rounded.VisibilityOff, contentDescription = null) }
-                )
-                DropdownMenuItem(
-                    text = { Text("Add to playlist") },
-                    onClick = { contextMenuItem = null },
-                    leadingIcon = { Icon(Icons.Rounded.Add, contentDescription = null) }
-                )
-                DropdownMenuItem(
-                    text = { Text("Share") },
-                    onClick = { contextMenuItem = null },
-                    leadingIcon = { Icon(Icons.Rounded.Share, contentDescription = null) }
-                )
+                Column(Modifier.padding(bottom = 24.dp)) {
+                    Text(
+                        item.cleanTitle.ifBlank { item.title },
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                contextMenuItem = null
+                                onItemClick(item)
+                            }
+                            .padding(horizontal = 24.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Rounded.PlayArrow, contentDescription = null, Modifier.size(24.dp))
+                        Spacer(Modifier.width(16.dp))
+                        Text("Play", style = MaterialTheme.typography.bodyLarge)
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                contextMenuItem = null
+                                viewModel.hideFromContinueWatching(item)
+                            }
+                            .padding(horizontal = 24.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Rounded.VisibilityOff, contentDescription = null, Modifier.size(24.dp))
+                        Spacer(Modifier.width(16.dp))
+                        Text("Hide from this list", style = MaterialTheme.typography.bodyLarge)
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                contextMenuItem = null
+                                showHideFromHomeDialog = item
+                            }
+                            .padding(horizontal = 24.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Rounded.VisibilityOff, contentDescription = null, Modifier.size(24.dp))
+                        Spacer(Modifier.width(16.dp))
+                        Text("Hide from Home", style = MaterialTheme.typography.bodyLarge)
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { contextMenuItem = null }
+                            .padding(horizontal = 24.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Rounded.Add, contentDescription = null, Modifier.size(24.dp))
+                        Spacer(Modifier.width(16.dp))
+                        Text("Add to playlist", style = MaterialTheme.typography.bodyLarge)
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { contextMenuItem = null }
+                            .padding(horizontal = 24.dp, vertical = 14.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Icon(Icons.Rounded.Share, contentDescription = null, Modifier.size(24.dp))
+                        Spacer(Modifier.width(16.dp))
+                        Text("Share", style = MaterialTheme.typography.bodyLarge)
+                    }
+                }
             }
         }
     }
@@ -502,6 +551,17 @@ private fun ContinueWatchingCard(item: MediaItem, onClick: () -> Unit, onLongCli
                     Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
+                        .height(70.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f))
+                            )
+                        )
+                )
+                Box(
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
                         .height(3.dp)
                         .background(Color.Black.copy(alpha = 0.35f))
                 ) {
@@ -515,29 +575,23 @@ private fun ContinueWatchingCard(item: MediaItem, onClick: () -> Unit, onLongCli
             }
             Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
                 Text(
-                    item.cleanTitle.ifEmpty { item.title },
+                    text = item.cleanTitle.ifBlank { item.title },
                     style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                if (item.year != null || item.seasonEpisode != null) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (item.year != null) {
-                            Text(
-                                item.year.toString(),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = LumenOnSurfaceDim
-                            )
-                        }
-                        if (item.seasonEpisode != null) {
-                            if (item.year != null) Text(" \u00B7 ", color = LumenOnSurfaceDim)
-                            Text(
-                                item.seasonEpisode!!,
-                                style = MaterialTheme.typography.bodySmall,
-                                color = LumenOnSurfaceDim
-                            )
-                        }
-                    }
+                val sub = buildString {
+                    item.year?.let { append(it) }
+                    if (item.year != null && item.seasonEpisode != null) append(" \u00B7 ")
+                    item.seasonEpisode?.let { append(it) }
+                }
+                if (sub.isNotEmpty()) {
+                    Text(
+                        text = sub,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
                 }
             }
         }
@@ -588,19 +642,61 @@ private fun RecentlyAddedCard(item: MediaItem, onClick: () -> Unit, onLongClick:
                     modifier = Modifier.fillMaxSize(),
                     loading = { ShimmerBox(modifier = Modifier.fillMaxSize()) }
                 )
+                Box(
+                    Modifier
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .height(70.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f))
+                            )
+                        )
+                )
+                if (item.lastPositionMs > 0L && item.durationMs > 0L) {
+                    val progress = (item.lastPositionMs.toFloat() / item.durationMs).coerceIn(0f, 1f)
+                    Box(
+                        Modifier
+                            .align(Alignment.BottomStart)
+                            .fillMaxWidth()
+                            .height(3.dp)
+                            .background(Color.Black.copy(alpha = 0.35f))
+                    ) {
+                        Box(
+                            Modifier
+                                .fillMaxWidth(progress)
+                                .height(3.dp)
+                                .background(MaterialTheme.colorScheme.primary)
+                        )
+                    }
+                }
             }
             Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
                 Text(
-                    item.cleanTitle.ifEmpty { item.title },
+                    text = item.cleanTitle.ifBlank { item.title },
                     style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                Text(
-                    TimeFormatter.format(item.durationMs),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
+                val sub = buildString {
+                    item.year?.let { append(it) }
+                    if (item.year != null && item.seasonEpisode != null) append(" \u00B7 ")
+                    item.seasonEpisode?.let { append(it) }
+                }
+                if (sub.isNotEmpty()) {
+                    Text(
+                        text = sub,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                } else {
+                    Text(
+                        TimeFormatter.format(item.durationMs),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
         }
     }
@@ -609,6 +705,7 @@ private fun RecentlyAddedCard(item: MediaItem, onClick: () -> Unit, onLongClick:
 @Composable
 private fun HomeFolderRow(
     folders: List<Folder>,
+    videosByFolder: Map<String, List<MediaItem>>,
     onClick: (Folder) -> Unit
 ) {
     LazyRow(
@@ -616,14 +713,37 @@ private fun HomeFolderRow(
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         items(folders, key = { it.path }) { folder ->
-            HomeFolderCard(folder = folder, onClick = { onClick(folder) })
+            HomeFolderCard(
+                folder = folder,
+                videos = videosByFolder[folder.path].orEmpty(),
+                onClick = { onClick(folder) }
+            )
         }
     }
 }
 
 @Composable
-private fun HomeFolderCard(folder: Folder, onClick: () -> Unit) {
-    val thumbUri = folder.firstVideoUri
+private fun HomeFolderCard(folder: Folder, videos: List<MediaItem>, onClick: () -> Unit) {
+    val thumbType = remember(folder.path, videos) {
+        FolderThumbnailResolver.resolve(folder, videos)
+    }
+    val model = remember(thumbType) {
+        when (thumbType) {
+            is FolderThumbnailType.TmdbPoster -> thumbType.url
+            is FolderThumbnailType.Mosaic -> MosaicFetcherInput(
+                folderPath = folder.path,
+                videoIds = thumbType.videoIds,
+                uris = thumbType.thumbnailUris
+            )
+            is FolderThumbnailType.Single -> VideoThumbnail(
+                id = folder.firstVideoId ?: 0L,
+                uri = thumbType.videoUri
+            )
+            is FolderThumbnailType.Placeholder -> folder.firstVideoUri?.let {
+                VideoThumbnail(id = folder.firstVideoId ?: 0L, uri = it)
+            }
+        }
+    }
     Card(
         modifier = Modifier
             .width(140.dp)
@@ -642,16 +762,20 @@ private fun HomeFolderCard(folder: Folder, onClick: () -> Unit) {
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
-                if (thumbUri != null) {
+                if (model != null) {
                     SubcomposeAsyncImage(
-                        model = com.lumen.player.ui.util.FolderThumbnail(
-                            folderPath = folder.path,
-                            firstVideoUri = thumbUri
-                        ),
+                        model = model,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize(),
-                        loading = { ShimmerBox(modifier = Modifier.fillMaxSize()) }
+                        loading = { ShimmerBox(modifier = Modifier.fillMaxSize()) },
+                        error = {
+                            Icon(
+                                Icons.Rounded.Folder, contentDescription = null,
+                                modifier = Modifier.size(48.dp),
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
                     )
                 } else {
                     Icon(
