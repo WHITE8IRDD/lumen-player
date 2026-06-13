@@ -847,14 +847,15 @@ private fun AudioTabContent(
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                FilledTonalButton(
-                    onClick = { viewModel.play(items, 0) },
-                    enabled = items.isNotEmpty()
+            if (items.isNotEmpty()) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
+                    FilledTonalButton(
+                        onClick = { viewModel.play(items, 0) },
+                        enabled = items.isNotEmpty()
+                    ) {
                     Icon(Icons.Rounded.GraphicEq, null)
                     Spacer(Modifier.width(8.dp))
                     Text(stringResource(R.string.play_all))
@@ -874,6 +875,7 @@ private fun AudioTabContent(
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+            }
             }
 
             Spacer(Modifier.height(8.dp))
