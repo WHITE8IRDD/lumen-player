@@ -976,9 +976,9 @@ fun Folder.toSingleVideo(parser: MediaTitleParser = MediaTitleParser()): MediaIt
 enum class VideoSort { TITLE, DATE, DURATION, SIZE, RESOLUTION }
 
 fun VideoSort.label(): String = when (this) {
-    VideoSort.TITLE -> "title"
-    VideoSort.DATE -> "date added"
-    VideoSort.DURATION -> "duration"
-    VideoSort.SIZE -> "size"
-    VideoSort.RESOLUTION -> "resolution"
+    VideoSort.TITLE -> "Title"
+    VideoSort.DATE -> "Date added"
+    VideoSort.DURATION -> "Duration"
+    VideoSort.SIZE -> "Size"
+    VideoSort.RESOLUTION -> "Resolution"
 }

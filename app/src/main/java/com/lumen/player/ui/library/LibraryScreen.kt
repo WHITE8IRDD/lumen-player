@@ -367,8 +367,8 @@ private fun VideosTabContent(
             LumenEmptyState(
                 blobColor = LumenAmber,
                 blobMood = Mood.IDLE,
-                title = "no videos yet",
-                subtitle = "add video files to your device to begin",
+                title = "No videos yet",
+                subtitle = "Add video files to your device to begin",
                 accents = { VideoAccents(LumenAmber) }
             )
         }
@@ -446,37 +446,37 @@ private fun VideosTabContent(
                             }
                         } else {
                             DropdownMenuItem(
-                                text = { Text("sort by") },
+                                text = { Text("Sort by") },
                                 onClick = { showSortSubmenu = true }
                             )
                             DropdownMenuItem(
-                                text = { Text(if (isGroupedByFolder) "ungroup folders" else "group by folder") },
+                                text = { Text(if (isGroupedByFolder) "Ungroup folders" else "Group by folder") },
                                 onClick = {
                                     isGroupedByFolder = !isGroupedByFolder
                                     overflowExpanded = false
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text(if (isGridView) "list view" else "grid view") },
+                                text = { Text(if (isGridView) "List view" else "Grid view") },
                                 onClick = {
                                     onToggleViewMode()
                                     overflowExpanded = false
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("select multiple") },
+                                text = { Text("Select multiple") },
                                 onClick = { selectionMode = true; overflowExpanded = false }
                             )
                             DropdownMenuItem(
-                                text = { Text(if (showHiddenItems) "hide hidden items" else "show hidden items") },
+                                text = { Text(if (showHiddenItems) "Hide hidden items" else "Show hidden items") },
                                 onClick = { showHiddenItems = !showHiddenItems; overflowExpanded = false }
                             )
                             DropdownMenuItem(
-                                text = { Text("rescan library") },
+                                text = { Text("Rescan library") },
                                 onClick = { viewModel.rescan(); overflowExpanded = false }
                             )
                             DropdownMenuItem(
-                                text = { Text("settings") },
+                                text = { Text("Settings") },
                                 onClick = { overflowExpanded = false }
                             )
                         }
@@ -808,9 +808,9 @@ message = "hidden from home",
                 newPlaylistName = ""
                 showCreatePlaylistDialog = false
             },
-            title = "new playlist",
+            title = "New playlist",
             label = "playlist name",
-            confirmLabel = "create"
+            confirmLabel = "Create"
         )
     }
 
@@ -954,8 +954,8 @@ private fun FoldersTabContent(
             modifier = Modifier.navigationBarsPadding(),
             blobColor = LumenAmber,
             blobMood = Mood.SLEEPING,
-            title = "no folders yet",
-            subtitle = "videos are grouped by their folder on your device",
+            title = "No folders yet",
+            subtitle = "Videos are grouped by their folder on your device",
             accents = { FolderAccents(LumenAmber) }
         )
         return
@@ -1090,8 +1090,8 @@ private fun StreamsTabContent(
                     modifier = Modifier.navigationBarsPadding(),
                     blobColor = LumenOcean,
                     blobMood = Mood.SLEEPING,
-                    title = "no streams yet",
-                    subtitle = "add a network stream URL or import an M3U playlist",
+                    title = "No streams yet",
+                    subtitle = "Add a network stream URL or import an M3U playlist",
                     accents = { StreamAccents(LumenOcean) },
                     actions = {
                         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -1104,7 +1104,7 @@ private fun StreamsTabContent(
                             ) {
                                 Icon(Icons.Rounded.Folder, null, Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("import M3U")
+                                Text("Import M3U")
                             }
                             FilledTonalButton(
                                 onClick = { showAddDialog = true },
@@ -1112,7 +1112,7 @@ private fun StreamsTabContent(
                             ) {
                                 Icon(Icons.Rounded.Add, null, Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("add URL")
+                                Text("Add URL")
                             }
                         }
                     }
@@ -1130,7 +1130,7 @@ private fun StreamsTabContent(
                             value = query,
                             onValueChange = viewModel::setQuery,
                             modifier = Modifier.weight(1f),
-                            placeholder = { Text("search streams...") },
+                            placeholder = { Text("Search streams...") },
                             leadingIcon = { Icon(Icons.Rounded.Search, null) },
                             trailingIcon = {
                                 if (query.isNotEmpty()) {
@@ -1373,7 +1373,7 @@ private fun StreamsTabContent(
                     Column(Modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                         ShimmerBox(Modifier.size(40.dp), shape = LumenSquircle(12.dp))
                         Spacer(Modifier.height(16.dp))
-                        Text("importing channels\u2026", style = MaterialTheme.typography.bodyLarge)
+                        Text("Importing channels\u2026", style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }
@@ -1407,7 +1407,7 @@ private fun StreamsTabContent(
                 tonalElevation = 4.dp, shadowElevation = 8.dp
             ) {
                 Column(Modifier.padding(24.dp)) {
-                    Text("add network stream", style = MaterialTheme.typography.titleLarge)
+                    Text("Add network stream", style = MaterialTheme.typography.titleLarge)
                     Spacer(Modifier.height(16.dp))
                     OutlinedTextField(value = url, onValueChange = { url = it },
                         label = { Text("url") }, singleLine = true,
@@ -1419,7 +1419,7 @@ private fun StreamsTabContent(
                     Spacer(Modifier.height(24.dp))
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End) {
-                        TextButton(onClick = { showAddDialog = false }) { Text("cancel") }
+                        TextButton(onClick = { showAddDialog = false }) { Text("Cancel") }
                         Spacer(Modifier.width(8.dp))
                         FilledTonalButton(
                             onClick = {
@@ -1430,7 +1430,7 @@ private fun StreamsTabContent(
                             },
                             shape = LumenSquircle(12.dp),
                             enabled = url.isNotBlank()
-                        ) { Text("add & play") }
+                        ) { Text("Add & play") }
                     }
                 }
             }
@@ -1453,7 +1453,7 @@ private fun PlaylistsTabContent(
                     modifier = Modifier.navigationBarsPadding(),
                     blobColor = LumenSage,
                     blobMood = Mood.IDLE,
-                    title = "no playlists yet",
+                    title = "No playlists yet",
                     accents = { PlaylistAccents(LumenSage) },
                     actions = {
                         FilledTonalButton(
@@ -1462,7 +1462,7 @@ private fun PlaylistsTabContent(
                         ) {
                             Icon(Icons.Rounded.Add, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("create your first playlist")
+                            Text("Create your first playlist")
                         }
                     }
                 )
@@ -1520,9 +1520,9 @@ private fun PlaylistsTabContent(
                 newPlaylistName = ""
                 showCreateDialog = false
             },
-            title = "new playlist",
+            title = "New playlist",
             label = "playlist name",
-            confirmLabel = "create"
+            confirmLabel = "Create"
         )
     }
 }
@@ -1574,13 +1574,13 @@ private fun EmptyLibraryPlaceholder(onRescan: () -> Unit, modifier: Modifier = M
         modifier = modifier,
         blobColor = LumenLavender,
         blobMood = Mood.HAPPY,
-        title = "no audio on this device",
+        title = "No audio on this device",
         accents = { AudioAccents(LumenLavender) },
         actions = {
             FilledTonalButton(onClick = onRescan, shape = LumenSquircle(12.dp)) {
                 Icon(Icons.Rounded.Refresh, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("scan again")
+                Text("Scan again")
             }
         }
     )

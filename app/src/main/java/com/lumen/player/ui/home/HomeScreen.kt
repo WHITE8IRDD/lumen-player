@@ -213,9 +213,9 @@ fun HomeScreen(
                     }
                 }
             },
-            title = "hide from home?",
-            body = "${item.cleanTitle.ifEmpty { item.title }} will be hidden from home carousels. it will still be available in your library.",
-            confirmLabel = "hide",
+            title = "Hide from home?",
+            body = "${item.cleanTitle.ifEmpty { item.title }} will be hidden from home carousels. It will still be available in your library.",
+            confirmLabel = "Hide",
             variant = DialogVariant.NEUTRAL,
             icon = Icons.Rounded.VisibilityOff
         )
@@ -244,7 +244,7 @@ fun HomeScreen(
                 item { HomeSectionRowSkeleton() }
             } else if (!allEmpty) {
                 if (cw.isNotEmpty()) {
-                    item { SectionHeader("continue watching", color = LumenAmber, onSeeAll = { onSeeAll("continue_watching") }) }
+                    item { SectionHeader("Continue watching", color = LumenAmber, onSeeAll = { onSeeAll("continue_watching") }) }
                     item {
                         ContinueWatchingRow(
                             items = cw,
@@ -255,7 +255,7 @@ fun HomeScreen(
                 }
 
                 if (recent.isNotEmpty()) {
-                    item { SectionHeader("recently added", color = LumenAmber, onSeeAll = { onSeeAll("recently_added") }) }
+                    item { SectionHeader("Recently added", color = LumenAmber, onSeeAll = { onSeeAll("recently_added") }) }
                     item {
                         RecentlyAddedRow(
                             items = recent,
@@ -266,7 +266,7 @@ fun HomeScreen(
                 }
 
                 if (folders.isNotEmpty()) {
-                    item { SectionHeader("your folders", color = LumenAmber, onSeeAll = { onSeeAll("folders") }) }
+                    item { SectionHeader("Your folders", color = LumenAmber, onSeeAll = { onSeeAll("folders") }) }
                     item {
                         HomeFolderRow(
                             folders = folders,
@@ -277,7 +277,7 @@ fun HomeScreen(
                 }
 
                 if (audio.isNotEmpty()) {
-                    item { SectionHeader("recent audio", color = LumenAmber, onSeeAll = { onSeeAll("recent_audio") }) }
+                    item { SectionHeader("Recent audio", color = LumenAmber, onSeeAll = { onSeeAll("recent_audio") }) }
                     item {
                         RecentAudioColumn(
                             items = audio,
@@ -401,31 +401,31 @@ fun HomeScreen(
 }
 
 private val morningSubtitles = listOf(
-    "what shall we start the day with?",
-    "ready for something good?",
-    "set the mood for the day",
-    "morning pick, your choice"
+    "What shall we start the day with?",
+    "Ready for something good?",
+    "Set the mood for the day",
+    "Morning pick, your choice"
 )
 
 private val afternoonSubtitles = listOf(
-    "afternoon break time?",
-    "what are you in the mood for?",
-    "take a moment, watch something",
-    "midday escape?"
+    "Afternoon break time?",
+    "What are you in the mood for?",
+    "Take a moment, watch something",
+    "Midday escape?"
 )
 
 private val eveningSubtitles = listOf(
-    "what are you in the mood for?",
-    "wind down with something good",
-    "evening picks await",
-    "let's find something cozy"
+    "What are you in the mood for?",
+    "Wind down with something good",
+    "Evening picks await",
+    "Let's find something cozy"
 )
 
 private val nightSubtitles = listOf(
-    "still up? let's find something",
-    "late night picks",
-    "one more episode?",
-    "night owl mode activated"
+    "Still up? Let's find something",
+    "Late night picks",
+    "One more episode?",
+    "Night owl mode activated"
 )
 
 private enum class TimeSlot { MORNING, AFTERNOON, EVENING, NIGHT }
@@ -441,10 +441,10 @@ private fun getCurrentTimeSlot(): TimeSlot {
 }
 
 private fun getGreetingTitle(slot: TimeSlot): String = when (slot) {
-    TimeSlot.MORNING -> "good morning"
-    TimeSlot.AFTERNOON -> "good afternoon"
-    TimeSlot.EVENING -> "good evening"
-    TimeSlot.NIGHT -> "good night"
+    TimeSlot.MORNING -> "Good morning"
+    TimeSlot.AFTERNOON -> "Good afternoon"
+    TimeSlot.EVENING -> "Good evening"
+    TimeSlot.NIGHT -> "Good night"
 }
 
 private fun getSubtitlePool(slot: TimeSlot): List<String> = when (slot) {
@@ -520,7 +520,7 @@ private fun SearchBar(onClick: () -> Unit) {
             )
             Spacer(Modifier.width(12.dp))
             Text(
-                "search your media...",
+                "Search your media...",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -543,7 +543,7 @@ private fun SectionHeader(title: String, color: Color, onSeeAll: () -> Unit) {
             modifier = Modifier.weight(1f)
         )
         TextButton(onClick = onSeeAll) {
-            Text("see all", color = color, style = MaterialTheme.typography.labelLarge)
+            Text("See all", color = color, style = MaterialTheme.typography.labelLarge)
         }
     }
 }
@@ -958,8 +958,8 @@ private fun HomeEmptyState(refreshing: Boolean, onRefresh: () -> Unit) {
     LumenEmptyState(
         blobColor = LumenAmber,
         blobMood = Mood.CURIOUS,
-        title = "welcome to Lumen",
-        subtitle = "add media to your device and tap refresh",
+        title = "Welcome to Lumen",
+        subtitle = "Add media to your device and tap refresh",
         accents = { HomeAccents(LumenAmber) },
         actions = {
             if (refreshing) {
@@ -971,7 +971,7 @@ private fun HomeEmptyState(refreshing: Boolean, onRefresh: () -> Unit) {
                 androidx.compose.material3.FilledTonalButton(onClick = onRefresh) {
                     Icon(Icons.Rounded.Search, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("refresh")
+                    Text("Refresh")
                 }
             }
         }

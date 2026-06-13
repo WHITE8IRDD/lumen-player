@@ -116,15 +116,15 @@ fun SettingsScreen(
             .padding(top = 40.dp, bottom = 8.dp)
     ) {
         Text(
-            "settings",
+            "Settings",
             style = MaterialTheme.typography.headlineLarge,
             modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp)
         )
 
         // ── PLAYBACK GROUP ──
         SettingsSectionHeader(
-            title = "playback",
-            subtitle = "resume, focus, gapless",
+            title =             "Playback",
+            subtitle = "Resume, focus, gapless",
             expanded = s.sectionPlayback,
             onToggle = { viewModel.setSectionExpanded("playback", !s.sectionPlayback) }
         )
@@ -143,105 +143,105 @@ fun SettingsScreen(
         SettingsDivider()
 
         SettingsSectionHeader(
-            title = "video",
-            subtitle = "hardware acceleration, aspect ratio",
+            title =             "Video",
+            subtitle = "Hardware acceleration, aspect ratio",
             expanded = s.sectionVideo,
             onToggle = { viewModel.setSectionExpanded("video", !s.sectionVideo) }
         )
         AnimatedVisibility(visible = s.sectionVideo) {
             Column {
                 SettingsDivider()
-                SettingsSwitchRow(title = "hardware acceleration", summary = "prefer hardware decoders for video playback", checked = s.hardwareAcceleration, onToggle = viewModel::setHardwareAcceleration)
+                SettingsSwitchRow(title = "Hardware acceleration", summary = "Prefer hardware decoders for video playback", checked = s.hardwareAcceleration, onToggle = viewModel::setHardwareAcceleration)
                 SettingsDivider()
-                SettingsClickableRow(title = "default aspect ratio", subtitle = s.aspectRatio.replace("_", ":").replace("R", ""), onClick = { showAspectRatioPicker = true })
+                SettingsClickableRow(title = "Default aspect ratio", subtitle = s.aspectRatio.replace("_", ":").replace("R", ""), onClick = { showAspectRatioPicker = true })
                 SettingsDivider()
-                SettingsClickableRow(title = "brightness mode", subtitle = s.brightnessMode.lowercase().replaceFirstChar { it.uppercase() }, onClick = { showBrightnessPicker = true })
+                SettingsClickableRow(title = "Brightness mode", subtitle = s.brightnessMode.lowercase().replaceFirstChar { it.uppercase() }, onClick = { showBrightnessPicker = true })
             }
         }
         SettingsDivider()
 
         SettingsSectionHeader(
-            title = "audio",
-            subtitle = "equalizer, replay gain",
+            title =             "Audio",
+            subtitle = "Equalizer, replay gain",
             expanded = s.sectionAudio,
             onToggle = { viewModel.setSectionExpanded("audio", !s.sectionAudio) }
         )
         AnimatedVisibility(visible = s.sectionAudio) {
             Column {
                 SettingsDivider()
-                SettingsClickableRow(title = stringResource(R.string.equalizer), subtitle = "eq, bass, virtualizer, loudness", onClick = onOpenEqualizer)
+                SettingsClickableRow(title = stringResource(R.string.equalizer), subtitle = "EQ, bass, virtualizer, loudness", onClick = onOpenEqualizer)
                 SettingsDivider()
-                SettingsSwitchRow(title = "replay gain", summary = "normalize volume across tracks", checked = s.replayGain, onToggle = viewModel::setReplayGain)
+                SettingsSwitchRow(title = "Replay gain", summary = "Normalize volume across tracks", checked = s.replayGain, onToggle = viewModel::setReplayGain)
             }
         }
         SettingsDivider()
 
         SettingsSectionHeader(
-            title = "subtitles",
-            subtitle = "text size, color, language, delay",
+            title =             "Subtitles",
+            subtitle = "Text size, color, language, delay",
             expanded = s.sectionSubtitles,
             onToggle = { viewModel.setSectionExpanded("subtitles", !s.sectionSubtitles) }
         )
         AnimatedVisibility(visible = s.sectionSubtitles) {
             Column {
                 SettingsDivider()
-                SettingsClickableRow(title = "default text size", subtitle = "${s.subtitleTextSize.toInt()}sp", onClick = { showSubtitleTextSizeDialog = true })
+                SettingsClickableRow(title = "Default text size", subtitle = "${s.subtitleTextSize.toInt()}sp", onClick = { showSubtitleTextSizeDialog = true })
                 SettingsDivider()
-                SettingsClickableRow(title = "default text color", subtitle = s.subtitleColor.lowercase().replaceFirstChar { it.uppercase() }, onClick = { showSubtitleColorPicker = true })
+                SettingsClickableRow(title = "Default text color", subtitle = s.subtitleColor.lowercase().replaceFirstChar { it.uppercase() }, onClick = { showSubtitleColorPicker = true })
                 SettingsDivider()
-                SettingsClickableRow(title = "default delay", subtitle = "${s.subtitleDelayUs / 1000}ms", onClick = { showSubtitleDelayDialog = true })
+                SettingsClickableRow(title = "Default delay", subtitle = "${s.subtitleDelayUs / 1000}ms", onClick = { showSubtitleDelayDialog = true })
                 SettingsDivider()
-                SettingsClickableRow(title = "default language", subtitle = s.subtitleLanguage, onClick = { showLanguagePicker = true })
+                SettingsClickableRow(title = "Default language", subtitle = s.subtitleLanguage, onClick = { showLanguagePicker = true })
                 SettingsDivider()
-                SettingsClickableRow(title = "opensubtitles api key", subtitle = if (s.opensubtitlesApiKey.isNotEmpty()) "********" else "not set", onClick = { showOpenSubsKeyDialog = true })
+                SettingsClickableRow(title = "Opensubtitles API key", subtitle = if (s.opensubtitlesApiKey.isNotEmpty()) "********" else "Not set", onClick = { showOpenSubsKeyDialog = true })
             }
         }
         SettingsDivider()
 
         // ── LIBRARY GROUP ──
         SettingsSectionHeader(
-            title = "library",
-            subtitle = "excluded folders, auto-scan",
+            title =             "Library",
+            subtitle = "Excluded folders, auto-scan",
             expanded = s.sectionLibrary,
             onToggle = { viewModel.setSectionExpanded("library", !s.sectionLibrary) }
         )
         AnimatedVisibility(visible = s.sectionLibrary) {
             Column {
                 SettingsDivider()
-                SettingsClickableRow(title = "excluded folders", subtitle = "manage hidden folders", onClick = onOpenHiddenItems)
+                SettingsClickableRow(title = "Excluded folders", subtitle = "Manage hidden folders", onClick = onOpenHiddenItems)
                 SettingsDivider()
-                SettingsSwitchRow(title = "auto-scan on startup", summary = null, checked = s.autoScanOnStartup, onToggle = viewModel::setAutoScanOnStartup)
+                SettingsSwitchRow(title = "Auto-scan on startup", summary = null, checked = s.autoScanOnStartup, onToggle = viewModel::setAutoScanOnStartup)
                 SettingsDivider()
                 SettingsSwitchRow(title = stringResource(R.string.show_videos), summary = null, checked = s.showVideos, onToggle = viewModel::setShowVideos)
                 SettingsDivider()
-                SettingsSwitchRow(title = "show audio", summary = null, checked = s.showAudio, onToggle = viewModel::setShowAudio)
+                SettingsSwitchRow(title = "Show audio", summary = null, checked = s.showAudio, onToggle = viewModel::setShowAudio)
             }
         }
         SettingsDivider()
 
         SettingsSectionHeader(
-            title = "network",
-            subtitle = "streams, TMDB metadata",
+            title =             "Network",
+            subtitle = "Streams, TMDB metadata",
             expanded = s.sectionNetwork,
             onToggle = { viewModel.setSectionExpanded("network", !s.sectionNetwork) }
         )
         AnimatedVisibility(visible = s.sectionNetwork) {
             Column {
                 SettingsDivider()
-                SettingsClickableRow(title = "open network stream", subtitle = "enter a URL to stream", onClick = { })
+                SettingsClickableRow(title = "Open network stream", subtitle = "Enter a URL to stream", onClick = { })
                 SettingsDivider()
-                SettingsSwitchRow(title = "TMDB metadata", summary = "download posters and descriptions from TMDB", checked = s.fetchOnlineMetadata, onToggle = viewModel::setFetchOnlineMetadata)
+                SettingsSwitchRow(title = "TMDB metadata", summary = "Download posters and descriptions from TMDB", checked = s.fetchOnlineMetadata, onToggle = viewModel::setFetchOnlineMetadata)
                 if (s.fetchOnlineMetadata) {
                     if (!viewModel.isTmdbApiAvailable) {
                         Text(
-                            "TMDB api key not set. metadata will not be fetched.",
+                            "TMDB API key not set. Metadata will not be fetched.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error,
                             modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp)
                         )
                     }
                     SettingsDivider()
-                    SettingsSwitchRow(title = "wi-fi only", summary = "only download metadata on wi-fi", checked = s.metadataWifiOnly, onToggle = viewModel::setMetadataWifiOnly)
+                    SettingsSwitchRow(title = "Wi-Fi only", summary = "Only download metadata on Wi-Fi", checked = s.metadataWifiOnly, onToggle = viewModel::setMetadataWifiOnly)
                 }
             }
         }
@@ -251,8 +251,8 @@ fun SettingsScreen(
         Spacer(Modifier.height(32.dp))
 
         SettingsSectionHeader(
-            title = "appearance",
-            subtitle = "theme, colors, typography",
+            title =             "Appearance",
+            subtitle = "Theme, colors, typography",
             expanded = s.sectionAppearance,
             onToggle = { viewModel.setSectionExpanded("appearance", !s.sectionAppearance) }
         )
@@ -261,7 +261,7 @@ fun SettingsScreen(
                 SettingsDivider()
                 SettingsSwitchRow(title = stringResource(R.string.dynamic_color), summary = stringResource(R.string.dynamic_color_summary), checked = s.dynamicColor, onToggle = viewModel::setDynamicColor)
                 SettingsDivider()
-                SettingsClickableRow(title = "font size", subtitle = s.fontSize.lowercase().replaceFirstChar { it.uppercase() }, onClick = { showFontSizePicker = true })
+                SettingsClickableRow(title = "Font size", subtitle = s.fontSize.lowercase().replaceFirstChar { it.uppercase() }, onClick = { showFontSizePicker = true })
                 SettingsDivider()
                 AccentColorRow(hex = s.accentColorHex, onClick = { showAccentColorPicker = true })
                 SettingsDivider()
@@ -281,26 +281,26 @@ fun SettingsScreen(
         Spacer(Modifier.height(32.dp))
 
         SettingsSectionHeader(
-            title = "advanced",
-            subtitle = "cache, reset all settings",
+            title =             "Advanced",
+            subtitle = "Cache, reset all settings",
             expanded = s.sectionAdvanced,
             onToggle = { viewModel.setSectionExpanded("advanced", !s.sectionAdvanced) }
         )
         AnimatedVisibility(visible = s.sectionAdvanced) {
             Column {
                 SettingsDivider()
-                SettingsClickableRow(title = "clear metadata cache", subtitle = "remove cached poster URLs", onClick = { showClearCacheDialog = true })
+                SettingsClickableRow(title = "Clear metadata cache", subtitle = "Remove cached poster URLs", onClick = { showClearCacheDialog = true })
                 SettingsDivider()
-                SettingsClickableRow(title = "reset all settings", subtitle = "restore defaults", onClick = { showResetSettingsDialog = true })
+                SettingsClickableRow(title = "Reset all settings", subtitle = "Restore defaults", onClick = { showResetSettingsDialog = true })
                 SettingsDivider()
-                SettingsClickableRow(title = "reset onboarding", subtitle = "show welcome screen on next launch", onClick = { showResetOnboardingDialog = true })
+                SettingsClickableRow(title = "Reset onboarding", subtitle = "Show welcome screen on next launch", onClick = { showResetOnboardingDialog = true })
             }
         }
         SettingsDivider()
 
         SettingsSectionHeader(
-            title = "about",
-            subtitle = "version, licenses, source code",
+            title =             "About",
+            subtitle = "Version, licenses, source code",
             expanded = s.sectionAbout,
             onToggle = { viewModel.setSectionExpanded("about", !s.sectionAbout) }
         )
@@ -325,17 +325,17 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        "a premium local-first media player",
+                        "A premium local-first media player",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
                     )
                 }
                 SettingsDivider()
-                AboutRow(title = "version", value = "${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})")
+                AboutRow(title = "Version", value = "${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})")
                 SettingsDivider()
                 val ctx = LocalContext.current
-                SettingsClickableRow(title = "open source licenses", subtitle = "view third-party licenses", onClick = {
+                SettingsClickableRow(title = "Open source licenses", subtitle = "View third-party licenses", onClick = {
                     try {
                         val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                             data = Uri.fromParts("package", ctx.packageName, null)
@@ -344,14 +344,14 @@ fun SettingsScreen(
                     } catch (_: Exception) { }
                 })
                 SettingsDivider()
-                SettingsClickableRow(title = "GitHub", subtitle = "view source code", onClick = {
+                SettingsClickableRow(title = "GitHub", subtitle = "View source code", onClick = {
                     try {
                         ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/anomalco/lumen")))
                     } catch (_: Exception) { }
                 }, chevronIcon = Icons.AutoMirrored.Rounded.OpenInNew)
                 if (BuildConfig.DEBUG) {
                     SettingsDivider()
-                    SettingsClickableRow(title = "LumenBlob Debug", subtitle = "preview animated blob moods", onClick = onDebugBlob)
+                    SettingsClickableRow(title = "LumenBlob Debug", subtitle = "Preview animated blob moods", onClick = onDebugBlob)
                 }
             }
         }
@@ -360,7 +360,7 @@ fun SettingsScreen(
     if (showFontSizePicker) {
         LumenPickerDialog(
             onDismiss = { showFontSizePicker = false },
-            title = "font size",
+            title = "Font size",
             options = listOf("SMALL", "DEFAULT", "LARGE"),
             selectedValue = s.fontSize,
             optionLabel = { it.lowercase() },
@@ -380,7 +380,7 @@ fun SettingsScreen(
     if (showAspectRatioPicker) {
         LumenPickerDialog(
             onDismiss = { showAspectRatioPicker = false },
-            title = "default aspect ratio",
+            title = "Default aspect ratio",
             options = listOf("AUTO", "R16_9", "R4_3", "STRETCH"),
             selectedValue = s.aspectRatio,
             optionLabel = { it.replace("_", ":").replace("R", "").lowercase() },
@@ -390,7 +390,7 @@ fun SettingsScreen(
     if (showBrightnessPicker) {
         LumenPickerDialog(
             onDismiss = { showBrightnessPicker = false },
-            title = "brightness mode",
+            title = "Brightness mode",
             options = listOf("SYSTEM", "MANUAL", "AUTO"),
             selectedValue = s.brightnessMode,
             optionLabel = { it.lowercase() },
@@ -400,7 +400,7 @@ fun SettingsScreen(
     if (showSubtitleColorPicker) {
         LumenPickerDialog(
             onDismiss = { showSubtitleColorPicker = false },
-            title = "subtitle color",
+            title = "Subtitle color",
             options = listOf("WHITE", "YELLOW", "CYAN", "PINK"),
             selectedValue = s.subtitleColor,
             optionLabel = { it.lowercase() },
@@ -411,7 +411,7 @@ fun SettingsScreen(
         val languages = listOf("English", "Spanish", "French", "German", "Italian", "Portuguese", "Russian", "Japanese", "Korean", "Chinese", "Arabic", "Hindi", "Turkish")
         LumenPickerDialog(
             onDismiss = { showLanguagePicker = false },
-            title = "subtitle language",
+            title = "Subtitle language",
             options = languages,
             selectedValue = s.subtitleLanguage,
             optionLabel = { it },
@@ -436,34 +436,34 @@ fun SettingsScreen(
         LumenInputDialog(
             onDismiss = { showOpenSubsKeyDialog = false },
             onConfirm = { viewModel.setOpensubtitlesApiKey(it); showOpenSubsKeyDialog = false },
-            title = "opensubtitles api key",
+            title = "Opensubtitles API key",
             initialValue = s.opensubtitlesApiKey,
             label = "api key"
         )
     }
     if (showClearCacheDialog) {
         LumenConfirmationDialog(
-            title = "clear metadata cache?",
-            body = "this will remove all cached poster URLs. they will be re-fetched from TMDB on the next library scan.",
-            confirmLabel = "clear",
+            title = "Clear metadata cache?",
+            body = "This will remove all cached poster URLs. They will be re-fetched from TMDB on the next library scan.",
+            confirmLabel = "Clear",
             onConfirm = { viewModel.clearMetadataCache(); showClearCacheDialog = false },
             onDismiss = { showClearCacheDialog = false }
         )
     }
     if (showResetSettingsDialog) {
         LumenConfirmationDialog(
-            title = "reset all settings?",
-            body = "all preferences will be restored to their default values. media data will not be affected.",
-            confirmLabel = "reset",
+            title = "Reset all settings?",
+            body = "All preferences will be restored to their default values. Media data will not be affected.",
+            confirmLabel = "Reset",
             onConfirm = { viewModel.resetAllSettings(); showResetSettingsDialog = false },
             onDismiss = { showResetSettingsDialog = false }
         )
     }
     if (showResetOnboardingDialog) {
         LumenConfirmationDialog(
-            title = "reset onboarding?",
-            body = "the welcome screen will appear on the next launch.",
-            confirmLabel = "reset",
+            title = "Reset onboarding?",
+            body = "The welcome screen will appear on the next launch.",
+            confirmLabel = "Reset",
             onConfirm = { viewModel.resetOnboarding(); showResetOnboardingDialog = false },
             onDismiss = { showResetOnboardingDialog = false }
         )
@@ -479,7 +479,7 @@ private fun SubtitleTextSizeSlider(
     var size by remember { mutableStateOf(currentSize) }
     LumenPickerDialog(
         onDismiss = onDismiss,
-        title = "subtitle text size",
+        title = "Subtitle text size",
         options = listOf(12f, 14f, 16f, 18f, 20f, 24f, 28f, 32f, 36f),
         selectedValue = size,
         optionLabel = { "${it.toInt()}sp" },
@@ -496,7 +496,7 @@ private fun SubtitleDelaySlider(
     var delayMs by remember { mutableStateOf(currentDelayUs / 1000) }
     LumenPickerDialog(
         onDismiss = onDismiss,
-        title = "subtitle delay",
+        title = "Subtitle delay",
         options = listOf(-5000L, -3000L, -1000L, 0L, 1000L, 3000L, 5000L),
         selectedValue = delayMs,
         optionLabel = { "${it}ms" },
@@ -542,7 +542,7 @@ private fun SettingsSectionHeader(
         }
         Icon(
             if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
-            contentDescription = if (expanded) "Collapse" else "Expand",
+            contentDescription = if (expanded) "collapse" else "expand",
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(20.dp)
         )
@@ -742,7 +742,7 @@ private fun AccentColorPickerDialog(
             shadowElevation = 8.dp
         ) {
             Column(Modifier.padding(24.dp)) {
-                Text("accent color", style = MaterialTheme.typography.titleLarge)
+                Text("Accent color", style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.height(16.dp))
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(4),
@@ -779,7 +779,7 @@ private fun AccentColorPickerDialog(
                 }
                 Spacer(Modifier.height(12.dp))
                 TextButton(onClick = { showCustom = !showCustom }) {
-                    Text(if (showCustom) "hide custom" else "custom hex color")
+                    Text(if (showCustom) "Hide custom" else "Custom hex color")
                 }
                 if (showCustom) {
                     Spacer(Modifier.height(8.dp))
@@ -799,7 +799,7 @@ private fun AccentColorPickerDialog(
                             onClick = { onPick(customHex) },
                             shape = LumenSquircle(12.dp)
                         ) {
-                            Text("apply")
+                            Text("Apply")
                         }
                     }
                 }

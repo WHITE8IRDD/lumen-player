@@ -211,7 +211,7 @@ fun FolderDetailScreen(
                 LumenEmptyState(
                     blobColor = LumenOcean,
                     blobMood = Mood.SLEEPING,
-                    title = "no media in this folder",
+                    title = "No media in this folder",
                     accents = { FolderDetailAccents(LumenOcean) }
                 )
             } else if (isGridView) {
@@ -234,9 +234,9 @@ fun FolderDetailScreen(
 }
 
 private fun VideoSort.label(): String = when (this) {
-    VideoSort.TITLE -> "title"
-    VideoSort.DATE -> "date added"
-    VideoSort.DURATION -> "duration"
-    VideoSort.SIZE -> "size"
-    VideoSort.RESOLUTION -> "resolution"
+    VideoSort.TITLE -> "Title"
+    VideoSort.DATE -> "Date added"
+    VideoSort.DURATION -> "Duration"
+    VideoSort.SIZE -> "Size"
+    VideoSort.RESOLUTION -> "Resolution"
 }

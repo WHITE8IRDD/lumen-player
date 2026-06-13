@@ -70,7 +70,7 @@ fun SettingsHiddenItemsScreen(
                 viewModel.restoreAll()
             },
             title = "Restore all items?",
-            body = "This will make all hidden items visible again on the Home screen.",
+            body = "This will make all hidden items visible again on the home screen.",
             confirmLabel = "Restore all",
             variant = DialogVariant.NEUTRAL
         )
@@ -80,11 +80,11 @@ fun SettingsHiddenItemsScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text("Hidden from Home", fontWeight = FontWeight.SemiBold)
+                    Text("Hidden from home", fontWeight = FontWeight.SemiBold)
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.Rounded.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.Rounded.ArrowBack, contentDescription = "back")
                     }
                 }
             )

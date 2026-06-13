@@ -89,7 +89,7 @@ fun OnboardingScreen(
                     TextButton(onClick = {
                         scope.launch { pagerState.animateScrollToPage(2) }
                     }) {
-                        Text("skip", color = Color.White.copy(alpha = 0.5f))
+                        Text("Skip", color = Color.White.copy(alpha = 0.5f))
                     }
                 }
             }
@@ -147,14 +147,14 @@ private fun WelcomeSlide(onNext: () -> Unit) {
         LumenBlob(modifier = Modifier.size(200.dp), color = LumenAmber, mood = Mood.IDLE)
         Spacer(Modifier.height(48.dp))
         Text(
-            "welcome to Lumen",
+            "Welcome to Lumen",
             style = MaterialTheme.typography.displayLarge,
             textAlign = TextAlign.Center,
             color = Color.White
         )
         Spacer(Modifier.height(16.dp))
         Text(
-            "your local media, beautifully.",
+            "Your local media, beautifully.",
             style = MaterialTheme.typography.bodyLarge,
             color = Color.White.copy(alpha = 0.6f),
             textAlign = TextAlign.Center
@@ -178,7 +178,7 @@ private fun WelcomeSlide(onNext: () -> Unit) {
                 contentColor = Color.Black
             )
         ) {
-            Text("get started", style = MaterialTheme.typography.labelLarge)
+            Text("Get started", style = MaterialTheme.typography.labelLarge)
         }
     }
 }
@@ -193,7 +193,7 @@ private fun PermissionsSlide(onGrant: () -> Unit) {
         LumenBlob(modifier = Modifier.size(200.dp), color = LumenLavender, mood = Mood.CURIOUS)
         Spacer(Modifier.height(48.dp))
         Text(
-            "grant media access",
+            "Grant media access",
             style = MaterialTheme.typography.displayLarge,
             textAlign = TextAlign.Center,
             color = Color.White
@@ -225,7 +225,7 @@ private fun PermissionsSlide(onGrant: () -> Unit) {
                 contentColor = Color.Black
             )
         ) {
-            Text("grant permissions", style = MaterialTheme.typography.labelLarge)
+            Text("Grant permissions", style = MaterialTheme.typography.labelLarge)
         }
     }
 }
@@ -248,7 +248,7 @@ private fun SetupSlide(
         LumenBlob(modifier = Modifier.size(200.dp), color = LumenAmber, mood = Mood.HAPPY)
         Spacer(Modifier.height(48.dp))
         Text(
-            "customize your experience",
+            "Customize your experience",
             style = MaterialTheme.typography.displayMedium,
             textAlign = TextAlign.Center,
             color = Color.White,
@@ -256,20 +256,20 @@ private fun SetupSlide(
         )
         Spacer(Modifier.height(40.dp))
         ToggleRow(
-            title = "dynamic color",
-            subtitle = "match your wallpaper colors (android 12+)",
+            title = "Dynamic color",
+            subtitle = "Match your wallpaper colors (Android 12+)",
             checked = dynamicColor,
             onToggle = onDynamicColorChange
         )
         ToggleRow(
-            title = "online metadata",
-            subtitle = "fetch movie posters from TMDB",
+            title = "Online metadata",
+            subtitle = "Fetch movie posters from TMDB",
             checked = tmdbEnabled,
             onToggle = onTmdbChange
         )
         ToggleRow(
-            title = "hardware acceleration",
-            subtitle = "use hardware video decoding",
+            title = "Hardware acceleration",
+            subtitle = "Use hardware video decoding",
             checked = hwAccel,
             onToggle = onHwAccelChange
         )
@@ -292,7 +292,7 @@ private fun SetupSlide(
                 contentColor = Color.Black
             )
         ) {
-            Text("done", style = MaterialTheme.typography.labelLarge)
+            Text("Done", style = MaterialTheme.typography.labelLarge)
         }
     }
 }
