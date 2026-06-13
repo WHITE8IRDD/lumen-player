@@ -113,6 +113,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import coil.compose.AsyncImage
+import coil.compose.SubcomposeAsyncImage
+import coil.compose.SubcomposeAsyncImageContent
 import com.lumen.player.R
 import com.lumen.player.domain.model.MediaItem
 import com.lumen.player.domain.model.MediaType
@@ -142,6 +144,7 @@ import com.lumen.player.ui.components.LumenInfoDialog
 import com.lumen.player.ui.components.LumenInputDialog
 import java.util.Locale
 import kotlinx.coroutines.launch
+import com.lumen.player.data.metadata.MediaTitleParser
 import com.lumen.player.data.metadata.friendlyPath
 import com.lumen.player.core.theme.LumenAmber
 import com.lumen.player.core.theme.LumenLavender
@@ -964,32 +967,27 @@ private fun FoldersTabContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(modifier = Modifier.size(56.dp)) {
-                    if (folder.firstItemArtUri != null) {
-                        AsyncImage(
-                            model = folder.firstItemArtUri,
+                    val artUri = folder.firstItemArtUri
+                    val hasValidArt = !artUri.isNullOrBlank() && artUri != "null"
+                    if (hasValidArt) {
+                        SubcomposeAsyncImage(
+                            model = artUri,
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier
                                 .fillMaxSize()
-                                .clip(LumenSquircle(12.dp))
+                                .clip(LumenSquircle(12.dp)),
+                            loading = { FolderIconFallback() },
+                            error = { FolderIconFallback() }
                         )
                     } else {
-                        Box(
-                            Modifier
-                                .fillMaxSize()
-                                .clip(LumenSquircle(12.dp))
-                                .background(MaterialTheme.colorScheme.surfaceVariant),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(Icons.Rounded.Folder, null, Modifier.size(28.dp),
-                                tint = MaterialTheme.colorScheme.primary)
-                        }
+                        FolderIconFallback()
                     }
                     Surface(
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(2.dp),
-                        color = Color.Black.copy(alpha = 0.75f),
+                        color = Color.Black.copy(alpha = 0.78f),
                         shape = RoundedCornerShape(3.dp)
                     ) {
                         Text(
@@ -1003,7 +1001,12 @@ private fun FoldersTabContent(
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(folder.displayName, style = MaterialTheme.typography.bodyLarge,
+                    val cleanName = remember { mutableStateOf(folder.displayName) }
+                    LaunchedEffect(folder.displayName) {
+                        val meta = MediaTitleParser().resolve(folder.displayName)
+                        cleanName.value = meta.cleanTitle.ifEmpty { folder.displayName }
+                    }
+                    Text(cleanName.value, style = MaterialTheme.typography.bodyLarge,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(friendlyPath(folder.path), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -1011,6 +1014,24 @@ private fun FoldersTabContent(
                 }
             }
         }
+    }
+}
+
+@Composable
+private fun FolderIconFallback() {
+    Box(
+        Modifier
+            .fillMaxSize()
+            .clip(LumenSquircle(12.dp))
+            .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.18f)),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            imageVector = Icons.Rounded.Folder,
+            contentDescription = null,
+            modifier = Modifier.size(28.dp),
+            tint = MaterialTheme.colorScheme.primary
+        )
     }
 }
 

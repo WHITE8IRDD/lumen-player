@@ -33,6 +33,7 @@ import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -51,6 +52,7 @@ import com.lumen.player.ui.library.VideoGrid
 import com.lumen.player.ui.library.VideoList
 import com.lumen.player.ui.library.VideoSort
 import com.lumen.player.ui.components.CircularIconButton
+import com.lumen.player.data.metadata.MediaTitleParser
 import com.lumen.player.ui.components.FloatingGlassCard
 import com.lumen.player.ui.components.LumenBlob
 import com.lumen.player.ui.components.LumenEmptyState
@@ -176,9 +178,20 @@ fun FolderDetailScreen(
                     }
                 }
             }
+            var cleanFolderName by remember { mutableStateOf(viewModel.folderName) }
+            var folderYear by remember { mutableStateOf<String?>(null) }
+            LaunchedEffect(viewModel.folderName) {
+                val meta = MediaTitleParser().resolve(viewModel.folderName)
+                cleanFolderName = meta.cleanTitle.ifEmpty { viewModel.folderName }
+                folderYear = meta.year?.toString()
+            }
             FloatingGlassCard(
-                title = viewModel.folderName,
-                subtitle = "${items.size} videos · ${TimeFormatter.format(items.sumOf { it.durationMs })}",
+                title = cleanFolderName,
+                subtitle = buildString {
+                    if (folderYear != null) append("$folderYear · ")
+                    append("${items.size} videos · ")
+                    append(TimeFormatter.format(items.sumOf { it.durationMs }))
+                },
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
             )
             Spacer(Modifier.height(8.dp))
