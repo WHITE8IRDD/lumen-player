@@ -49,6 +49,7 @@ import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
+import com.lumen.player.data.metadata.MediaTitleParser
 import com.lumen.player.player.PlaybackState
 import kotlinx.coroutines.launch
 import kotlin.math.abs
@@ -172,9 +173,16 @@ fun MiniPlayer(
                 )
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    val title = if (state.title.isNotEmpty()) state.title
-                    else if (state.isVideo) "Video"
-                    else "Nothing playing"
+                    val parsedTitle = remember(state.title) {
+                        if (state.title.isNotEmpty()) {
+                            val parser = MediaTitleParser()
+                            kotlinx.coroutines.runBlocking { parser.resolve(state.title) }
+                        } else null
+                    }
+                    val title = parsedTitle?.cleanTitle
+                        ?: if (state.title.isNotEmpty()) state.title
+                        else if (state.isVideo) "Video"
+                        else "Nothing playing"
                     Text(
                         title,
                         style = MaterialTheme.typography.titleSmall,
@@ -182,7 +190,15 @@ fun MiniPlayer(
                         overflow = TextOverflow.Ellipsis,
                         color = MaterialTheme.colorScheme.onSurface
                     )
-                    if (state.artist.isNotEmpty()) {
+                    if (parsedTitle?.year != null) {
+                        Text(
+                            "${parsedTitle.year}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    } else if (state.artist.isNotEmpty()) {
                         Text(
                             state.artist,
                             style = MaterialTheme.typography.bodySmall,

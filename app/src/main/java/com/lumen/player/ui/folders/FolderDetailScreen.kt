@@ -234,9 +234,9 @@ fun FolderDetailScreen(
 }
 
 private fun VideoSort.label(): String = when (this) {
-    VideoSort.TITLE -> "Title"
-    VideoSort.DATE -> "Date added"
-    VideoSort.DURATION -> "Duration"
-    VideoSort.SIZE -> "Size"
-    VideoSort.RESOLUTION -> "Resolution"
+    VideoSort.TITLE -> "title"
+    VideoSort.DATE -> "date added"
+    VideoSort.DURATION -> "duration"
+    VideoSort.SIZE -> "size"
+    VideoSort.RESOLUTION -> "resolution"
 }

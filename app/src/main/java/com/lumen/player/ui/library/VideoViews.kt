@@ -10,6 +10,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -38,6 +39,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import com.lumen.player.data.metadata.MediaTitleParser
 import com.lumen.player.ui.components.LumenSquircle
+import com.lumen.player.ui.components.ResolutionBadge
+import com.lumen.player.ui.util.pressableScale
 import kotlinx.coroutines.runBlocking
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
@@ -171,12 +174,16 @@ fun VideoGridCard(
     val selectionBorder = if (isSelected) Modifier.border(
         BorderStroke(2.dp, MaterialTheme.colorScheme.tertiary), LumenSquircle(14.dp)
     ) else Modifier
+    val interactionSource = remember { MutableInteractionSource() }
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .pressableScale(interactionSource)
             .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)), LumenSquircle(14.dp))
             .then(selectionBorder)
             .combinedClickable(
+                interactionSource = interactionSource,
+                indication = null,
                 onClick = onClick,
                 onLongClick = onLongClick
             ),
@@ -257,6 +264,12 @@ fun VideoGridCard(
                             .background(MaterialTheme.colorScheme.tertiary)
                     )
                 }
+                ResolutionBadge(
+                    resolution = item.resolution,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp)
+                )
                 if (isSelected) {
                     Box(
                         Modifier
@@ -478,12 +491,16 @@ fun VideoListRow(
     val selectionBorder = if (isSelected) Modifier.border(
         BorderStroke(2.dp, MaterialTheme.colorScheme.tertiary), LumenSquircle(12.dp)
     ) else Modifier
+    val interactionSource = remember { MutableInteractionSource() }
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .pressableScale(interactionSource)
             .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)), LumenSquircle(12.dp))
             .then(selectionBorder)
             .combinedClickable(
+                interactionSource = interactionSource,
+                indication = null,
                 onClick = onClick,
                 onLongClick = onLongClick
             ),
@@ -567,6 +584,12 @@ fun VideoListRow(
                         )
                     }
                 }
+                ResolutionBadge(
+                    resolution = item.resolution,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(3.dp)
+                )
                 if (isSelected) {
                     Box(
                         Modifier
@@ -673,11 +696,17 @@ fun FolderCard(
         }
     }
 
+    val interactionSource = remember { MutableInteractionSource() }
     Card(
         modifier = Modifier
             .fillMaxWidth()
+            .pressableScale(interactionSource)
             .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)), LumenSquircle(14.dp))
-            .clickable(onClick = onClick),
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            ),
         shape = LumenSquircle(14.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
@@ -721,7 +750,7 @@ fun FolderCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    "${folder.mediaCount} VIDEOS \u00B7 ${TimeFormatter.format(folder.totalDurationMs)}".uppercase(),
+                    "${folder.mediaCount} videos \u00B7 ${TimeFormatter.format(folder.totalDurationMs)}",
                     style = MaterialTheme.typography.labelSmall,
                     fontWeight = FontWeight.Medium,
                     letterSpacing = 1.sp,

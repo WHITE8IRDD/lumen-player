@@ -11,6 +11,7 @@ data class MediaItem(
     val cleanTitle: String = "",
     val year: Int? = null,
     val seasonEpisode: String? = null,
+    val resolution: String? = null,
     val artist: String?,
     val album: String?,
     val albumArtUri: Uri?,

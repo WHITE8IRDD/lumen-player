@@ -21,6 +21,7 @@ class MediaMapper @Inject constructor(
             cleanTitle = meta.cleanTitle,
             year = meta.year,
             seasonEpisode = meta.seasonEpisode,
+            resolution = meta.resolution,
             posterUrl = entity.posterUrl,
             artist = entity.artist,
             album = entity.album,

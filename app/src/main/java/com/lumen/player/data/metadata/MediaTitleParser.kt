@@ -95,6 +95,19 @@ class MediaTitleParser @Inject constructor() : MetadataResolver {
 
         s = bracketPattern.replace(s, "")
         s = tagParenPattern.replace(s, "")
+
+        // Extract resolution BEFORE qualityPattern strips it
+        val extractedResolution = qualityPattern.find(s)?.value?.uppercase()?.let { match ->
+            when {
+                match.contains("2160") || match.contains("4K") || match.contains("UHD") -> "4K"
+                match.contains("1080") -> "1080P"
+                match.contains("720") -> "720P"
+                match.contains("480") -> "480P"
+                match.contains("360") -> "360P"
+                else -> null
+            }
+        }
+
         s = qualityPattern.replace(s, "")
         s = groupSuffixPattern.replace(s, "")
         s = separatorPattern.replace(s, " ")
@@ -130,6 +143,7 @@ class MediaTitleParser @Inject constructor() : MetadataResolver {
         s = trailingPunct.replace(s, "")
         s = leadingPunct.replace(s, "")
         s = spacePattern.replace(s, " ").trim()
+        s = s.replace(Regex("\\s+(?:AND|OR|THE|&|WITH|FT|FEAT)$", RegexOption.IGNORE_CASE), "").trim()
 
         // Title case with stopword support
         val words = s.split(" ")
@@ -183,7 +197,8 @@ class MediaTitleParser @Inject constructor() : MetadataResolver {
         return MediaMetadata(
             cleanTitle = expanded.ifEmpty { rawFilename },
             year = year,
-            seasonEpisode = seasonEpisode ?: episodeOnly
+            seasonEpisode = seasonEpisode ?: episodeOnly,
+            resolution = extractedResolution
         )
     }
 }

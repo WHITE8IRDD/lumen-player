@@ -5,6 +5,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -37,6 +38,7 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import com.lumen.player.ui.components.LumenSquircle
+import com.lumen.player.ui.util.pressableScale
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.GraphicEq
@@ -144,6 +146,7 @@ import com.lumen.player.ui.components.LumenInfoDialog
 import com.lumen.player.ui.components.LumenInputDialog
 import java.util.Locale
 import kotlinx.coroutines.launch
+import com.lumen.player.ui.util.VideoThumbnail
 import com.lumen.player.data.metadata.MediaTitleParser
 import com.lumen.player.data.metadata.friendlyPath
 import com.lumen.player.core.theme.LumenAmber
@@ -960,18 +963,33 @@ private fun FoldersTabContent(
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())) {
         items(folders, key = { it.path }) { folder ->
+            val interactionSource = remember { MutableInteractionSource() }
             Row(
                 Modifier.fillMaxWidth()
-                    .clickable { onFolderClick(folder.path) }
+                    .pressableScale(interactionSource)
+                    .clickable(
+                        interactionSource = interactionSource,
+                        indication = null,
+                        onClick = { onFolderClick(folder.path) }
+                    )
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(modifier = Modifier.size(56.dp)) {
-                    val artUri = folder.firstItemArtUri
-                    val hasValidArt = !artUri.isNullOrBlank() && artUri != "null"
-                    if (hasValidArt) {
+                    val thumbnailModel = remember(folder) {
+                        when {
+                            folder.firstVideoPosterUrl != null -> folder.firstVideoPosterUrl
+                            folder.firstVideoUri != null -> VideoThumbnail(
+                                id = folder.firstVideoId ?: 0L,
+                                uri = folder.firstVideoUri
+                            )
+                            folder.firstItemArtUri != null && folder.firstItemArtUri != "null" && folder.firstItemArtUri.isNotBlank() -> folder.firstItemArtUri
+                            else -> null
+                        }
+                    }
+                    if (thumbnailModel != null) {
                         SubcomposeAsyncImage(
-                            model = artUri,
+                            model = thumbnailModel,
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
                             modifier = Modifier

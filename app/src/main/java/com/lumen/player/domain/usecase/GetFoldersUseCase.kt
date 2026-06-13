@@ -8,5 +8,5 @@ import javax.inject.Inject
 class GetFoldersUseCase @Inject constructor(
     private val repository: MediaRepository
 ) {
-    operator fun invoke(): Flow<List<Folder>> = repository.observeFolders()
+    operator fun invoke(): Flow<List<Folder>> = repository.observeVideoFolders()
 }

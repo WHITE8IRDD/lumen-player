@@ -8,6 +8,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -33,6 +34,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import com.lumen.player.ui.components.LumenSquircle
+import com.lumen.player.ui.components.ResolutionBadge
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Home
@@ -114,6 +116,7 @@ import com.lumen.player.ui.util.FolderThumbnailResolver
 import com.lumen.player.ui.util.FolderThumbnailType
 import com.lumen.player.ui.util.MosaicFetcherInput
 import com.lumen.player.ui.util.VideoThumbnail
+import com.lumen.player.ui.util.pressableScale
 
 private val NAV_TABS = listOf(
     NavTab(Destinations.HOME, R.string.tab_home, Icons.Rounded.Home, Icons.Rounded.Home),
@@ -397,13 +400,66 @@ fun HomeScreen(
     }
 }
 
+private val morningSubtitles = listOf(
+    "what shall we start the day with?",
+    "ready for something good?",
+    "set the mood for the day",
+    "morning pick, your choice"
+)
+
+private val afternoonSubtitles = listOf(
+    "afternoon break time?",
+    "what are you in the mood for?",
+    "take a moment, watch something",
+    "midday escape?"
+)
+
+private val eveningSubtitles = listOf(
+    "what are you in the mood for?",
+    "wind down with something good",
+    "evening picks await",
+    "let's find something cozy"
+)
+
+private val nightSubtitles = listOf(
+    "still up? let's find something",
+    "late night picks",
+    "one more episode?",
+    "night owl mode activated"
+)
+
+private enum class TimeSlot { MORNING, AFTERNOON, EVENING, NIGHT }
+
+private fun getCurrentTimeSlot(): TimeSlot {
+    val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+    return when (hour) {
+        in 5..11 -> TimeSlot.MORNING
+        in 12..16 -> TimeSlot.AFTERNOON
+        in 17..21 -> TimeSlot.EVENING
+        else -> TimeSlot.NIGHT
+    }
+}
+
+private fun getGreetingTitle(slot: TimeSlot): String = when (slot) {
+    TimeSlot.MORNING -> "good morning"
+    TimeSlot.AFTERNOON -> "good afternoon"
+    TimeSlot.EVENING -> "good evening"
+    TimeSlot.NIGHT -> "good night"
+}
+
+private fun getSubtitlePool(slot: TimeSlot): List<String> = when (slot) {
+    TimeSlot.MORNING -> morningSubtitles
+    TimeSlot.AFTERNOON -> afternoonSubtitles
+    TimeSlot.EVENING -> eveningSubtitles
+    TimeSlot.NIGHT -> nightSubtitles
+}
+
 @Composable
 private fun HomeGreetingSection() {
-    val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
-    val greeting = when (hour) {
-        in 0..11 -> "good morning"
-        in 12..16 -> "good afternoon"
-        else -> "good evening"
+    val timeSlot = remember { getCurrentTimeSlot() }
+    val title = remember(timeSlot) { getGreetingTitle(timeSlot) }
+    val subtitle = remember(timeSlot) {
+        getSubtitlePool(timeSlot).random()
     }
     Box(modifier = Modifier.fillMaxWidth()) {
         GradientBlob(
@@ -420,7 +476,7 @@ private fun HomeGreetingSection() {
                 .padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 24.dp)
         ) {
             Text(
-                text = greeting,
+                text = title,
                 style = MaterialTheme.typography.labelMedium.copy(
                     letterSpacing = 2.sp,
                     fontWeight = FontWeight.SemiBold
@@ -429,7 +485,7 @@ private fun HomeGreetingSection() {
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "what are you in the mood for?",
+                text = subtitle,
                 style = MaterialTheme.typography.displayMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -514,10 +570,17 @@ private fun ContinueWatchingRow(
 private fun ContinueWatchingCard(item: MediaItem, onClick: () -> Unit, onLongClick: () -> Unit) {
     val progress = if (item.durationMs > 0L)
         (item.lastPositionMs.toFloat() / item.durationMs).coerceIn(0f, 1f) else 0f
+    val interactionSource = remember { MutableInteractionSource() }
     Card(
         modifier = Modifier
             .width(200.dp)
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+            .pressableScale(interactionSource)
+            .combinedClickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         shape = LumenSquircle(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)),
@@ -563,6 +626,12 @@ private fun ContinueWatchingCard(item: MediaItem, onClick: () -> Unit, onLongCli
                             .background(MaterialTheme.colorScheme.primary)
                     )
                 }
+                ResolutionBadge(
+                    resolution = item.resolution,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp)
+                )
             }
             Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
                 Text(
@@ -609,10 +678,17 @@ private fun RecentlyAddedRow(
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun RecentlyAddedCard(item: MediaItem, onClick: () -> Unit, onLongClick: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
     Card(
         modifier = Modifier
             .width(180.dp)
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+            .pressableScale(interactionSource)
+            .combinedClickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick,
+                onLongClick = onLongClick
+            ),
         shape = LumenSquircle(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)),
@@ -661,6 +737,12 @@ private fun RecentlyAddedCard(item: MediaItem, onClick: () -> Unit, onLongClick:
                         )
                     }
                 }
+                ResolutionBadge(
+                    resolution = item.resolution,
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(6.dp)
+                )
             }
             Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
                 Text(
@@ -735,10 +817,16 @@ private fun HomeFolderCard(folder: Folder, videos: List<MediaItem>, onClick: () 
             }
         }
     }
+    val interactionSource = remember { MutableInteractionSource() }
     Card(
         modifier = Modifier
             .width(140.dp)
-            .clickable(onClick = onClick),
+            .pressableScale(interactionSource)
+            .clickable(
+                interactionSource = interactionSource,
+                indication = null,
+                onClick = onClick
+            ),
         shape = LumenSquircle(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)),
