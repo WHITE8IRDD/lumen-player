@@ -2,7 +2,6 @@ package com.lumen.player.ui.components
 
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.RepeatMode
-import androidx.compose.animation.core.StartOffset
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
@@ -15,7 +14,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Folder
-import androidx.compose.material.icons.filled.InsertDriveFile
+import androidx.compose.material.icons.automirrored.filled.InsertDriveFile
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Public
@@ -27,10 +26,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlin.math.cos
+import kotlin.math.sin
 
 private fun driftTransition(
     durationMs: Int = 10_000,
@@ -58,6 +59,36 @@ private fun DriftOffset(
         label = "drift-y"
     )
     content(driftY.dp)
+}
+
+@Composable
+fun BoxScope.OrbitingAccents(
+    icons: List<ImageVector>,
+    blobColor: Color,
+    alpha: Float = 0.22f
+) {
+    val radius = 110.dp
+    val iconSize = 20.dp
+    val radPerDeg = 0.0174533f
+    val count = icons.size.coerceAtLeast(1)
+    icons.forEachIndexed { index, icon ->
+        val angle = (360f / count) * index - 90f
+        val rad = angle * radPerDeg
+        val offsetX = (radius.value * cos(rad.toDouble())).dp
+        val offsetY = (radius.value * sin(rad.toDouble())).dp
+        DriftOffset(durationMs = 10_000, delayMs = index * 1000) { drift ->
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier
+                    .size(iconSize)
+                    .align(Alignment.Center)
+                    .offset(x = offsetX, y = offsetY + drift)
+                    .alpha(alpha),
+                tint = blobColor
+            )
+        }
+    }
 }
 
 @Composable
@@ -102,86 +133,41 @@ fun BoxScope.VideoAccents(blobColor: Color) {
 
 @Composable
 fun BoxScope.AudioAccents(blobColor: Color) {
-    DriftOffset(durationMs = 8000) { drift ->
-        Icon(
-            imageVector = Icons.Default.MusicNote,
-            contentDescription = null,
-            modifier = Modifier
-                .size(20.dp)
-                .align(Alignment.Center)
-                .offset(x = (-85).dp, y = (-60).dp + drift)
-                .alpha(0.22f),
-            tint = blobColor
-        )
-    }
-    DriftOffset(durationMs = 10_000, delayMs = 3000) { drift ->
-        Icon(
-            imageVector = Icons.Default.MusicNote,
-            contentDescription = null,
-            modifier = Modifier
-                .size(16.dp)
-                .align(Alignment.Center)
-                .offset(x = 95.dp, y = 10.dp + drift)
-                .alpha(0.18f),
-            tint = blobColor
-        )
-    }
-    DriftOffset(durationMs = 12_000, delayMs = 1500) { drift ->
-        Icon(
-            imageVector = Icons.Default.MusicNote,
-            contentDescription = null,
-            modifier = Modifier
-                .size(18.dp)
-                .align(Alignment.Center)
-                .offset(x = (-30).dp, y = 100.dp + drift)
-                .alpha(0.20f),
-            tint = blobColor
-        )
-    }
+    OrbitingAccents(
+        icons = listOf(
+            Icons.Default.MusicNote,
+            Icons.Default.PlayArrow,
+            Icons.AutoMirrored.Filled.QueueMusic,
+            Icons.Default.Add
+        ),
+        blobColor = blobColor
+    )
 }
 
 @Composable
 fun BoxScope.FolderAccents(blobColor: Color) {
-    DriftOffset(durationMs = 10_000, delayMs = 500) { drift ->
-        Icon(
-            imageVector = Icons.Default.Folder,
-            contentDescription = null,
-            modifier = Modifier
-                .size(32.dp)
-                .align(Alignment.Center)
-                .offset(x = 80.dp, y = (-75).dp + drift)
-                .alpha(0.20f),
-            tint = blobColor
-        )
-    }
+    OrbitingAccents(
+        icons = listOf(
+            Icons.Default.Folder,
+            Icons.AutoMirrored.Filled.InsertDriveFile,
+            Icons.Default.Folder,
+            Icons.AutoMirrored.Filled.InsertDriveFile
+        ),
+        blobColor = blobColor
+    )
 }
 
 @Composable
 fun BoxScope.PlaylistAccents(blobColor: Color) {
-    DriftOffset(durationMs = 10_000) { drift ->
-        Icon(
-            imageVector = Icons.AutoMirrored.Filled.QueueMusic,
-            contentDescription = null,
-            modifier = Modifier
-                .size(26.dp)
-                .align(Alignment.Center)
-                .offset(x = (-90).dp, y = (-50).dp + drift)
-                .alpha(0.20f),
-            tint = blobColor
-        )
-    }
-    DriftOffset(durationMs = 12_000, delayMs = 2000) { drift ->
-        Icon(
-            imageVector = Icons.Default.Add,
-            contentDescription = null,
-            modifier = Modifier
-                .size(20.dp)
-                .align(Alignment.Center)
-                .offset(x = 70.dp, y = 75.dp + drift)
-                .alpha(0.20f),
-            tint = blobColor
-        )
-    }
+    OrbitingAccents(
+        icons = listOf(
+            Icons.AutoMirrored.Filled.QueueMusic,
+            Icons.Default.Add,
+            Icons.Default.MusicNote,
+            Icons.Default.PlayArrow
+        ),
+        blobColor = blobColor
+    )
 }
 
 @Composable
@@ -246,56 +232,26 @@ fun BoxScope.StreamAccents(blobColor: Color) {
 
 @Composable
 fun BoxScope.FolderDetailAccents(blobColor: Color) {
-    DriftOffset(durationMs = 10_000) { drift ->
-        Icon(
-            imageVector = Icons.Default.InsertDriveFile,
-            contentDescription = null,
-            modifier = Modifier
-                .size(22.dp)
-                .align(Alignment.Center)
-                .offset(x = 75.dp, y = (-60).dp + drift)
-                .alpha(0.20f),
-            tint = blobColor
-        )
-    }
-    DriftOffset(durationMs = 12_000, delayMs = 2000) { drift ->
-        Icon(
-            imageVector = Icons.Default.InsertDriveFile,
-            contentDescription = null,
-            modifier = Modifier
-                .size(18.dp)
-                .align(Alignment.Center)
-                .offset(x = (-80).dp, y = 70.dp + drift)
-                .alpha(0.20f),
-            tint = blobColor
-        )
-    }
+    OrbitingAccents(
+        icons = listOf(
+            Icons.AutoMirrored.Filled.InsertDriveFile,
+            Icons.Default.PlayArrow,
+            Icons.Default.Folder,
+            Icons.Default.MusicNote
+        ),
+        blobColor = blobColor
+    )
 }
 
 @Composable
 fun BoxScope.PlaylistDetailAccents(blobColor: Color) {
-    DriftOffset(durationMs = 10_000) { drift ->
-        Icon(
-            imageVector = Icons.Default.MusicNote,
-            contentDescription = null,
-            modifier = Modifier
-                .size(22.dp)
-                .align(Alignment.Center)
-                .offset(x = (-80).dp, y = (-60).dp + drift)
-                .alpha(0.20f),
-            tint = blobColor
-        )
-    }
-    DriftOffset(durationMs = 12_000, delayMs = 2000) { drift ->
-        Icon(
-            imageVector = Icons.Default.Add,
-            contentDescription = null,
-            modifier = Modifier
-                .size(20.dp)
-                .align(Alignment.Center)
-                .offset(x = 75.dp, y = 70.dp + drift)
-                .alpha(0.20f),
-            tint = blobColor
-        )
-    }
+    OrbitingAccents(
+        icons = listOf(
+            Icons.Default.MusicNote,
+            Icons.Default.Add,
+            Icons.AutoMirrored.Filled.QueueMusic,
+            Icons.Default.PlayArrow
+        ),
+        blobColor = blobColor
+    )
 }
