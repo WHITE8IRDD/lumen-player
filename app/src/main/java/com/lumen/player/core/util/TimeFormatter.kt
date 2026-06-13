@@ -22,3 +22,15 @@ object TimeFormatter {
         return if (h > 0) "${h}h ${m}m" else "${m}m"
     }
 }
+
+fun formatFileSize(bytes: Long): String {
+    if (bytes <= 0) return "0 KB"
+    val kb = bytes / 1024.0
+    val mb = kb / 1024.0
+    val gb = mb / 1024.0
+    return when {
+        gb >= 1.0 -> "%.1f GB".format(gb)
+        mb >= 1.0 -> "%.0f MB".format(mb)
+        else -> "%.0f KB".format(kb)
+    }
+}

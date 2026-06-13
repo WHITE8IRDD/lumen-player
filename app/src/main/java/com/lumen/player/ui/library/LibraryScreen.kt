@@ -137,6 +137,7 @@ import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import com.lumen.player.core.util.TimeFormatter
+import com.lumen.player.core.util.formatFileSize
 import com.lumen.player.ui.components.LumenInfoDialog
 import com.lumen.player.ui.components.LumenInputDialog
 import java.util.Locale
@@ -407,10 +408,14 @@ private fun VideosTabContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${items.size} VIDEOS",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 2.sp,
+                    text = buildString {
+                        append("${items.size} videos")
+                        val totalBytes = items.sumOf { it.sizeBytes }
+                        if (totalBytes > 0L) {
+                            append(" • ${formatFileSize(totalBytes)}")
+                        }
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f)
                 )
