@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material3.ButtonDefaults
@@ -53,7 +52,7 @@ fun LumenConfirmationDialog(
             modifier = Modifier
                 .fillMaxWidth(0.85f)
                 .padding(vertical = 8.dp),
-            shape = RoundedCornerShape(20.dp),
+            shape = LumenSquircle(20.dp),
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, Color.White.copy(alpha = 0.08f)),
             tonalElevation = 4.dp,

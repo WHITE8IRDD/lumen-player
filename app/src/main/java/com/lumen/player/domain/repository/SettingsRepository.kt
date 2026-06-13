@@ -20,7 +20,7 @@ data class UserSettings(
     val fetchOnlineMetadata: Boolean = false,
     val metadataWifiOnly: Boolean = true,
     val onboardingCompleted: Boolean = false,
-    val accentColorHex: String = "#00E5C8",
+    val accentColorHex: String = "#FFC857",
     val fontSize: String = "DEFAULT",
     val aspectRatio: String = "AUTO",
     val brightnessMode: String = "SYSTEM",
@@ -30,6 +30,9 @@ data class UserSettings(
     val autoScanOnStartup: Boolean = true,
     val showAudio: Boolean = true,
     val replayGain: Boolean = false,
+    val fontFamilyChoice: String = "SERIF_DISPLAY",
+    val textCaseChoice: String = "LOWERCASE",
+    val weightOffset: Int = 0,
     val sectionAppearance: Boolean = true,
     val sectionPlayback: Boolean = true,
     val sectionVideo: Boolean = false,
@@ -68,4 +71,7 @@ interface SettingsRepository {
     suspend fun setShowAudio(enabled: Boolean)
     suspend fun setReplayGain(enabled: Boolean)
     suspend fun setSectionExpanded(section: String, expanded: Boolean)
+    suspend fun setFontFamilyChoice(value: String)
+    suspend fun setTextCaseChoice(value: String)
+    suspend fun setWeightOffset(value: Int)
 }

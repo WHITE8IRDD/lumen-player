@@ -10,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.Icon
@@ -31,7 +30,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
-import com.lumen.player.core.theme.LumenOnSurfaceDim
+import com.lumen.player.core.theme.LumenTextSecondary
 import com.lumen.player.core.util.TimeFormatter
 import com.lumen.player.domain.model.MediaItem
 
@@ -65,7 +64,7 @@ fun MediaListItem(
         Box(
             Modifier
                 .size(56.dp)
-                .clip(RoundedCornerShape(12.dp))
+                .clip(LumenSquircle(12.dp))
         ) {
             SubcomposeAsyncImage(
                 model = thumbRequest,
@@ -91,7 +90,7 @@ fun MediaListItem(
                 horizontalArrangement = Arrangement.spacedBy(4.dp)
             ) {
                 Text(
-                    item.artist ?: "Unknown",
+                    item.artist ?: "unknown",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     maxLines = 1,
@@ -101,12 +100,12 @@ fun MediaListItem(
                 if (item.durationMs > 0) {
                     Text(
                         "\u00B7",
-                        color = LumenOnSurfaceDim
+                        color = LumenTextSecondary
                     )
                     Text(
                         TimeFormatter.format(item.durationMs),
                         style = MaterialTheme.typography.bodySmall,
-                        color = LumenOnSurfaceDim
+                        color = LumenTextSecondary
                     )
                 }
             }

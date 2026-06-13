@@ -96,6 +96,7 @@ dependencies {
     implementation(libs.compose.material.icons)
     implementation(libs.compose.animation)
     implementation(libs.compose.foundation)
+    implementation("androidx.compose.ui:ui-text-google-fonts:1.7.6")
     debugImplementation(libs.compose.ui.tooling)
 
     // Lifecycle & Navigation

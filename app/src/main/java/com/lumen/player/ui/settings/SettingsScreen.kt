@@ -3,7 +3,6 @@ package com.lumen.player.ui.settings
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -18,28 +17,15 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.material.icons.Icons
+import com.lumen.player.ui.components.LumenSquircle
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
-import androidx.compose.material.icons.rounded.Cloud
-import androidx.compose.material.icons.rounded.Delete
-import androidx.compose.material.icons.rounded.Info
-import androidx.compose.material.icons.rounded.ArrowForwardIos
+import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
-import androidx.compose.material.icons.rounded.LibraryMusic
-import androidx.compose.material.icons.rounded.Movie
-import androidx.compose.material.icons.rounded.MusicNote
-import androidx.compose.material.icons.rounded.Palette
-import androidx.compose.material.icons.rounded.PlayCircle
-import androidx.compose.material.icons.rounded.Refresh
-import androidx.compose.material.icons.rounded.RestartAlt
-import androidx.compose.material.icons.rounded.Settings
-import androidx.compose.material.icons.rounded.Subtitles
-import androidx.compose.material.icons.rounded.Wifi
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.FilledTonalButton
@@ -63,59 +49,52 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.lumen.player.BuildConfig
 import com.lumen.player.R
-import com.lumen.player.domain.repository.ThemeMode
+import com.lumen.player.core.theme.LumenAmber
+import com.lumen.player.core.theme.LumenBorderSubtle
+
 import com.lumen.player.ui.components.LumenConfirmationDialog
 import com.lumen.player.ui.components.LumenInputDialog
 import com.lumen.player.ui.components.LumenPickerDialog
-import androidx.compose.foundation.BorderStroke
-import com.lumen.player.core.theme.LumenBlue
-import com.lumen.player.core.theme.LumenBlueDeep
-import com.lumen.player.core.theme.LumenGreen
-import com.lumen.player.core.theme.LumenGreenDeep
-import com.lumen.player.core.theme.LumenYellow
-import com.lumen.player.core.theme.LumenYellowDeep
-import com.lumen.player.core.theme.LumenOrange
-import com.lumen.player.core.theme.LumenOrangeDeep
-import com.lumen.player.core.theme.LumenPink
-import com.lumen.player.core.theme.LumenPinkDeep
-import com.lumen.player.core.theme.LumenCyan
-import com.lumen.player.core.theme.LumenCyanDeep
-import com.lumen.player.core.theme.LumenRed
-import com.lumen.player.core.theme.LumenRedDeep
-import com.lumen.player.core.theme.LumenPurple
-import com.lumen.player.core.theme.LumenPurpleDeep
-import com.lumen.player.core.theme.LumenDarkOnSurfaceVariant
-import com.lumen.player.ui.components.ShapeIcon
+import com.lumen.player.ui.theme.LumenFontChoice
+import com.lumen.player.ui.theme.LumenTextCase
+import com.lumen.player.ui.theme.LumenText
+import com.lumen.player.ui.theme.LocalLumenTextCase
+import com.lumen.player.ui.theme.applyLumenCase
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.material3.Slider
+import androidx.compose.ui.text.font.FontWeight
+import kotlin.math.roundToInt
+import androidx.compose.material3.SliderDefaults
 
-private fun themeLabel(mode: ThemeMode): String = when (mode) {
-    ThemeMode.SYSTEM -> "System"
-    ThemeMode.LIGHT -> "Light"
-    ThemeMode.DARK -> "Dark"
-}
 
 @Composable
 fun SettingsScreen(
     onOpenEqualizer: () -> Unit,
     onOpenHiddenItems: () -> Unit = {},
+    onDebugBlob: () -> Unit = {},
     viewModel: SettingsViewModel = hiltViewModel()
 ) {
     val s by viewModel.settings.collectAsStateWithLifecycle()
 
-    var showThemePicker by remember { mutableStateOf(false) }
     var showFontSizePicker by remember { mutableStateOf(false) }
     var showAccentColorPicker by remember { mutableStateOf(false) }
     var showAspectRatioPicker by remember { mutableStateOf(false) }
@@ -136,245 +115,265 @@ fun SettingsScreen(
             .padding(top = 40.dp, bottom = 8.dp)
     ) {
         Text(
-            stringResource(R.string.settings),
-            style = MaterialTheme.typography.displayMedium,
-            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 4.dp)
+            "settings",
+            style = MaterialTheme.typography.headlineLarge,
+            modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 32.dp)
         )
 
-        SettingsSection(
-            title = "Appearance",
-            subtitle = "Theme, colors, typography",
-            icon = Icons.Rounded.Palette,
-            color = LumenPurple,
-            expanded = s.sectionAppearance,
-            onToggle = { viewModel.setSectionExpanded("appearance", !s.sectionAppearance) }
-        ) {
-            ClickableRow(
-                title = "Theme",
-                subtitle = themeLabel(s.themeMode),
-                onClick = { showThemePicker = true }
-            )
-            SwitchRow(
-                title = stringResource(R.string.dynamic_color),
-                summary = stringResource(R.string.dynamic_color_summary),
-                checked = s.dynamicColor,
-                onToggle = viewModel::setDynamicColor
-            )
-            ClickableRow(
-                title = "Font Size",
-                subtitle = s.fontSize.lowercase().replaceFirstChar { it.uppercase() },
-                onClick = { showFontSizePicker = true }
-            )
-            AccentColorRow(
-                hex = s.accentColorHex,
-                onClick = { showAccentColorPicker = true }
-            )
-        }
+        // ── PLAYBACK GROUP ──
+        SettingsEyebrow("Playback")
 
-        SettingsSection(
-            title = "Playback",
-            subtitle = "Resume, focus, gapless",
-            icon = Icons.Rounded.PlayCircle,
-            color = LumenGreen,
+        SettingsSectionHeader(
+            title = "playback",
+            subtitle = "resume, focus, gapless",
             expanded = s.sectionPlayback,
             onToggle = { viewModel.setSectionExpanded("playback", !s.sectionPlayback) }
-        ) {
-            SwitchRow(title = stringResource(R.string.resume_playback), summary = stringResource(R.string.resume_playback_summary), checked = s.resumePlayback, onToggle = viewModel::setResumePlayback)
-            SwitchRow(title = stringResource(R.string.audio_focus), summary = stringResource(R.string.audio_focus_summary), checked = s.respectAudioFocus, onToggle = viewModel::setRespectAudioFocus)
-            SwitchRow(title = stringResource(R.string.gapless_playback), summary = null, checked = s.gaplessPlayback, onToggle = viewModel::setGapless)
-            SwitchRow(title = stringResource(R.string.skip_silence), summary = null, checked = s.skipSilence, onToggle = viewModel::setSkipSilence)
+        )
+        AnimatedVisibility(visible = s.sectionPlayback) {
+            Column {
+                SettingsDivider()
+                SettingsSwitchRow(title = stringResource(R.string.resume_playback), summary = stringResource(R.string.resume_playback_summary), checked = s.resumePlayback, onToggle = viewModel::setResumePlayback)
+                SettingsDivider()
+                SettingsSwitchRow(title = stringResource(R.string.audio_focus), summary = stringResource(R.string.audio_focus_summary), checked = s.respectAudioFocus, onToggle = viewModel::setRespectAudioFocus)
+                SettingsDivider()
+                SettingsSwitchRow(title = stringResource(R.string.gapless_playback), summary = null, checked = s.gaplessPlayback, onToggle = viewModel::setGapless)
+                SettingsDivider()
+                SettingsSwitchRow(title = stringResource(R.string.skip_silence), summary = null, checked = s.skipSilence, onToggle = viewModel::setSkipSilence)
+            }
         }
+        SettingsDivider()
 
-        SettingsSection(
-            title = "Video",
-            subtitle = "Hardware acceleration, aspect ratio",
-            icon = Icons.Rounded.Movie,
-            color = LumenBlue,
+        SettingsSectionHeader(
+            title = "video",
+            subtitle = "hardware acceleration, aspect ratio",
             expanded = s.sectionVideo,
             onToggle = { viewModel.setSectionExpanded("video", !s.sectionVideo) }
-        ) {
-            SwitchRow(title = "Hardware Acceleration", summary = "Prefer hardware decoders for video playback", checked = s.hardwareAcceleration, onToggle = viewModel::setHardwareAcceleration)
-            ClickableRow(title = "Default Aspect Ratio", subtitle = s.aspectRatio.replace("_", ":").replace("R", ""), onClick = { showAspectRatioPicker = true })
-            ClickableRow(title = "Brightness Mode", subtitle = s.brightnessMode.lowercase().replaceFirstChar { it.uppercase() }, onClick = { showBrightnessPicker = true })
+        )
+        AnimatedVisibility(visible = s.sectionVideo) {
+            Column {
+                SettingsDivider()
+                SettingsSwitchRow(title = "hardware acceleration", summary = "prefer hardware decoders for video playback", checked = s.hardwareAcceleration, onToggle = viewModel::setHardwareAcceleration)
+                SettingsDivider()
+                SettingsClickableRow(title = "default aspect ratio", subtitle = s.aspectRatio.replace("_", ":").replace("R", ""), onClick = { showAspectRatioPicker = true })
+                SettingsDivider()
+                SettingsClickableRow(title = "brightness mode", subtitle = s.brightnessMode.lowercase().replaceFirstChar { it.uppercase() }, onClick = { showBrightnessPicker = true })
+            }
         }
+        SettingsDivider()
 
-        SettingsSection(
-            title = "Subtitles",
-            subtitle = "Text size, color, language, delay",
-            icon = Icons.Rounded.Subtitles,
-            color = LumenYellow,
-            expanded = s.sectionSubtitles,
-            onToggle = { viewModel.setSectionExpanded("subtitles", !s.sectionSubtitles) }
-        ) {
-            ClickableRow(title = "Default Text Size", subtitle = "${s.subtitleTextSize.toInt()}sp", onClick = { showSubtitleTextSizeDialog = true })
-            ClickableRow(title = "Default Text Color", subtitle = s.subtitleColor.lowercase().replaceFirstChar { it.uppercase() }, onClick = { showSubtitleColorPicker = true })
-            ClickableRow(title = "Default Delay", subtitle = "${s.subtitleDelayUs / 1000}ms", onClick = { showSubtitleDelayDialog = true })
-            ClickableRow(title = "Default Language", subtitle = s.subtitleLanguage, onClick = { showLanguagePicker = true })
-            ClickableRow(title = "OpenSubtitles API Key", subtitle = if (s.opensubtitlesApiKey.isNotEmpty()) "********" else "Not set", onClick = { showOpenSubsKeyDialog = true })
-        }
-
-        SettingsSection(
-            title = "Library",
-            subtitle = "Excluded folders, auto-scan",
-            icon = Icons.Rounded.LibraryMusic,
-            color = LumenOrange,
-            expanded = s.sectionLibrary,
-            onToggle = { viewModel.setSectionExpanded("library", !s.sectionLibrary) }
-        ) {
-            ClickableRow(title = "Excluded Folders", subtitle = "Manage hidden folders", onClick = onOpenHiddenItems)
-            SwitchRow(title = "Auto-Scan on Startup", summary = null, checked = s.autoScanOnStartup, onToggle = viewModel::setAutoScanOnStartup)
-            SwitchRow(title = stringResource(R.string.show_videos), summary = null, checked = s.showVideos, onToggle = viewModel::setShowVideos)
-            SwitchRow(title = "Show Audio", summary = null, checked = s.showAudio, onToggle = viewModel::setShowAudio)
-        }
-
-        SettingsSection(
-            title = "Audio",
-            subtitle = "Equalizer, replay gain",
-            icon = Icons.Rounded.MusicNote,
-            color = LumenPink,
+        SettingsSectionHeader(
+            title = "audio",
+            subtitle = "equalizer, replay gain",
             expanded = s.sectionAudio,
             onToggle = { viewModel.setSectionExpanded("audio", !s.sectionAudio) }
-        ) {
-            ClickableRow(title = stringResource(R.string.equalizer), subtitle = "EQ, Bass, Virtualizer, Loudness", onClick = onOpenEqualizer)
-            SwitchRow(title = "Replay Gain", summary = "Normalize volume across tracks", checked = s.replayGain, onToggle = viewModel::setReplayGain)
+        )
+        AnimatedVisibility(visible = s.sectionAudio) {
+            Column {
+                SettingsDivider()
+                SettingsClickableRow(title = stringResource(R.string.equalizer), subtitle = "eq, bass, virtualizer, loudness", onClick = onOpenEqualizer)
+                SettingsDivider()
+                SettingsSwitchRow(title = "replay gain", summary = "normalize volume across tracks", checked = s.replayGain, onToggle = viewModel::setReplayGain)
+            }
         }
+        SettingsDivider()
 
-        SettingsSection(
-            title = "Network",
-            subtitle = "Streams, TMDB metadata",
-            icon = Icons.Rounded.Cloud,
-            color = LumenCyan,
+        SettingsSectionHeader(
+            title = "subtitles",
+            subtitle = "text size, color, language, delay",
+            expanded = s.sectionSubtitles,
+            onToggle = { viewModel.setSectionExpanded("subtitles", !s.sectionSubtitles) }
+        )
+        AnimatedVisibility(visible = s.sectionSubtitles) {
+            Column {
+                SettingsDivider()
+                SettingsClickableRow(title = "default text size", subtitle = "${s.subtitleTextSize.toInt()}sp", onClick = { showSubtitleTextSizeDialog = true })
+                SettingsDivider()
+                SettingsClickableRow(title = "default text color", subtitle = s.subtitleColor.lowercase().replaceFirstChar { it.uppercase() }, onClick = { showSubtitleColorPicker = true })
+                SettingsDivider()
+                SettingsClickableRow(title = "default delay", subtitle = "${s.subtitleDelayUs / 1000}ms", onClick = { showSubtitleDelayDialog = true })
+                SettingsDivider()
+                SettingsClickableRow(title = "default language", subtitle = s.subtitleLanguage, onClick = { showLanguagePicker = true })
+                SettingsDivider()
+                SettingsClickableRow(title = "opensubtitles api key", subtitle = if (s.opensubtitlesApiKey.isNotEmpty()) "********" else "not set", onClick = { showOpenSubsKeyDialog = true })
+            }
+        }
+        SettingsDivider()
+
+        // ── LIBRARY GROUP ──
+        Spacer(Modifier.height(32.dp))
+        SettingsEyebrow("Library")
+
+        SettingsSectionHeader(
+            title = "library",
+            subtitle = "excluded folders, auto-scan",
+            expanded = s.sectionLibrary,
+            onToggle = { viewModel.setSectionExpanded("library", !s.sectionLibrary) }
+        )
+        AnimatedVisibility(visible = s.sectionLibrary) {
+            Column {
+                SettingsDivider()
+                SettingsClickableRow(title = "excluded folders", subtitle = "manage hidden folders", onClick = onOpenHiddenItems)
+                SettingsDivider()
+                SettingsSwitchRow(title = "auto-scan on startup", summary = null, checked = s.autoScanOnStartup, onToggle = viewModel::setAutoScanOnStartup)
+                SettingsDivider()
+                SettingsSwitchRow(title = stringResource(R.string.show_videos), summary = null, checked = s.showVideos, onToggle = viewModel::setShowVideos)
+                SettingsDivider()
+                SettingsSwitchRow(title = "show audio", summary = null, checked = s.showAudio, onToggle = viewModel::setShowAudio)
+            }
+        }
+        SettingsDivider()
+
+        SettingsSectionHeader(
+            title = "network",
+            subtitle = "streams, TMDB metadata",
             expanded = s.sectionNetwork,
             onToggle = { viewModel.setSectionExpanded("network", !s.sectionNetwork) }
-        ) {
-            ClickableRow(
-                title = "Open Network Stream",
-                subtitle = "Enter a URL to stream",
-                onClick = { },
-                icon = Icons.Rounded.Wifi
-            )
-            SwitchRow(
-                title = "TMDB Metadata",
-                summary = "Download posters and descriptions from TMDB",
-                checked = s.fetchOnlineMetadata,
-                onToggle = viewModel::setFetchOnlineMetadata
-            )
-            if (s.fetchOnlineMetadata) {
-                if (!viewModel.isTmdbApiAvailable) {
-                    Text(
-                        "TMDB API key not set. Metadata will not be fetched.",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.error,
-                        modifier = Modifier.padding(start = 56.dp, end = 16.dp, bottom = 8.dp)
-                    )
+        )
+        AnimatedVisibility(visible = s.sectionNetwork) {
+            Column {
+                SettingsDivider()
+                SettingsClickableRow(title = "open network stream", subtitle = "enter a URL to stream", onClick = { })
+                SettingsDivider()
+                SettingsSwitchRow(title = "TMDB metadata", summary = "download posters and descriptions from TMDB", checked = s.fetchOnlineMetadata, onToggle = viewModel::setFetchOnlineMetadata)
+                if (s.fetchOnlineMetadata) {
+                    if (!viewModel.isTmdbApiAvailable) {
+                        Text(
+                            "TMDB api key not set. metadata will not be fetched.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp)
+                        )
+                    }
+                    SettingsDivider()
+                    SettingsSwitchRow(title = "wi-fi only", summary = "only download metadata on wi-fi", checked = s.metadataWifiOnly, onToggle = viewModel::setMetadataWifiOnly)
                 }
-                SwitchRow(title = "Wi-Fi only", summary = "Only download metadata on Wi-Fi", checked = s.metadataWifiOnly, onToggle = viewModel::setMetadataWifiOnly)
             }
         }
+        SettingsDivider()
 
-        SettingsSection(
-            title = "Advanced",
-            subtitle = "Cache, reset all settings",
-            icon = Icons.Rounded.Settings,
-            color = LumenRed,
+        // ── APPEARANCE GROUP ──
+        Spacer(Modifier.height(32.dp))
+        SettingsEyebrow("Appearance")
+
+        SettingsSectionHeader(
+            title = "appearance",
+            subtitle = "theme, colors, typography",
+            expanded = s.sectionAppearance,
+            onToggle = { viewModel.setSectionExpanded("appearance", !s.sectionAppearance) }
+        )
+        AnimatedVisibility(visible = s.sectionAppearance) {
+            Column {
+                SettingsDivider()
+                SettingsSwitchRow(title = stringResource(R.string.dynamic_color), summary = stringResource(R.string.dynamic_color_summary), checked = s.dynamicColor, onToggle = viewModel::setDynamicColor)
+                SettingsDivider()
+                SettingsClickableRow(title = "font size", subtitle = s.fontSize.lowercase().replaceFirstChar { it.uppercase() }, onClick = { showFontSizePicker = true })
+                SettingsDivider()
+                AccentColorRow(hex = s.accentColorHex, onClick = { showAccentColorPicker = true })
+                SettingsDivider()
+                TypographySection(
+                    currentFontChoice = try { LumenFontChoice.valueOf(s.fontFamilyChoice) } catch (_: Exception) { LumenFontChoice.SERIF_DISPLAY },
+                    currentTextCase = try { LumenTextCase.valueOf(s.textCaseChoice) } catch (_: Exception) { LumenTextCase.LOWERCASE },
+                    currentWeightOffset = s.weightOffset,
+                    onFontChoice = { viewModel.setFontFamilyChoice(it.name) },
+                    onTextCase = { viewModel.setTextCaseChoice(it.name) },
+                    onWeightOffset = { viewModel.setWeightOffset(it) }
+                )
+            }
+        }
+        SettingsDivider()
+
+        // ── SYSTEM GROUP ──
+        Spacer(Modifier.height(32.dp))
+        SettingsEyebrow("System")
+
+        SettingsSectionHeader(
+            title = "advanced",
+            subtitle = "cache, reset all settings",
             expanded = s.sectionAdvanced,
             onToggle = { viewModel.setSectionExpanded("advanced", !s.sectionAdvanced) }
-        ) {
-            ClickableRow(
-                title = "Clear metadata cache",
-                subtitle = "Remove cached poster URLs",
-                onClick = { showClearCacheDialog = true },
-                icon = Icons.Rounded.Delete
-            )
-            ClickableRow(
-                title = "Reset All Settings",
-                subtitle = "Restore defaults",
-                onClick = { showResetSettingsDialog = true },
-                icon = Icons.Rounded.RestartAlt,
-                iconTint = MaterialTheme.colorScheme.error,
-                titleColor = MaterialTheme.colorScheme.error
-            )
-            ClickableRow(
-                title = "Reset Onboarding",
-                subtitle = "Show welcome screen on next launch",
-                onClick = { showResetOnboardingDialog = true },
-                icon = Icons.Rounded.Refresh
-            )
+        )
+        AnimatedVisibility(visible = s.sectionAdvanced) {
+            Column {
+                SettingsDivider()
+                SettingsClickableRow(title = "clear metadata cache", subtitle = "remove cached poster URLs", onClick = { showClearCacheDialog = true })
+                SettingsDivider()
+                SettingsClickableRow(title = "reset all settings", subtitle = "restore defaults", onClick = { showResetSettingsDialog = true })
+                SettingsDivider()
+                SettingsClickableRow(title = "reset onboarding", subtitle = "show welcome screen on next launch", onClick = { showResetOnboardingDialog = true })
+            }
         }
+        SettingsDivider()
 
-        SettingsSection(
-            title = "About",
-            subtitle = "Version, licenses, source code",
-            icon = Icons.Rounded.Info,
-            color = MaterialTheme.colorScheme.onSurface,
+        SettingsSectionHeader(
+            title = "about",
+            subtitle = "version, licenses, source code",
             expanded = s.sectionAbout,
             onToggle = { viewModel.setSectionExpanded("about", !s.sectionAbout) }
-        ) {
-            Column(
-                horizontalAlignment = Alignment.CenterHorizontally,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 20.dp)
-            ) {
-                Image(
-                    painter = painterResource(R.drawable.lumen_logo_rounded),
-                    contentDescription = null,
-                    modifier = Modifier.size(80.dp)
-                )
-                Spacer(Modifier.height(16.dp))
-                Text(
-                    "Lumen",
-                    style = MaterialTheme.typography.headlineMedium,
-                    color = MaterialTheme.colorScheme.onSurface
-                )
-                Text(
-                    "v1.0.0",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-                Spacer(Modifier.height(8.dp))
-                Text(
-                    "A premium local-first media player",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    textAlign = TextAlign.Center
-                )
+        )
+        AnimatedVisibility(visible = s.sectionAbout) {
+            Column {
+                SettingsDivider()
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 20.dp)
+                ) {
+                    Image(
+                        painter = painterResource(R.drawable.lumen_logo_rounded),
+                        contentDescription = null,
+                        modifier = Modifier.size(80.dp)
+                    )
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        "Lumen",
+                        style = MaterialTheme.typography.headlineMedium,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        "v1.0.0",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "a premium local-first media player",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center
+                    )
+                }
+                SettingsDivider()
+                AboutRow(title = "version", value = "${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})")
+                SettingsDivider()
+                val ctx = LocalContext.current
+                SettingsClickableRow(title = "open source licenses", subtitle = "view third-party licenses", onClick = {
+                    try {
+                        val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.fromParts("package", ctx.packageName, null)
+                        }
+                        ctx.startActivity(intent)
+                    } catch (_: Exception) { }
+                })
+                SettingsDivider()
+                SettingsClickableRow(title = "GitHub", subtitle = "view source code", onClick = {
+                    try {
+                        ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/anomalco/lumen")))
+                    } catch (_: Exception) { }
+                }, chevronIcon = Icons.AutoMirrored.Rounded.OpenInNew)
+                SettingsDivider()
+                SettingsClickableRow(title = "LumenBlob Debug", subtitle = "preview animated blob moods", onClick = onDebugBlob)
             }
-            AboutRow(title = "Version", value = "${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})")
-            val ctx = LocalContext.current
-            ClickableRow(title = "Open Source Licenses", subtitle = "View third-party licenses", onClick = {
-                try {
-                    val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                        data = Uri.fromParts("package", ctx.packageName, null)
-                    }
-                    ctx.startActivity(intent)
-                } catch (_: Exception) { }
-            })
-            ClickableRow(title = "GitHub", subtitle = "View source code", onClick = {
-                try {
-                    ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/anomalco/lumen")))
-                } catch (_: Exception) { }
-            }, chevronIcon = Icons.AutoMirrored.Rounded.OpenInNew)
         }
     }
 
-    if (showThemePicker) {
-        LumenPickerDialog(
-            onDismiss = { showThemePicker = false },
-            title = "Theme",
-            options = listOf(ThemeMode.SYSTEM, ThemeMode.LIGHT, ThemeMode.DARK),
-            selectedValue = s.themeMode,
-            optionLabel = { it.name.lowercase().replaceFirstChar { c -> c.uppercase() } },
-            onPick = { viewModel.setThemeMode(it); showThemePicker = false }
-        )
-    }
     if (showFontSizePicker) {
         LumenPickerDialog(
             onDismiss = { showFontSizePicker = false },
-            title = "Font Size",
+            title = "font size",
             options = listOf("SMALL", "DEFAULT", "LARGE"),
             selectedValue = s.fontSize,
-            optionLabel = { it.lowercase().replaceFirstChar { c -> c.uppercase() } },
+            optionLabel = { it.lowercase() },
             onPick = { viewModel.setFontSize(it); showFontSizePicker = false }
         )
     }
@@ -391,30 +390,30 @@ fun SettingsScreen(
     if (showAspectRatioPicker) {
         LumenPickerDialog(
             onDismiss = { showAspectRatioPicker = false },
-            title = "Default Aspect Ratio",
+            title = "default aspect ratio",
             options = listOf("AUTO", "R16_9", "R4_3", "STRETCH"),
             selectedValue = s.aspectRatio,
-            optionLabel = { it.replace("_", ":").replace("R", "") },
+            optionLabel = { it.replace("_", ":").replace("R", "").lowercase() },
             onPick = { viewModel.setAspectRatio(it); showAspectRatioPicker = false }
         )
     }
     if (showBrightnessPicker) {
         LumenPickerDialog(
             onDismiss = { showBrightnessPicker = false },
-            title = "Brightness Mode",
+            title = "brightness mode",
             options = listOf("SYSTEM", "MANUAL", "AUTO"),
             selectedValue = s.brightnessMode,
-            optionLabel = { it.lowercase().replaceFirstChar { c -> c.uppercase() } },
+            optionLabel = { it.lowercase() },
             onPick = { viewModel.setBrightnessMode(it); showBrightnessPicker = false }
         )
     }
     if (showSubtitleColorPicker) {
         LumenPickerDialog(
             onDismiss = { showSubtitleColorPicker = false },
-            title = "Subtitle Color",
+            title = "subtitle color",
             options = listOf("WHITE", "YELLOW", "CYAN", "PINK"),
             selectedValue = s.subtitleColor,
-            optionLabel = { it.lowercase().replaceFirstChar { c -> c.uppercase() } },
+            optionLabel = { it.lowercase() },
             onPick = { viewModel.setSubtitleColor(it); showSubtitleColorPicker = false }
         )
     }
@@ -422,7 +421,7 @@ fun SettingsScreen(
         val languages = listOf("English", "Spanish", "French", "German", "Italian", "Portuguese", "Russian", "Japanese", "Korean", "Chinese", "Arabic", "Hindi", "Turkish")
         LumenPickerDialog(
             onDismiss = { showLanguagePicker = false },
-            title = "Subtitle Language",
+            title = "subtitle language",
             options = languages,
             selectedValue = s.subtitleLanguage,
             optionLabel = { it },
@@ -447,34 +446,34 @@ fun SettingsScreen(
         LumenInputDialog(
             onDismiss = { showOpenSubsKeyDialog = false },
             onConfirm = { viewModel.setOpensubtitlesApiKey(it); showOpenSubsKeyDialog = false },
-            title = "OpenSubtitles API Key",
+            title = "opensubtitles api key",
             initialValue = s.opensubtitlesApiKey,
-            label = "API Key"
+            label = "api key"
         )
     }
     if (showClearCacheDialog) {
         LumenConfirmationDialog(
-            title = "Clear metadata cache?",
-            body = "This will remove all cached poster URLs. They will be re-fetched from TMDB on the next library scan.",
-            confirmLabel = "Clear",
+            title = "clear metadata cache?",
+            body = "this will remove all cached poster URLs. they will be re-fetched from TMDB on the next library scan.",
+            confirmLabel = "clear",
             onConfirm = { viewModel.clearMetadataCache(); showClearCacheDialog = false },
             onDismiss = { showClearCacheDialog = false }
         )
     }
     if (showResetSettingsDialog) {
         LumenConfirmationDialog(
-            title = "Reset All Settings?",
-            body = "All preferences will be restored to their default values. Media data will not be affected.",
-            confirmLabel = "Reset",
+            title = "reset all settings?",
+            body = "all preferences will be restored to their default values. media data will not be affected.",
+            confirmLabel = "reset",
             onConfirm = { viewModel.resetAllSettings(); showResetSettingsDialog = false },
             onDismiss = { showResetSettingsDialog = false }
         )
     }
     if (showResetOnboardingDialog) {
         LumenConfirmationDialog(
-            title = "Reset Onboarding?",
-            body = "The welcome screen will appear on the next launch.",
-            confirmLabel = "Reset",
+            title = "reset onboarding?",
+            body = "the welcome screen will appear on the next launch.",
+            confirmLabel = "reset",
             onConfirm = { viewModel.resetOnboarding(); showResetOnboardingDialog = false },
             onDismiss = { showResetOnboardingDialog = false }
         )
@@ -490,7 +489,7 @@ private fun SubtitleTextSizeSlider(
     var size by remember { mutableStateOf(currentSize) }
     LumenPickerDialog(
         onDismiss = onDismiss,
-        title = "Subtitle Text Size",
+        title = "subtitle text size",
         options = listOf(12f, 14f, 16f, 18f, 20f, 24f, 28f, 32f, 36f),
         selectedValue = size,
         optionLabel = { "${it.toInt()}sp" },
@@ -507,7 +506,7 @@ private fun SubtitleDelaySlider(
     var delayMs by remember { mutableStateOf(currentDelayUs / 1000) }
     LumenPickerDialog(
         onDismiss = onDismiss,
-        title = "Subtitle Delay",
+        title = "subtitle delay",
         options = listOf(-5000L, -3000L, -1000L, 0L, 1000L, 3000L, 5000L),
         selectedValue = delayMs,
         optionLabel = { "${it}ms" },
@@ -516,89 +515,73 @@ private fun SubtitleDelaySlider(
 }
 
 @Composable
-private fun SettingsSection(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    color: Color,
-    expanded: Boolean,
-    onToggle: () -> Unit,
-    content: @Composable () -> Unit
-) {
-    val iconEnd = when (icon) {
-        Icons.Rounded.Palette -> LumenPurpleDeep
-        Icons.Rounded.PlayCircle -> LumenGreenDeep
-        Icons.Rounded.Movie -> LumenBlueDeep
-        Icons.Rounded.Subtitles -> LumenYellowDeep
-        Icons.Rounded.LibraryMusic -> LumenOrangeDeep
-        Icons.Rounded.MusicNote -> LumenPinkDeep
-        Icons.Rounded.Cloud -> LumenCyanDeep
-        Icons.Rounded.Settings -> LumenRedDeep
-        Icons.Rounded.Info -> LumenDarkOnSurfaceVariant
-        else -> LumenPurpleDeep
-    }
-    Card(
+private fun SettingsEyebrow(label: String) {
+    Box(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 4.dp)
-            .animateContentSize(),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
-        ),
-        border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.15f))
+            .padding(start = 16.dp, end = 16.dp, bottom = 10.dp, top = 6.dp)
     ) {
-        Column {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onToggle)
-                    .height(72.dp)
-                    .padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                ShapeIcon(
-                    icon = icon,
-                    gradientStart = color,
-                    gradientEnd = iconEnd
-                )
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        title,
-                        style = MaterialTheme.typography.titleMedium,
-                        color = color
-                    )
-                    Spacer(Modifier.height(2.dp))
-                    Text(
-                        subtitle,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Icon(
-                    if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
-                    contentDescription = if (expanded) "Collapse" else "Expand",
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-            AnimatedVisibility(visible = expanded) {
-                Column {
-                    HorizontalDivider(
-                        color = MaterialTheme.colorScheme.outline.copy(alpha = 0.15f),
-                        modifier = Modifier.padding(horizontal = 16.dp)
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    content()
-                    Spacer(Modifier.height(4.dp))
-                }
-            }
-        }
+        Text(
+            text = label.uppercase(),
+            style = MaterialTheme.typography.labelSmall.copy(
+                letterSpacing = 2.sp
+            ),
+            color = Color(0xFFFFC857)
+        )
     }
 }
 
 @Composable
-private fun SwitchRow(
+private fun SettingsSectionHeader(
+    title: String,
+    subtitle: String,
+    expanded: Boolean,
+    onToggle: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onToggle)
+            .defaultMinSize(minHeight = 56.dp)
+            .padding(horizontal = 16.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.labelSmall.copy(
+                    letterSpacing = 0.sp,
+                    fontWeight = androidx.compose.ui.text.font.FontWeight.Normal
+                ),
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Icon(
+            if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
+            contentDescription = if (expanded) "Collapse" else "Expand",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(20.dp)
+        )
+    }
+}
+
+@Composable
+private fun SettingsDivider() {
+    HorizontalDivider(
+        thickness = 0.5.dp,
+        color = LumenBorderSubtle,
+        modifier = Modifier.padding(horizontal = 16.dp)
+    )
+}
+
+@Composable
+private fun SettingsSwitchRow(
     title: String,
     summary: String?,
     checked: Boolean,
@@ -607,14 +590,18 @@ private fun SwitchRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .defaultMinSize(minHeight = 56.dp)
+            .defaultMinSize(minHeight = 48.dp)
             .clickable { onToggle(!checked) }
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f).padding(end = 16.dp)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(
+                title,
+                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp)
+            )
             if (!summary.isNullOrEmpty()) {
+                Spacer(Modifier.height(2.dp))
                 Text(
                     summary,
                     style = MaterialTheme.typography.bodySmall,
@@ -627,33 +614,27 @@ private fun SwitchRow(
 }
 
 @Composable
-private fun ClickableRow(
+private fun SettingsClickableRow(
     title: String,
     subtitle: String,
     onClick: () -> Unit,
-    icon: ImageVector? = null,
-    iconTint: Color = MaterialTheme.colorScheme.primary,
-    titleColor: Color? = null,
-    chevronIcon: ImageVector = Icons.Rounded.ArrowForwardIos
+    chevronIcon: ImageVector = Icons.AutoMirrored.Rounded.ArrowForwardIos
 ) {
     Row(
         Modifier
             .fillMaxWidth()
-            .defaultMinSize(minHeight = 56.dp)
+            .defaultMinSize(minHeight = 48.dp)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        if (icon != null) {
-            Icon(icon, contentDescription = null, tint = iconTint)
-            Spacer(Modifier.width(12.dp))
-        }
         Column(Modifier.weight(1f)) {
             Text(
                 title,
-                style = MaterialTheme.typography.bodyLarge,
-                color = titleColor ?: MaterialTheme.colorScheme.onSurface
+                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
+                color = MaterialTheme.colorScheme.onSurface
             )
+            Spacer(Modifier.height(2.dp))
             Text(
                 subtitle,
                 style = MaterialTheme.typography.bodySmall,
@@ -678,18 +659,22 @@ private fun AccentColorRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .defaultMinSize(minHeight = 56.dp)
+            .defaultMinSize(minHeight = 48.dp)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text("Accent Color", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Text(
+            "accent color",
+            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
+            modifier = Modifier.weight(1f)
+        )
         Box(
             modifier = Modifier
                 .size(24.dp)
                 .clip(CircleShape)
                 .background(Color(android.graphics.Color.parseColor(hex)))
-                .border(1.dp, MaterialTheme.colorScheme.outline, CircleShape)
+                .border(1.dp, LumenBorderSubtle, CircleShape)
         )
         Spacer(Modifier.width(6.dp))
         Text(
@@ -699,7 +684,7 @@ private fun AccentColorRow(
         )
         Spacer(Modifier.width(8.dp))
         Icon(
-            Icons.Rounded.ArrowForwardIos,
+            Icons.AutoMirrored.Rounded.ArrowForwardIos,
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(20.dp)
@@ -715,11 +700,15 @@ private fun AboutRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .defaultMinSize(minHeight = 56.dp)
+            .defaultMinSize(minHeight = 48.dp)
             .padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(title, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+        Text(
+            title,
+            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
+            modifier = Modifier.weight(1f)
+        )
         Text(
             value,
             style = MaterialTheme.typography.bodyMedium,
@@ -729,14 +718,14 @@ private fun AboutRow(
 }
 
 private val ACCENT_COLORS = listOf(
-    "#00E5C8" to "Teal",
-    "#FF4D6D" to "Rose",
-    "#7C5CFF" to "Purple",
-    "#FFB347" to "Amber",
-    "#4CAF50" to "Green",
-    "#2196F3" to "Blue",
-    "#FF6B9D" to "Pink",
-    "#FFFFFF" to "White"
+    "#FFC857" to "amber",
+    "#FF4D6D" to "rose",
+    "#7C5CFF" to "purple",
+    "#FFB347" to "warm",
+    "#4CAF50" to "green",
+    "#2196F3" to "blue",
+    "#FF6B9D" to "pink",
+    "#FFFFFF" to "white"
 )
 
 @Composable
@@ -754,13 +743,13 @@ private fun AccentColorPickerDialog(
     ) {
         Surface(
             modifier = Modifier.fillMaxWidth(0.85f),
-            shape = RoundedCornerShape(20.dp),
+            shape = LumenSquircle(20.dp),
             color = MaterialTheme.colorScheme.surface,
             tonalElevation = 4.dp,
             shadowElevation = 8.dp
         ) {
             Column(Modifier.padding(24.dp)) {
-                Text("Accent Color", style = MaterialTheme.typography.titleLarge)
+                Text("accent color", style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.height(16.dp))
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(4),
@@ -797,7 +786,7 @@ private fun AccentColorPickerDialog(
                 }
                 Spacer(Modifier.height(12.dp))
                 TextButton(onClick = { showCustom = !showCustom }) {
-                    Text(if (showCustom) "Hide custom" else "Custom hex color")
+                    Text(if (showCustom) "hide custom" else "custom hex color")
                 }
                 if (showCustom) {
                     Spacer(Modifier.height(8.dp))
@@ -808,20 +797,184 @@ private fun AccentColorPickerDialog(
                         OutlinedTextField(
                             value = customHex,
                             onValueChange = { customHex = it },
-                            label = { Text("#RRGGBB") },
+                            label = { Text("#rrggbb") },
                             singleLine = true,
                             modifier = Modifier.weight(1f),
-                            shape = RoundedCornerShape(12.dp)
+                            shape = LumenSquircle(12.dp)
                         )
                         FilledTonalButton(
                             onClick = { onPick(customHex) },
-                            shape = RoundedCornerShape(12.dp)
+                            shape = LumenSquircle(12.dp)
                         ) {
-                            Text("Apply")
+                            Text("apply")
                         }
                     }
                 }
             }
         }
     }
+}
+
+private val weightNames = listOf("Light", "Normal", "Medium", "SemiBold", "Bold")
+
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun TypographySection(
+    currentFontChoice: LumenFontChoice,
+    currentTextCase: LumenTextCase,
+    currentWeightOffset: Int,
+    onFontChoice: (LumenFontChoice) -> Unit,
+    onTextCase: (LumenTextCase) -> Unit,
+    onWeightOffset: (Int) -> Unit
+) {
+    SettingsDivider()
+    Spacer(Modifier.height(8.dp))
+
+    LumenText(
+        value = "font",
+        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 2.sp),
+        color = LumenAmber,
+        modifier = Modifier.padding(start = 16.dp, bottom = 10.dp)
+    )
+
+    LazyRow(
+        contentPadding = PaddingValues(horizontal = 24.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        items(LumenFontChoice.entries) { choice ->
+            val isSelected = choice == currentFontChoice
+            Surface(
+                onClick = { onFontChoice(choice) },
+                shape = LumenSquircle(16.dp),
+                border = BorderStroke(
+                    if (isSelected) 2.dp else 1.dp,
+                    if (isSelected) MaterialTheme.colorScheme.primary
+                    else MaterialTheme.colorScheme.outline.copy(alpha = 0.3f)
+                ),
+                color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
+                else Color.Transparent,
+                modifier = Modifier.width(112.dp).height(96.dp)
+            ) {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Center,
+                    modifier = Modifier.padding(8.dp)
+                ) {
+                    Text(
+                        "Aa",
+                        fontFamily = choice.family,
+                        fontSize = 32.sp,
+                        color = if (isSelected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        choice.displayName,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        maxLines = 1,
+                        softWrap = false,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+        }
+    }
+
+    Spacer(Modifier.height(24.dp))
+
+    LumenText(
+        value = "case",
+        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 2.sp),
+        color = LumenAmber,
+        modifier = Modifier.padding(start = 16.dp, bottom = 10.dp)
+    )
+
+    FlowRow(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        LumenTextCase.entries.forEach { case ->
+            val isSelected = case == currentTextCase
+            Surface(
+                onClick = { onTextCase(case) },
+                shape = LumenSquircle(20.dp),
+                color = if (isSelected) MaterialTheme.colorScheme.primary
+                else MaterialTheme.colorScheme.surfaceVariant
+            ) {
+                Text(
+                    case.displayName,
+                    style = MaterialTheme.typography.labelMedium,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
+                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary
+                    else MaterialTheme.colorScheme.onSurface,
+                    softWrap = false,
+                    overflow = TextOverflow.Visible
+                )
+            }
+        }
+    }
+
+    Spacer(Modifier.height(24.dp))
+
+    LumenText(
+        value = "${weightNames[currentWeightOffset.coerceIn(0, 4)]}",
+        style = MaterialTheme.typography.titleMedium,
+        color = LumenAmber,
+        modifier = Modifier.padding(start = 16.dp, bottom = 4.dp)
+    )
+
+    Slider(
+        value = currentWeightOffset.toFloat(),
+        onValueChange = { onWeightOffset(it.roundToInt()) },
+        valueRange = 0f..4f,
+        steps = 3,
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        colors = SliderDefaults.colors(
+            thumbColor = MaterialTheme.colorScheme.primary,
+            activeTrackColor = MaterialTheme.colorScheme.primary,
+            inactiveTrackColor = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f)
+        )
+    )
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        weightNames.forEach { name ->
+            Text(
+                name,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
+            )
+        }
+    }
+
+    Spacer(Modifier.height(24.dp))
+
+    Surface(
+        shape = LumenSquircle(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 16.dp)
+    ) {
+        LumenText(
+            value = "The quick brown fox jumps over the lazy dog",
+            style = MaterialTheme.typography.bodyLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(16.dp)
+        )
+    }
+
+    Spacer(Modifier.height(8.dp))
 }

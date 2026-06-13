@@ -17,9 +17,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
+import com.lumen.player.ui.components.LumenSquircle
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -156,7 +156,7 @@ private fun HiddenItemRow(
         Box(
             Modifier
                 .size(48.dp)
-                .clip(RoundedCornerShape(8.dp)),
+                .clip(LumenSquircle(8.dp)),
             contentAlignment = Alignment.Center
         ) {
             SubcomposeAsyncImage(
@@ -181,7 +181,7 @@ private fun HiddenItemRow(
             colors = ButtonDefaults.filledTonalButtonColors(
                 containerColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
             ),
-            shape = RoundedCornerShape(8.dp)
+            shape = LumenSquircle(8.dp)
         ) {
             Text("Unhide", style = MaterialTheme.typography.labelMedium)
         }

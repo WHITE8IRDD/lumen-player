@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -38,11 +37,11 @@ fun FloatingGlassCard(
             .then(clickMod)
             .shadow(
                 elevation = 16.dp,
-                shape = RoundedCornerShape(28.dp),
+                shape = LumenSquircle(28.dp),
                 ambientColor = Color.Black.copy(alpha = 0.4f),
                 spotColor = Color.Black.copy(alpha = 0.4f)
             ),
-        shape = RoundedCornerShape(28.dp),
+        shape = LumenSquircle(28.dp),
         color = Color.Transparent,
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.10f))
     ) {
@@ -56,7 +55,7 @@ fun FloatingGlassCard(
                             Color.White.copy(alpha = 0.02f)
                         )
                     ),
-                    shape = RoundedCornerShape(28.dp)
+                    shape = LumenSquircle(28.dp)
                 )
                 .padding(horizontal = 20.dp, vertical = 16.dp)
         ) {

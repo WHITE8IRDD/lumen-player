@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material.icons.rounded.PlayArrow
@@ -87,9 +86,9 @@ fun MiniPlayer(
             .padding(horizontal = 8.dp)
             .offset { IntOffset(offsetX.value.roundToInt(), 0) }
             .height(64.dp)
-            .shadow(8.dp, RoundedCornerShape(20.dp), clip = false)
-            .clip(RoundedCornerShape(20.dp))
-            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)), RoundedCornerShape(20.dp))
+            .shadow(8.dp, LumenSquircle(20.dp), clip = false)
+            .clip(LumenSquircle(20.dp))
+            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)), LumenSquircle(20.dp))
             .background(
                 Brush.verticalGradient(
                     colors = listOf(
@@ -168,7 +167,7 @@ fun MiniPlayer(
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
                         .size(48.dp)
-                        .clip(RoundedCornerShape(12.dp)),
+                        .clip(LumenSquircle(12.dp)),
                     loading = { ShimmerBox(modifier = Modifier.size(48.dp)) }
                 )
                 Spacer(Modifier.width(12.dp))

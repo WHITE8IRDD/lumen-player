@@ -55,3 +55,8 @@ restart_*.png
 settings_*.png
 step*.png
 tests/
+
+screenshots/
+*.png
+*.mp4
+*.xml

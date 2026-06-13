@@ -1,6 +1,6 @@
 package com.lumen.player.ui.components
 
-import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.InfiniteTransition
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
@@ -9,7 +9,7 @@ import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -23,15 +23,15 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun ShimmerBox(
     modifier: Modifier = Modifier,
-    shape: Shape = RoundedCornerShape(8.dp),
-    shimmerColors: List<Color> = ShimmerDefaults.colors
+    shape: Shape = LumenSquircle(12.dp),
+    shimmerColors: List<Color> = ShimmerDefaults.colors()
 ) {
     val transition: InfiniteTransition = rememberInfiniteTransition()
     val translateAnim by transition.animateFloat(
         initialValue = 0f,
         targetValue = 1000f,
         animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1200, easing = FastOutSlowInEasing),
+            animation = tween(durationMillis = 1400, easing = LinearEasing),
             repeatMode = RepeatMode.Restart
         )
     )
@@ -48,10 +48,10 @@ fun ShimmerBox(
 }
 
 object ShimmerDefaults {
-    val colors: List<Color>
-        get() = listOf(
-            Color.White.copy(alpha = 0.06f),
-            Color.White.copy(alpha = 0.12f),
-            Color.White.copy(alpha = 0.06f)
-        )
+    @Composable
+    fun colors(): List<Color> = listOf(
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.9f),
+        MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+    )
 }

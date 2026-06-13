@@ -41,4 +41,7 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setShowAudio(enabled: Boolean) = store.setShowAudio(enabled)
     override suspend fun setReplayGain(enabled: Boolean) = store.setReplayGain(enabled)
     override suspend fun setSectionExpanded(section: String, expanded: Boolean) = store.setSectionExpanded(section, expanded)
+    override suspend fun setFontFamilyChoice(value: String) = store.setFontFamilyChoice(value)
+    override suspend fun setTextCaseChoice(value: String) = store.setTextCaseChoice(value)
+    override suspend fun setWeightOffset(value: Int) = store.setWeightOffset(value)
 }

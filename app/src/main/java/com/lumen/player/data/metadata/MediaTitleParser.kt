@@ -114,8 +114,13 @@ class MediaTitleParser @Inject constructor() : MetadataResolver {
             } else cleanTitle
         }
 
+        val cleaned = colonResult
+            .replace(Regex("[\\[\\](){}]"), "")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+
         return MediaMetadata(
-            cleanTitle = colonResult.ifEmpty { rawFilename },
+            cleanTitle = cleaned.ifEmpty { rawFilename },
             year = year,
             seasonEpisode = seasonEpisode ?: episodeOnly
         )

@@ -5,8 +5,6 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
-import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,13 +21,8 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Folder
-import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -44,24 +37,25 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.lumen.player.core.theme.LumenBlue
-import com.lumen.player.core.theme.LumenBlueDeep
-import com.lumen.player.core.theme.LumenCyanDeep
-import com.lumen.player.core.theme.LumenGreen
-import com.lumen.player.core.theme.LumenGreenDeep
-import com.lumen.player.core.theme.LumenOrangeDeep
-import com.lumen.player.core.theme.LumenPurpleDeep
-import com.lumen.player.core.theme.LumenYellow
-import com.lumen.player.ui.components.LumenPrimaryButton
+import com.lumen.player.core.theme.LumenAmber
+import com.lumen.player.core.theme.LumenLavender
+import com.lumen.player.ui.components.LumenBlob
+import com.lumen.player.ui.components.Mood
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
+
+// Onboarding-specific legacy palette (vibrant experience, not UI chrome)
+private val OnboardingYellow = Color(0xFFFFD23F)
+private val OnboardingBlue = Color(0xFF60A5FA)
+private val OnboardingBlueDeep = Color(0xFF3B82F6)
+private val OnboardingGreen = Color(0xFF34D399)
+private val OnboardingGreenDeep = Color(0xFF10B981)
+private val OnboardingPurpleDeep = Color(0xFF7C3AED)
+private val OnboardingOrangeDeep = Color(0xFFEA580C)
+private val OnboardingCyanDeep = Color(0xFF0891B2)
 
 @Composable
 fun OnboardingScreen(
@@ -80,7 +74,7 @@ fun OnboardingScreen(
         scope.launch { pagerState.animateScrollToPage(2) }
     }
 
-    val slideColors = listOf(LumenYellow, LumenBlue, LumenGreen)
+    val slideColors = listOf(OnboardingYellow, OnboardingBlue, OnboardingGreen)
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         Column(
@@ -95,7 +89,7 @@ fun OnboardingScreen(
                     TextButton(onClick = {
                         scope.launch { pagerState.animateScrollToPage(2) }
                     }) {
-                        Text("Skip", color = Color.White.copy(alpha = 0.5f))
+                        Text("skip", color = Color.White.copy(alpha = 0.5f))
                     }
                 }
             }
@@ -144,84 +138,23 @@ fun OnboardingScreen(
 }
 
 @Composable
-private fun OnboardingBlob(
-    gradientStart: Color,
-    gradientEnd: Color,
-    centerIcon: ImageVector,
-    modifier: Modifier = Modifier
-) {
-    Box(modifier = modifier.size(270.dp), contentAlignment = Alignment.Center) {
-        Canvas(modifier = Modifier.fillMaxSize()) {
-            drawCircle(
-                brush = Brush.radialGradient(
-                    colors = listOf(
-                        gradientStart.copy(alpha = 0.4f),
-                        gradientStart.copy(alpha = 0f)
-                    ),
-                    radius = size.minDimension
-                ),
-                radius = size.minDimension / 2
-            )
-        }
-        Box(
-            modifier = Modifier
-                .size(180.dp)
-                .clip(CircleShape)
-                .background(
-                    brush = Brush.linearGradient(
-                        colors = listOf(gradientStart, gradientEnd)
-                    )
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = centerIcon,
-                contentDescription = null,
-                tint = Color.White,
-                modifier = Modifier.size(72.dp)
-            )
-        }
-    }
-}
-
-@Composable
 private fun WelcomeSlide(onNext: () -> Unit) {
     Column(
         Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Box(
-            modifier = Modifier.size(240.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Canvas(modifier = Modifier.fillMaxSize()) {
-                drawCircle(
-                    brush = Brush.radialGradient(
-                        colors = listOf(
-                            LumenYellow.copy(alpha = 0.4f),
-                            LumenYellow.copy(alpha = 0f)
-                        )
-                    ),
-                    radius = size.minDimension / 1.5f
-                )
-            }
-            Image(
-                painter = painterResource(com.lumen.player.R.drawable.lumen_logo_rounded),
-                contentDescription = "Lumen",
-                modifier = Modifier.size(180.dp)
-            )
-        }
+        LumenBlob(modifier = Modifier.size(200.dp), color = LumenAmber, mood = Mood.IDLE)
         Spacer(Modifier.height(48.dp))
         Text(
-            "Welcome to Lumen",
+            "welcome to Lumen",
             style = MaterialTheme.typography.displayLarge,
             textAlign = TextAlign.Center,
             color = Color.White
         )
         Spacer(Modifier.height(16.dp))
         Text(
-            "Your local media, beautifully.",
+            "your local media, beautifully.",
             style = MaterialTheme.typography.bodyLarge,
             color = Color.White.copy(alpha = 0.6f),
             textAlign = TextAlign.Center
@@ -236,16 +169,16 @@ private fun WelcomeSlide(onNext: () -> Unit) {
                 .shadow(
                     elevation = 20.dp,
                     shape = RoundedCornerShape(percent = 50),
-                    spotColor = LumenYellow.copy(alpha = 0.6f),
-                    ambientColor = LumenYellow.copy(alpha = 0.3f)
+                    spotColor = LumenAmber.copy(alpha = 0.6f),
+                    ambientColor = LumenAmber.copy(alpha = 0.3f)
                 ),
             shape = RoundedCornerShape(percent = 50),
             colors = ButtonDefaults.buttonColors(
-                containerColor = LumenYellow,
+                containerColor = LumenAmber,
                 contentColor = Color.Black
             )
         ) {
-            Text("Get Started", style = MaterialTheme.typography.labelLarge)
+            Text("get started", style = MaterialTheme.typography.labelLarge)
         }
     }
 }
@@ -257,21 +190,17 @@ private fun PermissionsSlide(onGrant: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        OnboardingBlob(
-            gradientStart = LumenBlue,
-            gradientEnd = LumenPurpleDeep,
-            centerIcon = Icons.Rounded.Folder
-        )
+        LumenBlob(modifier = Modifier.size(200.dp), color = LumenLavender, mood = Mood.CURIOUS)
         Spacer(Modifier.height(48.dp))
         Text(
-            "Grant Media Access",
+            "grant media access",
             style = MaterialTheme.typography.displayLarge,
             textAlign = TextAlign.Center,
             color = Color.White
         )
         Spacer(Modifier.height(16.dp))
         Text(
-            "Lumen needs permission to read videos and audio on your device. We also use notifications for playback controls.",
+            "Lumen needs permission to read videos and audio on your device. we also use notifications for playback controls.",
             style = MaterialTheme.typography.bodyLarge,
             color = Color.White.copy(alpha = 0.6f),
             textAlign = TextAlign.Center,
@@ -287,16 +216,16 @@ private fun PermissionsSlide(onGrant: () -> Unit) {
                 .shadow(
                     elevation = 20.dp,
                     shape = RoundedCornerShape(percent = 50),
-                    spotColor = LumenBlue.copy(alpha = 0.6f),
-                    ambientColor = LumenBlue.copy(alpha = 0.3f)
+                    spotColor = LumenAmber.copy(alpha = 0.6f),
+                    ambientColor = LumenAmber.copy(alpha = 0.3f)
                 ),
             shape = RoundedCornerShape(percent = 50),
             colors = ButtonDefaults.buttonColors(
-                containerColor = LumenBlue,
-                contentColor = Color.White
+                containerColor = LumenAmber,
+                contentColor = Color.Black
             )
         ) {
-            Text("Grant Permissions", style = MaterialTheme.typography.labelLarge)
+            Text("grant permissions", style = MaterialTheme.typography.labelLarge)
         }
     }
 }
@@ -316,14 +245,10 @@ private fun SetupSlide(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        OnboardingBlob(
-            gradientStart = LumenGreen,
-            gradientEnd = LumenCyanDeep,
-            centerIcon = Icons.Rounded.Tune
-        )
+        LumenBlob(modifier = Modifier.size(200.dp), color = LumenAmber, mood = Mood.HAPPY)
         Spacer(Modifier.height(48.dp))
         Text(
-            "Customize Your Experience",
+            "customize your experience",
             style = MaterialTheme.typography.displayMedium,
             textAlign = TextAlign.Center,
             color = Color.White,
@@ -331,20 +256,20 @@ private fun SetupSlide(
         )
         Spacer(Modifier.height(40.dp))
         ToggleRow(
-            title = "Dynamic Color",
-            subtitle = "Match your wallpaper colors (Android 12+)",
+            title = "dynamic color",
+            subtitle = "match your wallpaper colors (android 12+)",
             checked = dynamicColor,
             onToggle = onDynamicColorChange
         )
         ToggleRow(
-            title = "Online Metadata",
-            subtitle = "Fetch movie posters from TMDB",
+            title = "online metadata",
+            subtitle = "fetch movie posters from TMDB",
             checked = tmdbEnabled,
             onToggle = onTmdbChange
         )
         ToggleRow(
-            title = "Hardware Acceleration",
-            subtitle = "Use hardware video decoding",
+            title = "hardware acceleration",
+            subtitle = "use hardware video decoding",
             checked = hwAccel,
             onToggle = onHwAccelChange
         )
@@ -358,16 +283,16 @@ private fun SetupSlide(
                 .shadow(
                     elevation = 20.dp,
                     shape = RoundedCornerShape(percent = 50),
-                    spotColor = LumenGreen.copy(alpha = 0.6f),
-                    ambientColor = LumenGreen.copy(alpha = 0.3f)
+                    spotColor = LumenAmber.copy(alpha = 0.6f),
+                    ambientColor = LumenAmber.copy(alpha = 0.3f)
                 ),
             shape = RoundedCornerShape(percent = 50),
             colors = ButtonDefaults.buttonColors(
-                containerColor = LumenGreen,
-                contentColor = Color.White
+                containerColor = LumenAmber,
+                contentColor = Color.Black
             )
         ) {
-            Text("Done", style = MaterialTheme.typography.labelLarge)
+            Text("done", style = MaterialTheme.typography.labelLarge)
         }
     }
 }

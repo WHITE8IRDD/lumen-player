@@ -2,24 +2,29 @@ package com.lumen.player.core.theme
 
 import android.app.Activity
 import android.os.Build
-import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.dynamicDarkColorScheme
-import androidx.compose.material3.dynamicLightColorScheme
-import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.text.font.FontFamily
 import androidx.core.view.WindowCompat
+import com.lumen.player.ui.theme.LocalLumenTextCase
+import com.lumen.player.ui.theme.LumenFontChoice
+import com.lumen.player.ui.theme.LumenTextCase
 
 @Composable
 fun LumenTheme(
-    darkTheme: Boolean = isSystemInDarkTheme(),
     dynamicColor: Boolean = false,
-    accentColor: Color = Color(0xFF00E5C8),
+    accentColor: Color = Color(0xFFFFC857),
+    fontFamily: FontFamily = LumenFontChoice.SERIF_DISPLAY.family,
+    textCase: LumenTextCase = LumenTextCase.LOWERCASE,
+    weightOffset: Int = 0,
     content: @Composable () -> Unit
 ) {
     val view = LocalView.current
@@ -28,30 +33,22 @@ fun LumenTheme(
 
     val colorScheme = when {
         dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            if (darkTheme) {
-                dynamicDarkColorScheme(view.context).copy(
-                    primary = accentColor,
-                    secondary = accentColor,
-                    tertiary = accentColor,
-                    background = LumenDarkBackground,
-                    surface = LumenDarkSurface,
-                    surfaceVariant = LumenDarkSurfaceVariant,
-                    surfaceContainer = LumenDarkSurfaceContainer,
-                    surfaceContainerHigh = Color(0xFF1F1F28),
-                    surfaceContainerHighest = Color(0xFF252530),
-                    onSurface = LumenDarkOnSurface,
-                    onSurfaceVariant = LumenDarkOnSurfaceVariant,
-                    outline = LumenDarkOutline
-                )
-            } else {
-                dynamicLightColorScheme(view.context).copy(
-                    primary = accentColor,
-                    secondary = accentColor,
-                    tertiary = accentColor
-                )
-            }
+            dynamicDarkColorScheme(view.context).copy(
+                primary = accentColor,
+                secondary = accentColor,
+                tertiary = accentColor,
+                background = LumenBlack,
+                surface = LumenSurfaceElevated,
+                surfaceVariant = LumenSurfaceHigh,
+                surfaceContainer = LumenSurfaceHigh,
+                surfaceContainerHigh = Color(0xFF1F1F28),
+                surfaceContainerHighest = Color(0xFF252530),
+                onSurface = LumenTextPrimary,
+                onSurfaceVariant = LumenTextSecondary,
+                outline = LumenBorderSubtle
+            )
         }
-        darkTheme -> darkColorScheme(
+        else -> darkColorScheme(
             primary = accentColor,
             onPrimary = onAccent,
             primaryContainer = Color(0xFF2A2A4A),
@@ -61,40 +58,18 @@ fun LumenTheme(
             secondaryContainer = accentColor.copy(alpha = 0.2f),
             onSecondaryContainer = accentColor,
             tertiary = accentColor,
-            background = LumenDarkBackground,
-            onBackground = LumenDarkOnSurface,
-            surface = LumenDarkSurface,
-            onSurface = LumenDarkOnSurface,
-            surfaceVariant = LumenDarkSurfaceVariant,
-            onSurfaceVariant = LumenDarkOnSurfaceVariant,
-            surfaceContainer = LumenDarkSurfaceContainer,
+            background = LumenBlack,
+            onBackground = LumenTextPrimary,
+            surface = LumenSurfaceElevated,
+            onSurface = LumenTextPrimary,
+            surfaceVariant = LumenSurfaceHigh,
+            onSurfaceVariant = LumenTextSecondary,
+            surfaceContainer = LumenSurfaceHigh,
             surfaceContainerHigh = Color(0xFF1F1F28),
             surfaceContainerHighest = Color(0xFF252530),
-            outline = LumenDarkOutline,
+            outline = LumenBorderSubtle,
             error = Color(0xFFE84D8A),
             onError = Color(0xFF2A1020)
-        )
-        else -> lightColorScheme(
-            primary = accentColor,
-            onPrimary = onAccent,
-            primaryContainer = Color(0xFFE0E0FF),
-            onPrimaryContainer = Color(0xFF1A0033),
-            secondary = accentColor,
-            onSecondary = Color.White,
-            secondaryContainer = accentColor.copy(alpha = 0.2f),
-            onSecondaryContainer = accentColor,
-            background = Color(0xFFFFFFFF),
-            onBackground = Color(0xFF0A0A0F),
-            surface = Color(0xFFF5F5F7),
-            onSurface = Color(0xFF0A0A0F),
-            surfaceVariant = Color(0xFFEEEEF1),
-            onSurfaceVariant = Color(0xFF5A5A65),
-            surfaceContainer = Color(0xFFFAFAFA),
-            surfaceContainerHigh = Color(0xFFF0F0F3),
-            surfaceContainerHighest = Color(0xFFE8E8EC),
-            outline = Color(0xFFD0D0D8),
-            error = Color(0xFFBA1A1A),
-            onError = Color.White
         )
     }
 
@@ -104,16 +79,22 @@ fun LumenTheme(
             window.statusBarColor = Color.Transparent.toArgb()
             window.navigationBarColor = Color.Transparent.toArgb()
             WindowCompat.getInsetsController(window, view).apply {
-                isAppearanceLightStatusBars = !darkTheme
-                isAppearanceLightNavigationBars = !darkTheme
+                isAppearanceLightStatusBars = false
+                isAppearanceLightNavigationBars = false
             }
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = LumenTypography,
-        shapes = LumenShapes,
-        content = content
-    )
+    val typography = remember(fontFamily, weightOffset) {
+        buildLumenTypography(family = fontFamily, weightOffset = weightOffset)
+    }
+
+    CompositionLocalProvider(LocalLumenTextCase provides textCase) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = typography,
+            shapes = LumenShapes,
+            content = content
+        )
+    }
 }

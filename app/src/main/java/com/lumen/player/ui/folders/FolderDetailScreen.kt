@@ -3,6 +3,9 @@ package com.lumen.player.ui.folders
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.IntentSenderRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -13,10 +16,11 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Sort
-import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.ViewAgenda
 import androidx.compose.material.icons.rounded.ViewModule
 import androidx.compose.material3.DropdownMenu
@@ -48,6 +52,12 @@ import com.lumen.player.ui.library.VideoList
 import com.lumen.player.ui.library.VideoSort
 import com.lumen.player.ui.components.CircularIconButton
 import com.lumen.player.ui.components.FloatingGlassCard
+import com.lumen.player.ui.components.LumenBlob
+import com.lumen.player.ui.components.LumenEmptyState
+import com.lumen.player.ui.components.Mood
+import com.lumen.player.ui.components.FolderDetailAccents
+import com.lumen.player.ui.components.VideoCardSkeleton
+import com.lumen.player.core.theme.LumenOcean
 import com.lumen.player.core.util.TimeFormatter
 import java.util.Locale
 
@@ -61,6 +71,7 @@ fun FolderDetailScreen(
     viewModel: FolderDetailViewModel = hiltViewModel()
 ) {
     val items by viewModel.items.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     var sort by remember { mutableStateOf(VideoSort.TITLE) }
     var sortMenuExpanded by remember { mutableStateOf(false) }
     var selectedIds by remember { mutableStateOf(setOf<Long>()) }
@@ -173,33 +184,38 @@ fun FolderDetailScreen(
             Spacer(Modifier.height(8.dp))
         }
 
-        if (items.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        Icons.Rounded.Movie, contentDescription = null,
-                        modifier = Modifier.size(56.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text("This folder is empty",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Crossfade(targetState = isLoading, animationSpec = tween(200)) { loading ->
+            if (loading) {
+                LazyVerticalGrid(
+                    columns = GridCells.Fixed(2),
+                    modifier = Modifier.fillMaxSize().padding(12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    items(6) { VideoCardSkeleton() }
                 }
+            } else if (items.isEmpty()) {
+                LumenEmptyState(
+                    blobColor = LumenOcean,
+                    blobMood = Mood.SLEEPING,
+                    title = "no media in this folder",
+                    accents = { FolderDetailAccents(LumenOcean) }
+                )
+            } else if (isGridView) {
+                VideoGrid(
+                    items = sorted,
+                    onClick = open,
+                    selectedIds = selectedIds,
+                    onLongClick = { item -> selectedIds = selectedIds + item.id }
+                )
+            } else {
+                VideoList(
+                    items = sorted,
+                    onClick = open,
+                    selectedIds = selectedIds,
+                    onLongClick = { item -> selectedIds = selectedIds + item.id }
+                )
             }
-        } else if (isGridView) {
-            VideoGrid(
-                items = sorted,
-                onClick = open,
-                selectedIds = selectedIds,
-                onLongClick = { item -> selectedIds = selectedIds + item.id }
-            )
-        } else {
-            VideoList(
-                items = sorted,
-                onClick = open,
-                selectedIds = selectedIds,
-                onLongClick = { item -> selectedIds = selectedIds + item.id }
-            )
         }
     }
 }

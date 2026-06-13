@@ -1,6 +1,8 @@
 package com.lumen.player.ui.playlist
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
@@ -23,8 +25,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import com.lumen.player.ui.components.LumenSquircle
 import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
@@ -32,7 +34,6 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.PlayArrow
-import androidx.compose.material.icons.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -67,6 +68,12 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import coil.compose.AsyncImage
 import com.lumen.player.core.util.TimeFormatter
+import com.lumen.player.ui.components.AudioRowSkeleton
+import com.lumen.player.ui.components.PlaylistDetailAccents
+import com.lumen.player.ui.components.LumenBlob
+import com.lumen.player.ui.components.LumenEmptyState
+import com.lumen.player.ui.components.Mood
+import com.lumen.player.core.theme.LumenSage
 import com.lumen.player.ui.components.CircularIconButton
 import com.lumen.player.ui.components.DialogVariant
 import com.lumen.player.ui.components.FloatingGlassCard
@@ -83,6 +90,7 @@ fun PlaylistDetailScreen(
     viewModel: PlaylistDetailViewModel = hiltViewModel()
 ) {
     val items by viewModel.items.collectAsStateWithLifecycle()
+    val isLoading by viewModel.isLoading.collectAsStateWithLifecycle()
     val playlistName by viewModel.playlistName.collectAsStateWithLifecycle()
     var showMenu by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
@@ -161,30 +169,32 @@ fun PlaylistDetailScreen(
             )
         )
 
-        if (items.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(Icons.Rounded.QueueMusic, null, Modifier.size(56.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Spacer(Modifier.height(8.dp))
-                    Text("No items in this playlist",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Crossfade(targetState = isLoading, animationSpec = tween(200)) { loading ->
+            if (loading) {
+                LazyColumn(Modifier.fillMaxSize()) {
+                    items(6) { AudioRowSkeleton() }
                 }
-            }
-        } else {
-            Column(Modifier.fillMaxSize()) {
-                FloatingGlassCard(
-                    title = playlistName.ifEmpty { "Playlist" },
-                    subtitle = "${items.size} items · ${TimeFormatter.format(items.sumOf { it.durationMs })}",
-                    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+            } else if (items.isEmpty()) {
+                LumenEmptyState(
+                    blobColor = LumenSage,
+                    blobMood = Mood.IDLE,
+                    title = "no items in this playlist",
+                    accents = { PlaylistDetailAccents(LumenSage) }
                 )
-                Row(
-                    Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
+            } else {
+                Column(Modifier.fillMaxSize()) {
+                    FloatingGlassCard(
+                        title = playlistName.ifEmpty { "Playlist" },
+                        subtitle = "${items.size} items · ${TimeFormatter.format(items.sumOf { it.durationMs })}",
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                    Row(
+                        Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
                     FilledTonalButton(
                         onClick = { viewModel.playAll(items) },
-                        shape = RoundedCornerShape(12.dp),
+                        shape = LumenSquircle(12.dp),
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(Icons.Rounded.PlayArrow, null, Modifier.size(18.dp))
@@ -193,7 +203,7 @@ fun PlaylistDetailScreen(
                     }
                     FilledTonalButton(
                         onClick = { viewModel.shufflePlay(items) },
-                        shape = RoundedCornerShape(12.dp),
+                        shape = LumenSquircle(12.dp),
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(Icons.Rounded.Shuffle, null, Modifier.size(18.dp))
@@ -253,6 +263,7 @@ fun PlaylistDetailScreen(
             confirmLabel = "Rename"
         )
     }
+    }
 }
 
 @UnstableApi
@@ -268,7 +279,7 @@ private fun PlaylistItemRow(
             .fillMaxWidth()
             .padding(horizontal = 12.dp, vertical = 4.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = LumenSquircle(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
@@ -296,7 +307,7 @@ private fun PlaylistItemRow(
             Box(
                 Modifier
                     .size(width = 48.dp, height = 48.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(LumenSquircle(8.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 AsyncImage(

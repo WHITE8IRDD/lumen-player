@@ -18,8 +18,12 @@ import com.lumen.player.domain.repository.MediaRepository
 import com.lumen.player.player.PlayerController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import java.io.File
 import javax.inject.Inject
@@ -48,9 +52,21 @@ class FolderDetailViewModel @Inject constructor(
     val path: String = java.net.URLDecoder.decode(encoded, "utf-8")
     val folderName: String = File(path).name.ifBlank { path }
 
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
     val items = repository.observeByFolder(path)
         .distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList<MediaItem>())
+
+    init {
+        viewModelScope.launch {
+            repository.observeByFolder(path).first {
+                _isLoading.value = false
+                true
+            }
+        }
+    }
 
     fun play(items: List<MediaItem>, startIndex: Int) {
         if (items.isEmpty() || startIndex !in items.indices) return

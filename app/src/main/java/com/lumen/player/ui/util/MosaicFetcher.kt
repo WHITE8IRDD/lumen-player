@@ -38,44 +38,57 @@ class MosaicFetcher(
 
     override suspend fun fetch(): FetchResult {
         val ctx = options.context
-        val cacheFile = cacheFileFor(ctx, data.folderPath, data.videoIds)
+        return try {
+            val cacheFile = cacheFileFor(ctx, data.folderPath, data.videoIds)
 
-        val bitmap: Bitmap = withContext(Dispatchers.IO) {
-            if (cacheFile != null && cacheFile.exists() && cacheFile.length() > 0L) {
-                val cached = BitmapFactory.decodeFile(cacheFile.absolutePath)
-                if (cached != null) {
-                    Log.d(TAG, "Cache HIT for ${data.folderPath}")
-                    return@withContext cached
-                }
-            }
-            Log.d(TAG, "Cache MISS for ${data.folderPath}, composing mosaic")
-            val frames = data.uris.take(4).map { uri ->
-                ThumbnailExtractor.extractWithFallback(ctx, uri) ?: ThumbnailExtractor.fallbackBitmap()
-            }
-            val composed = MosaicComposer.compose(frames, 512)
-            if (cacheFile != null) {
-                runCatching {
-                    FileOutputStream(cacheFile).use { out ->
-                        composed.compress(Bitmap.CompressFormat.JPEG, 85, out)
+            val bitmap: Bitmap = withContext(Dispatchers.IO) {
+                if (cacheFile != null && cacheFile.exists() && cacheFile.length() > 0L) {
+                    val cached = BitmapFactory.decodeFile(cacheFile.absolutePath)
+                    if (cached != null) {
+                        Log.d(TAG, "Cache HIT for ${data.folderPath}")
+                        return@withContext cached
                     }
                 }
+                Log.d(TAG, "Cache MISS for ${data.folderPath}, composing mosaic")
+                val frames = data.uris.take(4).map { uri ->
+                    ThumbnailExtractor.extractWithFallback(ctx, uri) ?: ThumbnailExtractor.fallbackBitmap()
+                }
+                val composed = MosaicComposer.compose(frames, 512)
+                if (cacheFile != null) {
+                    runCatching {
+                        FileOutputStream(cacheFile).use { out ->
+                            composed.compress(Bitmap.CompressFormat.JPEG, 85, out)
+                        }
+                    }
+                }
+                frames.forEachIndexed { i, bmp ->
+                    if (i > 0 && bmp.width > 1) bmp.recycle()
+                }
+                composed
             }
-            frames.forEachIndexed { i, bmp ->
-                if (i > 0 && bmp.width > 1) bmp.recycle()
-            }
-            composed
+
+            val out = ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
+            bitmap.recycle()
+            val bytes = out.toByteArray()
+
+            SourceResult(
+                source = ImageSource(Buffer().write(bytes), ctx),
+                mimeType = "image/jpeg",
+                dataSource = DataSource.DISK
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "mosaic fetch failed: ${e.message}")
+            val fallback = ThumbnailExtractor.fallbackBitmap()
+            val out = ByteArrayOutputStream()
+            fallback.compress(Bitmap.CompressFormat.JPEG, 85, out)
+            fallback.recycle()
+            SourceResult(
+                source = ImageSource(Buffer().write(out.toByteArray()), ctx),
+                mimeType = "image/jpeg",
+                dataSource = DataSource.DISK
+            )
         }
-
-        val out = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
-        bitmap.recycle()
-        val bytes = out.toByteArray()
-
-        return SourceResult(
-            source = ImageSource(Buffer().write(bytes), ctx),
-            mimeType = "image/jpeg",
-            dataSource = DataSource.DISK
-        )
     }
 
     class Factory : Fetcher.Factory<MosaicFetcherInput> {

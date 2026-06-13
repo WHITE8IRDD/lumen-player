@@ -21,8 +21,8 @@ import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import com.lumen.player.ui.components.LumenSquircle
 import androidx.compose.material.icons.rounded.ClosedCaption
 import androidx.compose.material.icons.rounded.ExpandMore
 import androidx.compose.material.icons.rounded.Equalizer
@@ -342,7 +342,7 @@ private fun AnimatedAlbumArt(
                     scaleX = artScale
                     scaleY = artScale
                 }
-                .clip(RoundedCornerShape(artCorner))
+                .clip(LumenSquircle(artCorner))
         )
     }
 }
@@ -362,7 +362,7 @@ private fun HudIndicator(icon: ImageVector, value: Float, label: String) {
             Box(
                 Modifier
                     .size(72.dp)
-                    .clip(RoundedCornerShape(16.dp))
+                    .clip(LumenSquircle(16.dp))
                     .background(Color.Black.copy(alpha = 0.55f)),
                 contentAlignment = Alignment.Center
             ) {

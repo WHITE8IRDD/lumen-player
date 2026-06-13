@@ -65,6 +65,9 @@ class SettingsViewModel @Inject constructor(
     fun setSubtitleDelayUs(v: Long) = viewModelScope.launch { repository.setSubtitleDelayUs(v) }
     fun setSubtitleLanguage(v: String) = viewModelScope.launch { repository.setSubtitleLanguage(v) }
     fun setOpensubtitlesApiKey(v: String) = viewModelScope.launch { repository.setOpensubtitlesApiKey(v) }
+    fun setFontFamilyChoice(v: String) = viewModelScope.launch { repository.setFontFamilyChoice(v) }
+    fun setTextCaseChoice(v: String) = viewModelScope.launch { repository.setTextCaseChoice(v) }
+    fun setWeightOffset(v: Int) = viewModelScope.launch { repository.setWeightOffset(v) }
     fun setAutoScanOnStartup(v: Boolean) = viewModelScope.launch { repository.setAutoScanOnStartup(v) }
     fun setShowAudio(v: Boolean) = viewModelScope.launch { repository.setShowAudio(v) }
     fun setReplayGain(v: Boolean) = viewModelScope.launch { repository.setReplayGain(v) }
@@ -92,6 +95,9 @@ class SettingsViewModel @Inject constructor(
         repository.setAutoScanOnStartup(true)
         repository.setShowAudio(true)
         repository.setReplayGain(false)
+        repository.setFontFamilyChoice("SERIF_DISPLAY")
+        repository.setTextCaseChoice("LOWERCASE")
+        repository.setWeightOffset(0)
     }
 
     fun resetOnboarding() = viewModelScope.launch {

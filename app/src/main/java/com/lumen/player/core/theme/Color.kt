@@ -2,39 +2,36 @@ package com.lumen.player.core.theme
 
 import androidx.compose.ui.graphics.Color
 
-val LumenOnSurfaceDim = Color(0xFF9090A0)
+// ── Surfaces ──
+val LumenBlack = Color(0xFF000000)
+val LumenSurfaceElevated = Color(0xFF0E0E10)
+val LumenSurfaceHigh = Color(0xFF18181B)
+val LumenBorderSubtle = Color(0xFF1E1E22)
 
-val LumenDarkBackground = Color(0xFF000000)
-val LumenDarkSurface = Color(0xFF0A0A0E)
-val LumenDarkSurfaceVariant = Color(0xFF14141C)
-val LumenDarkSurfaceContainer = Color(0xFF1A1A22)
-val LumenDarkOnSurface = Color(0xFFEDEDF2)
-val LumenDarkOnSurfaceVariant = Color(0xFF9090A0)
-val LumenDarkOutline = Color(0xFF2A2A35)
+// ── Text ──
+val LumenTextPrimary = Color(0xFFF5F2EC)
+val LumenTextSecondary = Color(0xFF8E8B85)
+val LumenTextTertiary = Color(0xFF5A5852)
 
-val LumenYellow = Color(0xFFFFD23F)
-val LumenGreen = Color(0xFF34D399)
-val LumenBlue = Color(0xFF60A5FA)
-val LumenRed = Color(0xFFFB7185)
-val LumenPurple = Color(0xFFA78BFA)
-val LumenOrange = Color(0xFFFB923C)
-val LumenPink = Color(0xFFF472B6)
-val LumenCyan = Color(0xFF22D3EE)
+// ── Accent ──
+val LumenAmber = Color(0xFFFFC857)
+val LumenAmberMuted = Color(0xFF8A7A56)
 
-val LumenYellowDeep = Color(0xFFE6A82E)
-val LumenGreenDeep = Color(0xFF10B981)
-val LumenBlueDeep = Color(0xFF3B82F6)
-val LumenRedDeep = Color(0xFFE11D48)
-val LumenPurpleDeep = Color(0xFF7C3AED)
-val LumenOrangeDeep = Color(0xFFEA580C)
-val LumenPinkDeep = Color(0xFFDB2777)
-val LumenCyanDeep = Color(0xFF0891B2)
+// ── Alt palettes (for future use) ──
+val LumenCoral = Color(0xFFFF8C7A)
+val LumenSage = Color(0xFF9BC8A8)
+val LumenLavender = Color(0xFFB8A8E0)
+val LumenOcean = Color(0xFF7AB8C8)
 
-val CategoryYellow = LumenYellow
-val CategoryGreen = LumenGreen
-val CategoryBlue = LumenBlue
-val CategoryRed = LumenRed
-val CategoryPurple = LumenPurple
-val CategoryOrange = LumenOrange
-val CategoryPink = LumenPink
-val CategoryCyan = LumenCyan
+// ── Category tag colors (content taxonomy, not UI chrome) ──
+val CategoryYellow = Color(0xFFFFD23F)
+val CategoryGreen = Color(0xFF34D399)
+val CategoryBlue = Color(0xFF60A5FA)
+val CategoryRed = Color(0xFFFB7185)
+val CategoryPurple = Color(0xFFA78BFA)
+val CategoryOrange = Color(0xFFFB923C)
+val CategoryPink = Color(0xFFF472B6)
+val CategoryCyan = Color(0xFF22D3EE)
+
+// ── Backward compat aliases ──
+val LumenOnSurfaceDim = LumenTextSecondary

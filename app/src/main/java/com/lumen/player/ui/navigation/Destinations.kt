@@ -17,4 +17,6 @@ object Destinations {
     fun playlistDetail(id: Long) = "playlist/$id"
 
     const val HIDDEN_ITEMS = "hidden_items"
+
+    const val LUMEN_BLOB_DEBUG = "lumen_blob_debug"
 }

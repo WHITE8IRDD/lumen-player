@@ -20,9 +20,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import com.lumen.player.ui.components.LumenSquircle
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Clear
@@ -34,7 +34,7 @@ import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.lumen.player.ui.components.AudioRowSkeleton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -131,7 +131,7 @@ fun SearchScreen(
                         viewModel.submitSearch(query)
                     }
                 ),
-                shape = RoundedCornerShape(28.dp),
+                shape = LumenSquircle(28.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = Color.Transparent,
                     unfocusedBorderColor = Color.Transparent
@@ -317,11 +317,11 @@ private fun SearchResultsContent(
         }
 
         if (isSearching) {
-            item {
-                Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator(Modifier.size(24.dp))
-                }
-            }
+            item { AudioRowSkeleton() }
+            item { AudioRowSkeleton() }
+            item { AudioRowSkeleton() }
+            item { AudioRowSkeleton() }
+            item { AudioRowSkeleton() }
         }
 
         if (filteredResults.videos.isNotEmpty()) {
@@ -405,7 +405,7 @@ private fun VideoSearchRow(item: MediaItem, onClick: () -> Unit) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = LumenSquircle(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f))
@@ -419,7 +419,7 @@ private fun VideoSearchRow(item: MediaItem, onClick: () -> Unit) {
                     .size(52.dp)
                     .background(
                         MaterialTheme.colorScheme.surfaceVariant,
-                        RoundedCornerShape(8.dp)
+                        LumenSquircle(8.dp)
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -463,7 +463,7 @@ private fun AudioSearchRow(item: MediaItem, onClick: () -> Unit) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = LumenSquircle(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f))
@@ -477,7 +477,7 @@ private fun AudioSearchRow(item: MediaItem, onClick: () -> Unit) {
                     .size(52.dp)
                     .background(
                         MaterialTheme.colorScheme.surfaceVariant,
-                        RoundedCornerShape(8.dp)
+                        LumenSquircle(8.dp)
                     ),
                 contentAlignment = Alignment.Center
             ) {
@@ -526,7 +526,7 @@ private fun FolderSearchRow(folder: Folder, onClick: () -> Unit) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = LumenSquircle(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f))
@@ -566,7 +566,7 @@ private fun PlaylistSearchRow(playlist: Playlist) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 4.dp),
-        shape = RoundedCornerShape(12.dp),
+        shape = LumenSquircle(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f))

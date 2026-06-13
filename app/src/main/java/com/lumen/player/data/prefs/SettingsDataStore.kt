@@ -21,6 +21,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -31,6 +32,17 @@ private val settingsScope = CoroutineScope(Dispatchers.Default + SupervisorJob()
 class SettingsDataStore @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
+    init {
+        // One-time migration: old teal default (#00E5C8) → new amber default (#FFC857)
+        settingsScope.launch {
+            context.prefsDataStore.edit { prefs ->
+                val current = prefs[Keys.ACCENT_COLOR_HEX]
+                if (current != null && current == "#00E5C8") {
+                    prefs[Keys.ACCENT_COLOR_HEX] = "#FFC857"
+                }
+            }
+        }
+    }
     private object Keys {
         val THEME_MODE        = stringPreferencesKey("theme_mode")
         val DYNAMIC_COLOR     = booleanPreferencesKey("dynamic_color")
@@ -59,6 +71,7 @@ class SettingsDataStore @Inject constructor(
         val REPLAY_GAIN      = booleanPreferencesKey("replay_gain")
 
         val ACCENT_COLOR_HEX = stringPreferencesKey("accent_color_hex")
+        val ACCENT_MIGRATED = booleanPreferencesKey("accent_migrated_v3")
 
         val SEC_APPEARANCE  = booleanPreferencesKey("section_appearance")
         val SEC_PLAYBACK    = booleanPreferencesKey("section_playback")
@@ -76,6 +89,10 @@ class SettingsDataStore @Inject constructor(
         val EQ_BASS           = intPreferencesKey("eq_bass")
         val EQ_VIRT           = intPreferencesKey("eq_virt")
         val EQ_LOUDNESS       = intPreferencesKey("eq_loudness")
+
+        val TYPOGRAPHY_FONT_FAMILY = stringPreferencesKey("typography_font_family")
+        val TYPOGRAPHY_CASE       = stringPreferencesKey("typography_case")
+        val TYPOGRAPHY_WEIGHT     = intPreferencesKey("typography_weight_offset")
     }
 
     val flow: Flow<UserSettings> = context.prefsDataStore.data.map { p ->
@@ -94,7 +111,7 @@ class SettingsDataStore @Inject constructor(
             subtitleDelayUs = p[Keys.SUBTITLE_DELAY_US] ?: 0L,
             subtitleTextSize = p[Keys.SUBTITLE_TEXT_SIZE] ?: 16f,
             onboardingCompleted = p[Keys.ONBOARDING_COMPLETED] ?: false,
-            accentColorHex = p[Keys.ACCENT_COLOR_HEX] ?: "#00E5C8",
+            accentColorHex = p[Keys.ACCENT_COLOR_HEX] ?: "#FFC857",
             fontSize = p[Keys.FONT_SIZE] ?: "DEFAULT",
             aspectRatio = p[Keys.ASPECT_RATIO] ?: "AUTO",
             brightnessMode = p[Keys.BRIGHTNESS_MODE] ?: "SYSTEM",
@@ -113,6 +130,9 @@ class SettingsDataStore @Inject constructor(
             sectionNetwork = p[Keys.SEC_NETWORK] ?: false,
             sectionAdvanced = p[Keys.SEC_ADVANCED] ?: false,
             sectionAbout = p[Keys.SEC_ABOUT] ?: false,
+            fontFamilyChoice = p[Keys.TYPOGRAPHY_FONT_FAMILY] ?: "SERIF_DISPLAY",
+            textCaseChoice = p[Keys.TYPOGRAPHY_CASE] ?: "LOWERCASE",
+            weightOffset = p[Keys.TYPOGRAPHY_WEIGHT] ?: 0,
             audioEffects = AudioEffectsState(
                 enabled = p[Keys.EQ_ENABLED] ?: false,
                 preset = p[Keys.EQ_PRESET] ?: 0,
@@ -234,6 +254,18 @@ class SettingsDataStore @Inject constructor(
 
     suspend fun setReplayGain(v: Boolean) {
         context.prefsDataStore.edit { it[Keys.REPLAY_GAIN] = v }
+    }
+
+    suspend fun setFontFamilyChoice(v: String) {
+        context.prefsDataStore.edit { it[Keys.TYPOGRAPHY_FONT_FAMILY] = v }
+    }
+
+    suspend fun setTextCaseChoice(v: String) {
+        context.prefsDataStore.edit { it[Keys.TYPOGRAPHY_CASE] = v }
+    }
+
+    suspend fun setWeightOffset(v: Int) {
+        context.prefsDataStore.edit { it[Keys.TYPOGRAPHY_WEIGHT] = v }
     }
 
     suspend fun setSectionExpanded(section: String, expanded: Boolean) {

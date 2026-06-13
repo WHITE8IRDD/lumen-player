@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -45,7 +44,7 @@ fun LumenInputDialog(
     ) {
         Surface(
             modifier = Modifier.fillMaxWidth(0.85f),
-            shape = RoundedCornerShape(20.dp),
+            shape = LumenSquircle(20.dp),
             color = MaterialTheme.colorScheme.surface,
             border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)),
             tonalElevation = 4.dp,
@@ -63,7 +62,7 @@ fun LumenInputDialog(
                     label = { Text(label) },
                     singleLine = singleLine,
                     modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp)
+                    shape = LumenSquircle(12.dp)
                 )
                 Spacer(Modifier.height(24.dp))
                 Row(

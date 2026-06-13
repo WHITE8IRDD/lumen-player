@@ -36,6 +36,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import com.lumen.player.ui.components.LumenSquircle
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
@@ -51,6 +52,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.Surface
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -76,11 +78,11 @@ import androidx.compose.ui.unit.sp
 import androidx.media3.common.util.UnstableApi
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
-import com.lumen.player.core.theme.LumenOnSurfaceDim
 import com.lumen.player.core.util.TimeFormatter
 import com.lumen.player.domain.model.Folder
 import com.lumen.player.domain.model.MediaItem
 import com.lumen.player.ui.components.ShimmerBox
+import com.lumen.player.ui.components.FolderMosaicThumbnail
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import com.lumen.player.ui.util.FolderThumbnail
@@ -165,18 +167,18 @@ fun VideoGridCard(
         (item.lastPositionMs.toFloat() / item.durationMs).coerceIn(0f, 1f)
     else 0f
     val selectionBorder = if (isSelected) Modifier.border(
-        BorderStroke(2.dp, MaterialTheme.colorScheme.tertiary), RoundedCornerShape(14.dp)
+        BorderStroke(2.dp, MaterialTheme.colorScheme.tertiary), LumenSquircle(14.dp)
     ) else Modifier
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)), RoundedCornerShape(14.dp))
+            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)), LumenSquircle(14.dp))
             .then(selectionBorder)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
             ),
-        shape = RoundedCornerShape(14.dp),
+        shape = LumenSquircle(14.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
@@ -252,7 +254,7 @@ fun VideoGridCard(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            Icons.Rounded.Check, contentDescription = "Selected",
+                            Icons.Rounded.Check, contentDescription = "selected",
                             tint = Color.White,
                             modifier = Modifier.size(16.dp)
                         )
@@ -262,7 +264,7 @@ fun VideoGridCard(
                     Box(Modifier.align(Alignment.TopEnd).padding(2.dp)) {
                         IconButton(onClick = { showMenu = true }) {
                             Icon(
-                                Icons.Rounded.MoreVert, contentDescription = "More options",
+                                Icons.Rounded.MoreVert, contentDescription = "more options",
                                 tint = Color.White
                             )
                         }
@@ -275,18 +277,20 @@ fun VideoGridCard(
                     style = MaterialTheme.typography.titleSmall,
                     fontWeight = FontWeight.SemiBold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    color = Color.White
                 )
                 val sub = buildString {
                     item.year?.let { append(it) }
-                    if (item.year != null && item.seasonEpisode != null) append(" \u00B7 ")
-                    item.seasonEpisode?.let { append(it) }
+                    if (item.year != null && !item.seasonEpisode.isNullOrBlank()) append(" \u00B7 ")
+                    item.seasonEpisode?.takeIf { it.isNotBlank() }?.let { append(it) }
                 }
                 if (sub.isNotEmpty()) {
                     Text(
                         text = sub,
                         style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        color = Color.White.copy(alpha = 0.75f),
+                        maxLines = 1
                     )
                 }
             }
@@ -339,19 +343,19 @@ private fun VideoCardMenuSheet(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                SheetMenuItem(Icons.Rounded.PlayArrow, "Play", onClick = { onDismiss(); onClick() })
-                SheetMenuItem(Icons.Rounded.QueuePlayNext, "Play next", enabled = onPlayNext != null, onClick = { onDismiss(); onPlayNext?.invoke() })
-                SheetMenuItem(Icons.Rounded.PlaylistAdd, "Add to queue", enabled = onAddToQueue != null, onClick = { onDismiss(); onAddToQueue?.invoke() })
-                SheetMenuItem(Icons.Rounded.PlaylistAdd, "Add to playlist", enabled = onAddToPlaylist != null, onClick = { onDismiss(); onAddToPlaylist?.invoke() })
-                SheetMenuItem(Icons.Rounded.Folder, "Open file location", enabled = onOpenFileLocation != null, onClick = { onDismiss(); onOpenFileLocation?.invoke() })
-                SheetMenuItem(Icons.Rounded.Info, "Properties", enabled = onProperties != null, onClick = { onDismiss(); onProperties?.invoke() })
-                SheetMenuItem(Icons.Rounded.VisibilityOff, "Hide from Home", enabled = onHideFromHome != null, onClick = { onDismiss(); onHideFromHome?.invoke() })
-                SheetMenuItem(Icons.Rounded.Share, "Share", enabled = onShare != null, onClick = { onDismiss(); onShare?.invoke() })
+                SheetMenuItem(Icons.Rounded.PlayArrow, "play", onClick = { onDismiss(); onClick() })
+                SheetMenuItem(Icons.Rounded.QueuePlayNext, "play next", enabled = onPlayNext != null, onClick = { onDismiss(); onPlayNext?.invoke() })
+                SheetMenuItem(Icons.Rounded.PlaylistAdd, "add to queue", enabled = onAddToQueue != null, onClick = { onDismiss(); onAddToQueue?.invoke() })
+                SheetMenuItem(Icons.Rounded.PlaylistAdd, "add to playlist", enabled = onAddToPlaylist != null, onClick = { onDismiss(); onAddToPlaylist?.invoke() })
+                SheetMenuItem(Icons.Rounded.Folder, "open file location", enabled = onOpenFileLocation != null, onClick = { onDismiss(); onOpenFileLocation?.invoke() })
+                SheetMenuItem(Icons.Rounded.Info, "properties", enabled = onProperties != null, onClick = { onDismiss(); onProperties?.invoke() })
+                SheetMenuItem(Icons.Rounded.VisibilityOff, "hide from home", enabled = onHideFromHome != null, onClick = { onDismiss(); onHideFromHome?.invoke() })
+                SheetMenuItem(Icons.Rounded.Share, "share", enabled = onShare != null, onClick = { onDismiss(); onShare?.invoke() })
                 HorizontalDivider(
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 2.dp),
                     color = MaterialTheme.colorScheme.outlineVariant
                 )
-                SheetMenuItem(Icons.Rounded.Delete, "Delete", enabled = onDelete != null, onClick = { onDismiss(); onDelete?.invoke() }, tint = MaterialTheme.colorScheme.error)
+                SheetMenuItem(Icons.Rounded.Delete, "delete", enabled = onDelete != null, onClick = { onDismiss(); onDelete?.invoke() }, tint = MaterialTheme.colorScheme.error)
             }
         }
     }
@@ -453,18 +457,18 @@ fun VideoListRow(
         (item.lastPositionMs.toFloat() / item.durationMs).coerceIn(0f, 1f)
     else 0f
     val selectionBorder = if (isSelected) Modifier.border(
-        BorderStroke(2.dp, MaterialTheme.colorScheme.tertiary), RoundedCornerShape(12.dp)
+        BorderStroke(2.dp, MaterialTheme.colorScheme.tertiary), LumenSquircle(12.dp)
     ) else Modifier
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)), RoundedCornerShape(12.dp))
+            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)), LumenSquircle(12.dp))
             .then(selectionBorder)
             .combinedClickable(
                 onClick = onClick,
                 onLongClick = onLongClick
             ),
-        shape = RoundedCornerShape(12.dp),
+        shape = LumenSquircle(12.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
@@ -477,7 +481,7 @@ fun VideoListRow(
             Box(
                 Modifier
                     .size(width = 96.dp, height = 54.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(LumenSquircle(8.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
                 val ctx = LocalContext.current
@@ -543,7 +547,7 @@ fun VideoListRow(
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            Icons.Rounded.Check, contentDescription = "Selected",
+                            Icons.Rounded.Check, contentDescription = "selected",
                             tint = Color.White,
                             modifier = Modifier.size(14.dp)
                         )
@@ -576,7 +580,7 @@ fun VideoListRow(
             Box {
                 IconButton(onClick = { showMenu = true }) {
                     Icon(
-                        Icons.Rounded.MoreVert, contentDescription = "More options",
+                        Icons.Rounded.MoreVert, contentDescription = "more options",
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
@@ -608,7 +612,6 @@ fun FolderCard(
     val thumbType = remember(folder.path, videos) {
         FolderThumbnailResolver.resolve(folder, videos)
     }
-
     var cleanDisplayName by remember { mutableStateOf(folder.displayName) }
     LaunchedEffect(folder.displayName) {
         val parser = com.lumen.player.data.metadata.MediaTitleParser()
@@ -628,16 +631,18 @@ fun FolderCard(
                 id = folder.firstVideoId ?: 0L,
                 uri = thumbType.videoUri
             )
-            is FolderThumbnailType.Placeholder -> null
+            is FolderThumbnailType.Placeholder -> folder.firstVideoUri?.let {
+                VideoThumbnail(id = folder.firstVideoId ?: 0L, uri = it)
+            }
         }
     }
 
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)), RoundedCornerShape(14.dp))
+            .border(BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)), LumenSquircle(14.dp))
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
+        shape = LumenSquircle(14.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surface
         ),
@@ -651,49 +656,25 @@ fun FolderCard(
                     .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
-                if (model != null) {
-                    SubcomposeAsyncImage(
-                        model = model,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                        loading = { ShimmerBox(modifier = Modifier.fillMaxSize()) },
-                        error = {
-                            Icon(
-                                Icons.Rounded.Folder, contentDescription = null,
-                                modifier = Modifier.align(Alignment.Center).size(48.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    )
-                } else {
-                    Icon(
-                        Icons.Rounded.Folder, contentDescription = null,
-                        modifier = Modifier.align(Alignment.Center).size(48.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Box(
-                    Modifier
+                FolderMosaicThumbnail(
+                    model = model,
+                    folderName = folder.displayName,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+                Surface(
+                    modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(6.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Color.Black.copy(alpha = 0.72f))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .padding(8.dp),
+                    shape = RoundedCornerShape(percent = 50),
+                    color = Color.Black.copy(alpha = 0.6f)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Rounded.Movie, contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            "${folder.mediaCount}",
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    }
+                    Text(
+                        "${folder.mediaCount} videos",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
                 }
             }
             Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
@@ -704,8 +685,12 @@ fun FolderCard(
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
-                    "${folder.mediaCount} videos \u00B7 ${TimeFormatter.format(folder.totalDurationMs)}",
-                    style = MaterialTheme.typography.bodySmall,
+                    "${folder.mediaCount} VIDEOS \u00B7 ${TimeFormatter.format(folder.totalDurationMs)}".uppercase(),
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 1.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -795,7 +780,7 @@ fun SelectionActionBar(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onClear) {
-                Icon(Icons.Rounded.Close, contentDescription = "Exit selection")
+                Icon(Icons.Rounded.Close, contentDescription = "exit selection")
             }
             Text(
                 "$selectedCount selected",
@@ -805,29 +790,29 @@ fun SelectionActionBar(
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SelectionActionButton(
                     icon = Icons.Rounded.QueuePlayNext,
-                    label = "Play next",
+                    label = "play next",
                     onClick = onPlayNext
                 )
                 SelectionActionButton(
                     icon = Icons.Rounded.PlaylistAdd,
-                    label = "Add to queue",
+                    label = "add to queue",
                     onClick = onAddToQueue
                 )
                 SelectionActionButton(
                     icon = Icons.Rounded.Share,
-                    label = "Share",
+                    label = "share",
                     onClick = onShare
                 )
                 if (onAddToPlaylist != null) {
                     SelectionActionButton(
                         icon = Icons.Rounded.PlaylistAdd,
-                        label = "Add to playlist",
+                        label = "add to playlist",
                         onClick = onAddToPlaylist
                     )
                 }
                 SelectionActionButton(
                     icon = Icons.Rounded.Delete,
-                    label = "Delete",
+                    label = "delete",
                     onClick = onDelete,
                     isDestructive = true
                 )
@@ -846,7 +831,7 @@ private fun SelectionActionButton(
     FilledTonalButton(
         onClick = onClick,
         modifier = Modifier.height(48.dp),
-        shape = RoundedCornerShape(10.dp),
+        shape = LumenSquircle(10.dp),
         colors = if (isDestructive) ButtonDefaults.filledTonalButtonColors(
             contentColor = MaterialTheme.colorScheme.error
         ) else ButtonDefaults.filledTonalButtonColors()
@@ -894,9 +879,9 @@ fun Folder.toSingleVideo(): MediaItem = MediaItem(
 enum class VideoSort { TITLE, DATE, DURATION, SIZE, RESOLUTION }
 
 fun VideoSort.label(): String = when (this) {
-    VideoSort.TITLE -> "Title"
-    VideoSort.DATE -> "Date added"
-    VideoSort.DURATION -> "Duration"
-    VideoSort.SIZE -> "Size"
-    VideoSort.RESOLUTION -> "Resolution"
+    VideoSort.TITLE -> "title"
+    VideoSort.DATE -> "date added"
+    VideoSort.DURATION -> "duration"
+    VideoSort.SIZE -> "size"
+    VideoSort.RESOLUTION -> "resolution"
 }

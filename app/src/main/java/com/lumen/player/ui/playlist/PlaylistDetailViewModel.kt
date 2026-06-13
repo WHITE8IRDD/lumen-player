@@ -10,8 +10,12 @@ import com.lumen.player.domain.model.MediaItem
 import com.lumen.player.player.PlayerController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.launch
@@ -28,6 +32,9 @@ class PlaylistDetailViewModel @Inject constructor(
 
     val playlistId: Long = savedStateHandle["id"] ?: 0L
 
+    private val _isLoading = MutableStateFlow(true)
+    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
+
     val playlistName = playlistDao.observeById(playlistId).mapLatest { entity ->
         entity?.name ?: ""
     }.distinctUntilChanged()
@@ -37,6 +44,15 @@ class PlaylistDetailViewModel @Inject constructor(
         mapper.toDomain(entities)
     }.distinctUntilChanged()
     .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    init {
+        viewModelScope.launch {
+            playlistDao.observeItems(playlistId).first {
+                _isLoading.value = false
+                true
+            }
+        }
+    }
 
     fun play(items: List<MediaItem>, startIndex: Int) {
         if (items.isEmpty()) return

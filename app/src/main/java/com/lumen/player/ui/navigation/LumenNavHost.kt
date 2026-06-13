@@ -8,7 +8,9 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.foundation.layout.size
+import com.lumen.player.ui.components.LumenSquircle
+import com.lumen.player.ui.components.ShimmerBox
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -17,6 +19,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
@@ -42,6 +45,7 @@ import com.lumen.player.ui.onboarding.OnboardingScreen
 import com.lumen.player.ui.settings.SettingsHiddenItemsScreen
 import com.lumen.player.ui.settings.SettingsScreen
 import com.lumen.player.ui.settings.SettingsViewModel
+import com.lumen.player.ui.components.LumenBlobPreview
 
 @UnstableApi
 @Composable
@@ -54,7 +58,7 @@ fun LumenNavHost(
 
     if (!isReady) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator()
+            ShimmerBox(Modifier.size(40.dp), shape = LumenSquircle(12.dp))
         }
         return
     }
@@ -151,6 +155,7 @@ fun LumenNavHost(
                 }
                 composable(Destinations.SETTINGS) {
                     SettingsScreen(
+                        onDebugBlob = { rootNav.navigate(Destinations.LUMEN_BLOB_DEBUG) },
                         onOpenEqualizer = { rootNav.navigate(Destinations.EQUALIZER) },
                         onOpenHiddenItems = { rootNav.navigate(Destinations.HIDDEN_ITEMS) }
                     )
@@ -163,6 +168,9 @@ fun LumenNavHost(
                 }
                 composable(Destinations.QUEUE) {
                     QueueScreen(onBack = { rootNav.popBackStack() })
+                }
+                composable(Destinations.LUMEN_BLOB_DEBUG) {
+                    LumenBlobPreview()
                 }
             }
         }

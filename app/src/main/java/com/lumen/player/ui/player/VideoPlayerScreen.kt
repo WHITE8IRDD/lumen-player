@@ -49,6 +49,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import com.lumen.player.ui.components.LumenSquircle
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
 import androidx.compose.material.icons.rounded.AspectRatio
@@ -637,7 +638,7 @@ fun VideoPlayerScreen(
                         placeholder = { Text("Search channels...") },
                         leadingIcon = { Icon(Icons.Rounded.Search, null) },
                         singleLine = true,
-                        shape = RoundedCornerShape(28.dp),
+                        shape = LumenSquircle(28.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = Color.Transparent,
                             unfocusedBorderColor = Color.Transparent
@@ -843,7 +844,7 @@ private fun VideoSeekBar(
                     .padding(start = previewXDp)
                     .offset(y = (-(22.dp)))
                     .size(width = 56.dp, height = 22.dp)
-                    .clip(RoundedCornerShape(11.dp))
+                    .clip(LumenSquircle(11.dp))
                     .background(Color.Black.copy(alpha = 0.75f)),
                 contentAlignment = Alignment.Center
             ) {
@@ -1063,7 +1064,7 @@ private fun VideoBottomControls(
 private fun VerticalHud(hud: HudInfo, modifier: Modifier = Modifier) {
     Surface(
         color = Color.Black.copy(alpha = 0.55f),
-        shape = RoundedCornerShape(20.dp),
+        shape = LumenSquircle(20.dp),
         modifier = modifier
     ) {
         Column(
@@ -1150,7 +1151,7 @@ private fun SeekFlashLayer(
     ) {
         Surface(
             color = Color.Black.copy(alpha = 0.55f),
-            shape = RoundedCornerShape(16.dp),
+            shape = LumenSquircle(16.dp),
             modifier = Modifier
                 .size(width = 120.dp, height = 96.dp)
                 .graphicsLayer { this.scaleX = ripple; this.scaleY = ripple }

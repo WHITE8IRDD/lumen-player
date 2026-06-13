@@ -32,6 +32,7 @@ import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import com.lumen.player.ui.components.LumenSquircle
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.Home
@@ -47,12 +48,12 @@ import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Snackbar
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -88,7 +89,6 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
 import coil.compose.SubcomposeAsyncImage
 import com.lumen.player.R
-import com.lumen.player.core.theme.LumenOnSurfaceDim
 import com.lumen.player.core.util.TimeFormatter
 import com.lumen.player.domain.model.Folder
 import com.lumen.player.domain.model.MediaItem
@@ -100,15 +100,15 @@ import com.lumen.player.ui.components.LumenConfirmationDialog
 import com.lumen.player.ui.components.SectionLabel
 import com.lumen.player.ui.components.MiniPlayer
 import com.lumen.player.ui.components.ShimmerBox
-import com.lumen.player.core.theme.LumenBlue
-import com.lumen.player.core.theme.LumenBlueDeep
-import com.lumen.player.core.theme.LumenGreen
-import com.lumen.player.core.theme.LumenPurple
-import com.lumen.player.core.theme.LumenPurpleDeep
-import com.lumen.player.core.theme.LumenRed
-import com.lumen.player.core.theme.LumenYellow
-import com.lumen.player.core.theme.LumenYellowDeep
+import com.lumen.player.ui.components.FolderMosaicThumbnail
+import com.lumen.player.core.theme.LumenAmber
+import com.lumen.player.core.theme.LumenAmberMuted
 import com.lumen.player.ui.components.GradientBlob
+import com.lumen.player.ui.components.HomeAccents
+import com.lumen.player.ui.components.HomeSectionRowSkeleton
+import com.lumen.player.ui.components.LumenBlob
+import com.lumen.player.ui.components.LumenEmptyState
+import com.lumen.player.ui.components.Mood
 import com.lumen.player.ui.navigation.Destinations
 import com.lumen.player.ui.util.FolderThumbnailResolver
 import com.lumen.player.ui.util.FolderThumbnailType
@@ -116,9 +116,9 @@ import com.lumen.player.ui.util.MosaicFetcherInput
 import com.lumen.player.ui.util.VideoThumbnail
 
 private val NAV_TABS = listOf(
-    NavTab(Destinations.HOME, R.string.tab_home, Icons.Rounded.Home, Icons.Rounded.Home, LumenYellow, LumenYellowDeep),
-    NavTab(Destinations.LIBRARY, R.string.tab_library, Icons.Rounded.LibraryMusic, Icons.Rounded.LibraryMusic, LumenBlue, LumenBlueDeep),
-    NavTab(Destinations.SETTINGS, R.string.tab_settings, Icons.Rounded.Settings, Icons.Rounded.Settings, LumenPurple, LumenPurpleDeep)
+    NavTab(Destinations.HOME, R.string.tab_home, Icons.Rounded.Home, Icons.Rounded.Home),
+    NavTab(Destinations.LIBRARY, R.string.tab_library, Icons.Rounded.LibraryMusic, Icons.Rounded.LibraryMusic),
+    NavTab(Destinations.SETTINGS, R.string.tab_settings, Icons.Rounded.Settings, Icons.Rounded.Settings)
 )
 
 @UnstableApi
@@ -202,17 +202,17 @@ fun HomeScreen(
                 viewModel.hideFromHome(item)
                 scope.launch {
                     val result = snackbarHostState.showSnackbar(
-                        message = "Hidden from Home",
-                        actionLabel = "Undo"
+                        message = "hidden from home",
+                        actionLabel = "undo"
                     )
                     if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
                         viewModel.unhideFromHome(item)
                     }
                 }
             },
-            title = "Hide from Home?",
-            body = "${item.cleanTitle.ifEmpty { item.title }} will be hidden from Home carousels. It will still be available in Library.",
-            confirmLabel = "Hide",
+            title = "hide from home?",
+            body = "${item.cleanTitle.ifEmpty { item.title }} will be hidden from home carousels. it will still be available in your library.",
+            confirmLabel = "hide",
             variant = DialogVariant.NEUTRAL,
             icon = Icons.Rounded.VisibilityOff
         )
@@ -235,9 +235,13 @@ fun HomeScreen(
                 SearchBar(onClick = onSearchClick)
             }
 
-            if (!allEmpty) {
+            if (refreshing && allEmpty) {
+                item { HomeSectionRowSkeleton() }
+                item { HomeSectionRowSkeleton() }
+                item { HomeSectionRowSkeleton() }
+            } else if (!allEmpty) {
                 if (cw.isNotEmpty()) {
-                    item { SectionHeader("Continue Watching", color = LumenRed, onSeeAll = { onSeeAll("continue_watching") }) }
+                    item { SectionHeader("continue watching", color = LumenAmber, onSeeAll = { onSeeAll("continue_watching") }) }
                     item {
                         ContinueWatchingRow(
                             items = cw,
@@ -248,7 +252,7 @@ fun HomeScreen(
                 }
 
                 if (recent.isNotEmpty()) {
-                    item { SectionHeader("Recently Added", color = LumenBlue, onSeeAll = { onSeeAll("recently_added") }) }
+                    item { SectionHeader("recently added", color = LumenAmber, onSeeAll = { onSeeAll("recently_added") }) }
                     item {
                         RecentlyAddedRow(
                             items = recent,
@@ -259,7 +263,7 @@ fun HomeScreen(
                 }
 
                 if (folders.isNotEmpty()) {
-                    item { SectionHeader("Your Folders", color = LumenYellow, onSeeAll = { onSeeAll("folders") }) }
+                    item { SectionHeader("your folders", color = LumenAmber, onSeeAll = { onSeeAll("folders") }) }
                     item {
                         HomeFolderRow(
                             folders = folders,
@@ -270,7 +274,7 @@ fun HomeScreen(
                 }
 
                 if (audio.isNotEmpty()) {
-                    item { SectionHeader("Recent Audio", color = LumenGreen, onSeeAll = { onSeeAll("recent_audio") }) }
+                    item { SectionHeader("recent audio", color = LumenAmber, onSeeAll = { onSeeAll("recent_audio") }) }
                     item {
                         RecentAudioColumn(
                             items = audio,
@@ -288,7 +292,7 @@ fun HomeScreen(
         }
 
         GradientBlob(
-            color = LumenPurple,
+            color = LumenAmberMuted,
             size = 180.dp,
             alpha = 0.25f,
             modifier = Modifier
@@ -302,7 +306,7 @@ fun HomeScreen(
             snackbar = { data ->
                 Snackbar(
                     snackbarData = data,
-                    shape = RoundedCornerShape(12.dp),
+                    shape = LumenSquircle(12.dp),
                     containerColor = MaterialTheme.colorScheme.surface
                 )
             }
@@ -335,7 +339,7 @@ fun HomeScreen(
                     ) {
                         Icon(Icons.Rounded.PlayArrow, contentDescription = null, Modifier.size(24.dp))
                         Spacer(Modifier.width(16.dp))
-                        Text("Play", style = MaterialTheme.typography.bodyLarge)
+                        Text("play", style = MaterialTheme.typography.bodyLarge)
                     }
                     Row(
                         modifier = Modifier
@@ -349,7 +353,7 @@ fun HomeScreen(
                     ) {
                         Icon(Icons.Rounded.VisibilityOff, contentDescription = null, Modifier.size(24.dp))
                         Spacer(Modifier.width(16.dp))
-                        Text("Hide from this list", style = MaterialTheme.typography.bodyLarge)
+                        Text("hide from this list", style = MaterialTheme.typography.bodyLarge)
                     }
                     Row(
                         modifier = Modifier
@@ -363,7 +367,7 @@ fun HomeScreen(
                     ) {
                         Icon(Icons.Rounded.VisibilityOff, contentDescription = null, Modifier.size(24.dp))
                         Spacer(Modifier.width(16.dp))
-                        Text("Hide from Home", style = MaterialTheme.typography.bodyLarge)
+                        Text("hide from home", style = MaterialTheme.typography.bodyLarge)
                     }
                     Row(
                         modifier = Modifier
@@ -374,7 +378,7 @@ fun HomeScreen(
                     ) {
                         Icon(Icons.Rounded.Add, contentDescription = null, Modifier.size(24.dp))
                         Spacer(Modifier.width(16.dp))
-                        Text("Add to playlist", style = MaterialTheme.typography.bodyLarge)
+                        Text("add to playlist", style = MaterialTheme.typography.bodyLarge)
                     }
                     Row(
                         modifier = Modifier
@@ -385,7 +389,7 @@ fun HomeScreen(
                     ) {
                         Icon(Icons.Rounded.Share, contentDescription = null, Modifier.size(24.dp))
                         Spacer(Modifier.width(16.dp))
-                        Text("Share", style = MaterialTheme.typography.bodyLarge)
+                        Text("share", style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }
@@ -397,13 +401,13 @@ fun HomeScreen(
 private fun HomeGreetingSection() {
     val hour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
     val greeting = when (hour) {
-        in 0..11 -> "Good morning"
-        in 12..16 -> "Good afternoon"
-        else -> "Good evening"
+        in 0..11 -> "good morning"
+        in 12..16 -> "good afternoon"
+        else -> "good evening"
     }
     Box(modifier = Modifier.fillMaxWidth()) {
         GradientBlob(
-            color = LumenYellow,
+            color = LumenAmberMuted,
             size = 200.dp,
             alpha = 0.25f,
             modifier = Modifier
@@ -425,7 +429,7 @@ private fun HomeGreetingSection() {
             )
             Spacer(Modifier.height(8.dp))
             Text(
-                text = "What are you in the mood for?",
+                text = "what are you in the mood for?",
                 style = MaterialTheme.typography.displayMedium,
                 color = MaterialTheme.colorScheme.onSurface
             )
@@ -440,7 +444,7 @@ private fun SearchBar(onClick: () -> Unit) {
             .fillMaxWidth()
             .padding(horizontal = 16.dp, vertical = 12.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(28.dp),
+        shape = LumenSquircle(28.dp),
         colors = CardDefaults.cardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant
         ),
@@ -460,7 +464,7 @@ private fun SearchBar(onClick: () -> Unit) {
             )
             Spacer(Modifier.width(12.dp))
             Text(
-                "Search your media...",
+                "search your media...",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -495,7 +499,7 @@ private fun SectionHeader(title: String, color: Color, onSeeAll: () -> Unit) {
                 modifier = Modifier.weight(1f)
             )
             TextButton(onClick = onSeeAll) {
-                Text("See all", color = color, style = MaterialTheme.typography.labelLarge)
+                Text("see all", color = color, style = MaterialTheme.typography.labelLarge)
             }
         }
     }
@@ -527,7 +531,7 @@ private fun ContinueWatchingCard(item: MediaItem, onClick: () -> Unit, onLongCli
         modifier = Modifier
             .width(200.dp)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
-        shape = RoundedCornerShape(14.dp),
+        shape = LumenSquircle(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -622,7 +626,7 @@ private fun RecentlyAddedCard(item: MediaItem, onClick: () -> Unit, onLongClick:
         modifier = Modifier
             .width(180.dp)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
-        shape = RoundedCornerShape(14.dp),
+        shape = LumenSquircle(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -748,7 +752,7 @@ private fun HomeFolderCard(folder: Folder, videos: List<MediaItem>, onClick: () 
         modifier = Modifier
             .width(140.dp)
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(14.dp),
+        shape = LumenSquircle(14.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
@@ -759,52 +763,27 @@ private fun HomeFolderCard(folder: Folder, videos: List<MediaItem>, onClick: () 
                     .fillMaxWidth()
                     .aspectRatio(1f)
                     .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
-                    .background(MaterialTheme.colorScheme.surfaceVariant),
-                contentAlignment = Alignment.Center
+                    .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
-                if (model != null) {
-                    SubcomposeAsyncImage(
-                        model = model,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize(),
-                        loading = { ShimmerBox(modifier = Modifier.fillMaxSize()) },
-                        error = {
-                            Icon(
-                                Icons.Rounded.Folder, contentDescription = null,
-                                modifier = Modifier.size(48.dp),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    )
-                } else {
-                    Icon(
-                        Icons.Rounded.Folder, contentDescription = null,
-                        modifier = Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-                Box(
-                    Modifier
+                FolderMosaicThumbnail(
+                    model = model,
+                    folderName = folder.displayName,
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+                Surface(
+                    modifier = Modifier
                         .align(Alignment.BottomEnd)
-                        .padding(6.dp)
-                        .clip(RoundedCornerShape(6.dp))
-                        .background(Color.Black.copy(alpha = 0.72f))
-                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                        .padding(8.dp),
+                    shape = RoundedCornerShape(percent = 50),
+                    color = Color.Black.copy(alpha = 0.6f)
                 ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            Icons.Rounded.Movie, contentDescription = null,
-                            tint = Color.White,
-                            modifier = Modifier.size(12.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            "${folder.mediaCount}",
-                            color = Color.White,
-                            style = MaterialTheme.typography.labelSmall
-                        )
-                    }
+                    Text(
+                        "${folder.mediaCount} videos",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+                    )
                 }
             }
             Column(Modifier.padding(horizontal = 10.dp, vertical = 8.dp)) {
@@ -840,7 +819,7 @@ private fun RecentAudioRow(item: MediaItem, onClick: () -> Unit) {
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = LumenSquircle(12.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = BorderStroke(1.dp, Color.White.copy(alpha = 0.06f)),
         elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
@@ -852,7 +831,7 @@ private fun RecentAudioRow(item: MediaItem, onClick: () -> Unit) {
             Box(
                 Modifier
                     .size(48.dp)
-                    .clip(RoundedCornerShape(8.dp))
+                    .clip(LumenSquircle(8.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant),
                 contentAlignment = Alignment.Center
             ) {
@@ -901,48 +880,27 @@ private fun RecentAudioRow(item: MediaItem, onClick: () -> Unit) {
 
 @Composable
 private fun HomeEmptyState(refreshing: Boolean, onRefresh: () -> Unit) {
-    Box(
-        Modifier
-            .fillMaxWidth()
-            .padding(top = 80.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                Icons.Rounded.Home,
-                contentDescription = null,
-                modifier = Modifier.size(64.dp),
-                tint = MaterialTheme.colorScheme.primary.copy(alpha = 0.4f)
-            )
-            Spacer(Modifier.height(16.dp))
-            Text(
-                "Welcome to Lumen",
-                style = MaterialTheme.typography.titleLarge,
-                color = MaterialTheme.colorScheme.onSurface
-            )
-            Spacer(Modifier.height(8.dp))
-            Text(
-                "Add media to your device and tap refresh",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                textAlign = TextAlign.Center,
-                modifier = Modifier.padding(horizontal = 32.dp)
-            )
-            Spacer(Modifier.height(24.dp))
+    LumenEmptyState(
+        blobColor = LumenAmber,
+        blobMood = Mood.CURIOUS,
+        title = "welcome to Lumen",
+        subtitle = "add media to your device and tap refresh",
+        accents = { HomeAccents(LumenAmber) },
+        actions = {
             if (refreshing) {
-                CircularProgressIndicator(
+                ShimmerBox(
                     modifier = Modifier.size(32.dp),
-                    color = MaterialTheme.colorScheme.primary
+                    shape = LumenSquircle(8.dp)
                 )
             } else {
                 androidx.compose.material3.FilledTonalButton(onClick = onRefresh) {
                     Icon(Icons.Rounded.Search, contentDescription = null)
                     Spacer(Modifier.width(8.dp))
-                    Text("Refresh")
+                    Text("refresh")
                 }
             }
         }
-    }
+    )
 }
 
 

@@ -35,6 +35,7 @@ import androidx.compose.foundation.pager.PagerState
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import com.lumen.player.ui.components.LumenSquircle
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Folder
 import androidx.compose.material.icons.rounded.GraphicEq
@@ -55,7 +56,7 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
+
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -102,6 +103,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import android.net.Uri
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -112,9 +114,18 @@ import coil.compose.AsyncImage
 import com.lumen.player.R
 import com.lumen.player.domain.model.MediaItem
 import com.lumen.player.domain.model.MediaType
+import com.lumen.player.ui.components.AudioRowSkeleton
 import com.lumen.player.ui.components.CategoryChip
+import com.lumen.player.ui.components.FolderCardSkeleton
 import com.lumen.player.ui.components.MediaListItem
 import com.lumen.player.ui.components.SectionLabel
+import com.lumen.player.ui.components.ShimmerBox
+import com.lumen.player.ui.components.AudioAccents
+import com.lumen.player.ui.components.FolderAccents
+import com.lumen.player.ui.components.PlaylistAccents
+import com.lumen.player.ui.components.StreamAccents
+import com.lumen.player.ui.components.VideoAccents
+import com.lumen.player.ui.components.VideoCardSkeleton
 import com.lumen.player.ui.folders.FoldersViewModel
 import com.lumen.player.ui.playlist.PlaylistViewModel
 import android.content.Intent
@@ -128,22 +139,18 @@ import com.lumen.player.ui.components.LumenInfoDialog
 import com.lumen.player.ui.components.LumenInputDialog
 import java.util.Locale
 import kotlinx.coroutines.launch
-import com.lumen.player.core.theme.LumenBlue
-import com.lumen.player.core.theme.LumenBlueDeep
-import com.lumen.player.core.theme.LumenGreen
-import com.lumen.player.core.theme.LumenGreenDeep
-import com.lumen.player.core.theme.LumenYellow
-import com.lumen.player.core.theme.LumenYellowDeep
-import com.lumen.player.core.theme.LumenRed
-import com.lumen.player.core.theme.LumenRedDeep
-import com.lumen.player.core.theme.LumenPurple
-import com.lumen.player.core.theme.LumenPurpleDeep
-import com.lumen.player.ui.components.ShapeIcon
+import com.lumen.player.core.theme.LumenAmber
+import com.lumen.player.core.theme.LumenLavender
+import com.lumen.player.core.theme.LumenOcean
+import com.lumen.player.core.theme.LumenSage
 import com.lumen.player.ui.components.ColoredFAB
 import com.lumen.player.ui.components.GradientBlob
+import com.lumen.player.ui.components.LumenBlob
+import com.lumen.player.ui.components.LumenEmptyState
+import com.lumen.player.ui.components.Mood
 import androidx.compose.foundation.layout.offset
 
-private val tabTitles = listOf("Videos", "Audio", "Folders", "Playlists", "Streams")
+private val tabTitles = listOf("videos", "audio", "folders", "playlists", "streams")
 private val tabIcons = listOf(
     Icons.Rounded.Movie,
     Icons.Rounded.MusicNote,
@@ -165,6 +172,7 @@ fun LibraryScreen(
 ) {
     val pagerState = rememberPagerState(pageCount = { tabTitles.size })
     val scope = rememberCoroutineScope()
+    val isScanning by viewModel.isScanning.collectAsStateWithLifecycle()
 
     LaunchedEffect(hasPermission) {
         if (hasPermission) viewModel.onPermissionGranted()
@@ -176,7 +184,7 @@ fun LibraryScreen(
             .statusBarsPadding()
     ) {
         GradientBlob(
-            color = LumenYellow,
+            color = LumenAmber,
             size = 250.dp,
             alpha = 0.2f,
             modifier = Modifier
@@ -215,44 +223,37 @@ fun LibraryScreen(
             indicator = { tabPositions ->
                 TabRowDefaults.SecondaryIndicator(
                     Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
-                    height = 3.dp,
-                    color = MaterialTheme.colorScheme.tertiary
+                    height = 2.dp,
+                    color = Color(0xFFFFC857)
                 )
             },
             modifier = Modifier.fillMaxWidth()
         ) {
             tabTitles.forEachIndexed { index, title ->
+                val selected = pagerState.currentPage == index
                 Tab(
-                    selected = pagerState.currentPage == index,
+                    selected = selected,
                     onClick = {
                         scope.launch {
                             pagerState.animateScrollToPage(index)
                         }
                     },
                     icon = {
-                        val (iconGradientStart, iconGradientEnd) = when (index) {
-                            0 -> LumenBlue to LumenBlueDeep
-                            1 -> LumenGreen to LumenGreenDeep
-                            2 -> LumenYellow to LumenYellowDeep
-                            3 -> LumenRed to LumenRedDeep
-                            4 -> LumenPurple to LumenPurpleDeep
-                            else -> LumenBlue to LumenBlueDeep
-                        }
-                        ShapeIcon(
-                            icon = tabIcons[index],
-                            gradientStart = iconGradientStart,
-                            gradientEnd = iconGradientEnd,
-                            size = 36.dp,
-                            iconSize = 20.dp
+                        Icon(
+                            imageVector = tabIcons[index],
+                            contentDescription = title,
+                            tint = if (selected) Color(0xFFFFC857)
+                                else MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(24.dp)
                         )
                     },
                     text = {
                         Text(
                             title,
-                            fontWeight = if (pagerState.currentPage == index)
+                            fontWeight = if (selected)
                                 FontWeight.SemiBold else FontWeight.Medium,
                             fontSize = MaterialTheme.typography.titleSmall.fontSize,
-                            color = if (pagerState.currentPage == index)
+                            color = if (selected)
                                 MaterialTheme.colorScheme.onSurface
                             else
                                 MaterialTheme.colorScheme.onSurfaceVariant
@@ -284,7 +285,7 @@ fun LibraryScreen(
                     onItemClick = onItemClick,
                     viewModel = viewModel
                 )
-                2 -> FoldersTabContent(onFolderClick = onFolderClick)
+                2 -> FoldersTabContent(onFolderClick = onFolderClick, isScanning = isScanning)
                  3 -> PlaylistsTabContent(onPlaylistClick = onPlaylistClick)
                  4 -> StreamsTabContent(onStreamPlay = onItemClick)
             }
@@ -346,29 +347,20 @@ private fun VideosTabContent(
     val sheetScope = rememberCoroutineScope()
     val snackbarState = remember { SnackbarHostState() }
 
+    if (isScanning && items.isEmpty()) {
+        VideoSkeletonGrid()
+        return
+    }
+
     if (items.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            if (isScanning) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    CircularProgressIndicator(modifier = Modifier.size(40.dp))
-                    Text("Scanning your videos\u2026",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-            } else {
-                Column(horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Icon(Icons.Rounded.Movie, null, Modifier.size(56.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("No videos on this device",
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    FilledTonalButton(onClick = viewModel::rescan, shape = RoundedCornerShape(12.dp)) {
-                        Icon(Icons.Rounded.Refresh, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("Scan again")
-                    }
-                }
-            }
+            LumenEmptyState(
+                blobColor = LumenAmber,
+                blobMood = Mood.IDLE,
+                title = "no videos yet",
+                subtitle = "add video files to your device to begin",
+                accents = { VideoAccents(LumenAmber) }
+            )
         }
         return
     }
@@ -412,14 +404,16 @@ private fun VideosTabContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "${items.size} videos",
-                    style = MaterialTheme.typography.labelMedium,
+                    text = "${items.size} VIDEOS",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 2.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.weight(1f)
                 )
                 Box {
                     IconButton(onClick = { overflowExpanded = true }) {
-                        Icon(Icons.Rounded.MoreVert, contentDescription = "More")
+                        Icon(Icons.Rounded.MoreVert, contentDescription = "more")
                     }
                     DropdownMenu(
                         expanded = overflowExpanded,
@@ -438,37 +432,37 @@ private fun VideosTabContent(
                             }
                         } else {
                             DropdownMenuItem(
-                                text = { Text("Sort by") },
+                                text = { Text("sort by") },
                                 onClick = { showSortSubmenu = true }
                             )
                             DropdownMenuItem(
-                                text = { Text(if (isGroupedByFolder) "Ungroup folders" else "Group by folder") },
+                                text = { Text(if (isGroupedByFolder) "ungroup folders" else "group by folder") },
                                 onClick = {
                                     isGroupedByFolder = !isGroupedByFolder
                                     overflowExpanded = false
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text(if (isGridView) "List view" else "Grid view") },
+                                text = { Text(if (isGridView) "list view" else "grid view") },
                                 onClick = {
                                     onToggleViewMode()
                                     overflowExpanded = false
                                 }
                             )
                             DropdownMenuItem(
-                                text = { Text("Select multiple") },
+                                text = { Text("select multiple") },
                                 onClick = { selectionMode = true; overflowExpanded = false }
                             )
                             DropdownMenuItem(
-                                text = { Text(if (showHiddenItems) "Hide hidden items" else "Show hidden items") },
+                                text = { Text(if (showHiddenItems) "hide hidden items" else "show hidden items") },
                                 onClick = { showHiddenItems = !showHiddenItems; overflowExpanded = false }
                             )
                             DropdownMenuItem(
-                                text = { Text("Rescan library") },
+                                text = { Text("rescan library") },
                                 onClick = { viewModel.rescan(); overflowExpanded = false }
                             )
                             DropdownMenuItem(
-                                text = { Text("Settings") },
+                                text = { Text("settings") },
                                 onClick = { overflowExpanded = false }
                             )
                         }
@@ -480,14 +474,14 @@ private fun VideosTabContent(
                         onClick = { if (!isGridView) onToggleViewMode() },
                         shape = SegmentedButtonDefaults.itemShape(index = 0, count = 2)
                     ) {
-                        Text("Grid", maxLines = 1)
+                        Text("grid", maxLines = 1)
                     }
                     SegmentedButton(
                         selected = !isGridView,
                         onClick = { if (isGridView) onToggleViewMode() },
                         shape = SegmentedButtonDefaults.itemShape(index = 1, count = 2)
                     ) {
-                        Text("List", maxLines = 1)
+                        Text("list", maxLines = 1)
                     }
                 }
             }
@@ -553,8 +547,8 @@ private fun VideosTabContent(
                     viewModel.hideFromHome(item)
                     sheetScope.launch {
                         val result = snackbarState.showSnackbar(
-                            message = "Hidden from Home",
-                            actionLabel = "Undo"
+message = "hidden from home",
+                        actionLabel = "undo"
                         )
                         if (result == SnackbarResult.ActionPerformed) {
                             viewModel.unhideFromHome(item)
@@ -621,8 +615,8 @@ private fun VideosTabContent(
                     viewModel.hideFromHome(item)
                     sheetScope.launch {
                         val result = snackbarState.showSnackbar(
-                            message = "Hidden from Home",
-                            actionLabel = "Undo"
+            message = "hidden from home",
+                        actionLabel = "undo"
                         )
                         if (result == SnackbarResult.ActionPerformed) {
                             viewModel.unhideFromHome(item)
@@ -689,8 +683,8 @@ private fun VideosTabContent(
                     viewModel.hideFromHome(item)
                     sheetScope.launch {
                         val result = snackbarState.showSnackbar(
-                            message = "Hidden from Home",
-                            actionLabel = "Undo"
+            message = "hidden from home",
+                        actionLabel = "undo"
                         )
                         if (result == SnackbarResult.ActionPerformed) {
                             viewModel.unhideFromHome(item)
@@ -714,7 +708,7 @@ private fun VideosTabContent(
         ) {
             Column(Modifier.padding(bottom = 32.dp)) {
                 Text(
-                    "Add to playlist",
+                    "add to playlist",
                     style = MaterialTheme.typography.titleMedium,
                     modifier = Modifier.padding(horizontal = 24.dp, vertical = 12.dp)
                 )
@@ -731,7 +725,7 @@ private fun VideosTabContent(
                     Icon(Icons.Rounded.Add, null, Modifier.size(24.dp),
                         tint = MaterialTheme.colorScheme.tertiary)
                     Spacer(Modifier.width(12.dp))
-                    Text("+ Create new playlist",
+                    Text("+ create new playlist",
                         color = MaterialTheme.colorScheme.tertiary,
                         style = MaterialTheme.typography.bodyLarge)
                 }
@@ -748,8 +742,8 @@ private fun VideosTabContent(
                                 showPlaylistSheet = false
                                 sheetScope.launch {
                                     val result = snackbarState.showSnackbar(
-                                        message = "Added ${ids.size} items to \"$name\"",
-                                        actionLabel = "Undo"
+                                        message = "added ${ids.size} items to \"$name\"",
+                                        actionLabel = "undo"
                                     )
                                     if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
                                         viewModel.removeFromPlaylist(playlist.id, ids)
@@ -789,8 +783,8 @@ private fun VideosTabContent(
                     selectionMode = false
                     sheetScope.launch {
                         val result = snackbarState.showSnackbar(
-                            message = "Added ${ids.size} items to \"$name\"",
-                            actionLabel = "Undo"
+                            message = "added ${ids.size} items to \"$name\"",
+                            actionLabel = "undo"
                         )
                         if (result == SnackbarResult.ActionPerformed) {
                             viewModel.removeFromPlaylist(newId, ids)
@@ -800,9 +794,9 @@ private fun VideosTabContent(
                 newPlaylistName = ""
                 showCreatePlaylistDialog = false
             },
-            title = "New playlist",
-            label = "Playlist name",
-            confirmLabel = "Create"
+            title = "new playlist",
+            label = "playlist name",
+            confirmLabel = "create"
         )
     }
 
@@ -812,13 +806,13 @@ private fun VideosTabContent(
             onDismiss = { showPropertiesDialog = null },
             title = item.cleanTitle.ifEmpty { item.title }
         ) {
-            PropertiesRow("Path", item.folderPath)
-            PropertiesRow("Size", humanSize(item.sizeBytes))
-            PropertiesRow("Duration", TimeFormatter.format(item.durationMs))
-            if (item.year != null) PropertiesRow("Year", item.year.toString())
-            if (item.seasonEpisode != null) PropertiesRow("Season/Episode", item.seasonEpisode!!)
-            PropertiesRow("Type", item.mimeType)
-            if (item.posterUrl != null) PropertiesRow("Poster", "TMDB")
+            PropertiesRow("path", item.folderPath)
+            PropertiesRow("size", humanSize(item.sizeBytes))
+            PropertiesRow("duration", TimeFormatter.format(item.durationMs))
+            if (item.year != null) PropertiesRow("year", item.year.toString())
+            if (item.seasonEpisode != null) PropertiesRow("season/episode", item.seasonEpisode!!)
+            PropertiesRow("type", item.mimeType)
+            if (item.posterUrl != null) PropertiesRow("poster", "TMDB")
         }
     }
 }
@@ -883,7 +877,7 @@ private fun AudioTabContent(
             Spacer(Modifier.height(8.dp))
 
             when {
-                hasPermission && isScanning && items.isEmpty() -> ScanningPlaceholder()
+                hasPermission && isScanning && items.isEmpty() -> AudioSkeletonList()
                 hasPermission && items.isEmpty() -> EmptyLibraryPlaceholder(onRescan = viewModel::rescan)
                 else -> LazyColumn(state = listState, modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())) {
@@ -924,9 +918,26 @@ private fun AudioTabContent(
 @Composable
 private fun FoldersTabContent(
     onFolderClick: (String) -> Unit,
+    isScanning: Boolean = false,
     viewModel: FoldersViewModel = hiltViewModel()
 ) {
     val folders by viewModel.folders.collectAsStateWithLifecycle()
+
+    if (isScanning && folders.isEmpty()) {
+        FolderSkeletonGrid()
+        return
+    }
+
+    if (folders.isEmpty()) {
+        LumenEmptyState(
+            blobColor = LumenAmber,
+            blobMood = Mood.SLEEPING,
+            title = "no folders yet",
+            subtitle = "videos are grouped by their folder on your device",
+            accents = { FolderAccents(LumenAmber) }
+        )
+        return
+    }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())) {
         items(folders, key = { it.path }) { folder ->
@@ -941,7 +952,7 @@ private fun FoldersTabContent(
                         model = folder.firstItemArtUri,
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier.size(48.dp).clip(RoundedCornerShape(12.dp))
+                        modifier = Modifier.size(48.dp).clip(LumenSquircle(12.dp))
                     )
                 } else {
                     Icon(Icons.Rounded.Folder, null, Modifier.size(48.dp),
@@ -955,8 +966,14 @@ private fun FoldersTabContent(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Text("${folder.mediaCount}", style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    "${folder.mediaCount} VIDEOS",
+                    style = MaterialTheme.typography.labelSmall,
+                    fontWeight = FontWeight.Medium,
+                    letterSpacing = 1.sp,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1
+                )
             }
         }
     }
@@ -995,40 +1012,36 @@ private fun StreamsTabContent(
 
     Box(Modifier.fillMaxSize()) {
         if (groups.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Icon(Icons.Rounded.Language, null, Modifier.size(56.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("No streams yet",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("Add a network stream URL or import an M3U playlist",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+            LumenEmptyState(
+                blobColor = LumenOcean,
+                blobMood = Mood.SLEEPING,
+                title = "no streams yet",
+                subtitle = "add a network stream URL or import an M3U playlist",
+                accents = { StreamAccents(LumenOcean) },
+                actions = {
                     Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         FilledTonalButton(
                             onClick = { m3uPicker.launch(arrayOf(
                                 "audio/x-mpegurl", "application/vnd.apple.mpegurl",
                                 "application/x-mpegurl", "*/*"
                             )) },
-                            shape = RoundedCornerShape(12.dp)
+                            shape = LumenSquircle(12.dp)
                         ) {
                             Icon(Icons.Rounded.Folder, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Import M3U")
+                            Text("import M3U")
                         }
                         FilledTonalButton(
                             onClick = { showAddDialog = true },
-                            shape = RoundedCornerShape(12.dp)
+                            shape = LumenSquircle(12.dp)
                         ) {
                             Icon(Icons.Rounded.Add, null, Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Add URL")
+                            Text("add URL")
                         }
                     }
                 }
-            }
+            )
         } else {
             Box(Modifier.fillMaxSize()) {
                 Column(Modifier.fillMaxSize()) {
@@ -1042,7 +1055,7 @@ private fun StreamsTabContent(
                             value = query,
                             onValueChange = viewModel::setQuery,
                             modifier = Modifier.weight(1f),
-                            placeholder = { Text("Search streams...") },
+                            placeholder = { Text("search streams...") },
                             leadingIcon = { Icon(Icons.Rounded.Search, null) },
                             trailingIcon = {
                                 if (query.isNotEmpty()) {
@@ -1052,7 +1065,7 @@ private fun StreamsTabContent(
                                 }
                             },
                             singleLine = true,
-                            shape = RoundedCornerShape(28.dp),
+                            shape = LumenSquircle(28.dp),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = Color.Transparent,
                                 unfocusedBorderColor = Color.Transparent
@@ -1067,7 +1080,7 @@ private fun StreamsTabContent(
                             Icon(
                                 if (viewMode == StreamViewMode.GRID) Icons.Rounded.ViewList
                                 else Icons.Rounded.GridView,
-                                "Toggle view"
+                                "toggle view"
                             )
                         }
                     }
@@ -1077,7 +1090,7 @@ private fun StreamsTabContent(
                     ) {
                         item {
                             CategoryChip(
-                                label = "All",
+                                label = "all",
                                 selected = selectedCategory == null,
                                 onClick = { selectedCategory = null }
                             )
@@ -1130,14 +1143,14 @@ private fun StreamsTabContent(
                                             Box(
                                                 Modifier
                                                     .size(48.dp)
-                                                    .clip(RoundedCornerShape(12.dp))
+                                                    .clip(LumenSquircle(12.dp))
                                                     .background(MaterialTheme.colorScheme.surfaceVariant),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 if (stream.logoUrl != null) {
                                                     AsyncImage(model = stream.logoUrl,
                                                         contentDescription = null,
-                                                        modifier = Modifier.size(48.dp).clip(RoundedCornerShape(12.dp)))
+                                                        modifier = Modifier.size(48.dp).clip(LumenSquircle(12.dp)))
                                                 } else {
                                                     Icon(Icons.Rounded.Language, null, Modifier.size(24.dp),
                                                         tint = MaterialTheme.colorScheme.primary)
@@ -1214,7 +1227,7 @@ private fun StreamsTabContent(
                                             modifier = Modifier
                                                 .fillMaxWidth()
                                                 .clickable { viewModel.playStream(stream, onStreamPlay) },
-                                            shape = RoundedCornerShape(12.dp),
+                                            shape = LumenSquircle(12.dp),
                                             colors = CardDefaults.cardColors(
                                                 containerColor = MaterialTheme.colorScheme.surfaceVariant
                                             )
@@ -1259,7 +1272,7 @@ private fun StreamsTabContent(
                 ColoredFAB(
                     icon = Icons.Rounded.Add,
                     contentDescription = "Add stream",
-                    color = LumenPurple,
+                    color = LumenAmber,
                     onClick = { showAddDialog = true },
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
@@ -1281,24 +1294,24 @@ private fun StreamsTabContent(
                 onDismissRequest = {},
                 properties = DialogProperties(usePlatformDefaultWidth = false, dismissOnBackPress = false, dismissOnClickOutside = false)
             ) {
-                Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surface, tonalElevation = 4.dp) {
+                Surface(shape = LumenSquircle(20.dp), color = MaterialTheme.colorScheme.surface, tonalElevation = 4.dp) {
                     Column(Modifier.padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(Modifier.size(40.dp))
+                        ShimmerBox(Modifier.size(40.dp), shape = LumenSquircle(12.dp))
                         Spacer(Modifier.height(16.dp))
-                        Text("Importing channels\u2026", style = MaterialTheme.typography.bodyLarge)
+                        Text("importing channels\u2026", style = MaterialTheme.typography.bodyLarge)
                     }
                 }
             }
         }
         is M3uImportState.Success -> {
             LaunchedEffect(state) {
-                snackbarHostState.showSnackbar("Imported ${state.count} channels from ${state.fileName}")
+                snackbarHostState.showSnackbar("imported ${state.count} channels from ${state.fileName}")
                 viewModel.dismissImportState()
             }
         }
         is M3uImportState.Error -> {
             LaunchedEffect(state) {
-                snackbarHostState.showSnackbar("Import failed: ${state.message}")
+                snackbarHostState.showSnackbar("import failed: ${state.message}")
                 viewModel.dismissImportState()
             }
         }
@@ -1314,24 +1327,24 @@ private fun StreamsTabContent(
         ) {
             Surface(
                 modifier = Modifier.fillMaxWidth(0.85f).imePadding(),
-                shape = RoundedCornerShape(20.dp),
+                shape = LumenSquircle(20.dp),
                 color = MaterialTheme.colorScheme.surface,
                 tonalElevation = 4.dp, shadowElevation = 8.dp
             ) {
                 Column(Modifier.padding(24.dp)) {
-                    Text("Add network stream", style = MaterialTheme.typography.titleLarge)
+                    Text("add network stream", style = MaterialTheme.typography.titleLarge)
                     Spacer(Modifier.height(16.dp))
                     OutlinedTextField(value = url, onValueChange = { url = it },
-                        label = { Text("URL") }, singleLine = true,
-                        modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+                        label = { Text("url") }, singleLine = true,
+                        modifier = Modifier.fillMaxWidth(), shape = LumenSquircle(12.dp))
                     Spacer(Modifier.height(12.dp))
                     OutlinedTextField(value = title, onValueChange = { title = it },
-                        label = { Text("Title (optional)") }, singleLine = true,
-                        modifier = Modifier.fillMaxWidth(), shape = RoundedCornerShape(12.dp))
+                        label = { Text("title (optional)") }, singleLine = true,
+                        modifier = Modifier.fillMaxWidth(), shape = LumenSquircle(12.dp))
                     Spacer(Modifier.height(24.dp))
                     Row(modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.End) {
-                        TextButton(onClick = { showAddDialog = false }) { Text("Cancel") }
+                        TextButton(onClick = { showAddDialog = false }) { Text("cancel") }
                         Spacer(Modifier.width(8.dp))
                         FilledTonalButton(
                             onClick = {
@@ -1340,9 +1353,9 @@ private fun StreamsTabContent(
                                     showAddDialog = false
                                 }
                             },
-                            shape = RoundedCornerShape(12.dp),
+                            shape = LumenSquircle(12.dp),
                             enabled = url.isNotBlank()
-                        ) { Text("Add & play") }
+                        ) { Text("add & play") }
                     }
                 }
             }
@@ -1361,24 +1374,22 @@ private fun PlaylistsTabContent(
 
     Box(Modifier.fillMaxSize()) {
         if (playlists.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                    Icon(Icons.Rounded.QueueMusic, null, Modifier.size(56.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text("No playlists yet",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+            LumenEmptyState(
+                blobColor = LumenSage,
+                blobMood = Mood.IDLE,
+                title = "no playlists yet",
+                accents = { PlaylistAccents(LumenSage) },
+                actions = {
                     FilledTonalButton(
                         onClick = { showCreateDialog = true },
-                        shape = RoundedCornerShape(12.dp)
+                        shape = LumenSquircle(12.dp)
                     ) {
                         Icon(Icons.Rounded.Add, null, Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Create your first playlist")
+                        Text("create your first playlist")
                     }
                 }
-            }
+            )
         } else {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())) {
                 items(playlists, key = { it.id }) { playlist ->
@@ -1391,7 +1402,7 @@ private fun PlaylistsTabContent(
                         Box(
                             Modifier
                                 .size(48.dp)
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(LumenSquircle(12.dp))
                                 .background(MaterialTheme.colorScheme.surfaceVariant),
                             contentAlignment = Alignment.Center
                         ) {
@@ -1412,8 +1423,8 @@ private fun PlaylistsTabContent(
 
             ColoredFAB(
                 icon = Icons.Rounded.Add,
-                contentDescription = "Create playlist",
-                color = LumenRed,
+                contentDescription = "create playlist",
+                color = LumenAmber,
                 onClick = { showCreateDialog = true },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
@@ -1433,38 +1444,67 @@ private fun PlaylistsTabContent(
                 newPlaylistName = ""
                 showCreateDialog = false
             },
-            title = "New playlist",
-            label = "Playlist name",
-            confirmLabel = "Create"
+            title = "new playlist",
+            label = "playlist name",
+            confirmLabel = "create"
         )
     }
 }
 
 @Composable
-private fun ScanningPlaceholder() {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            CircularProgressIndicator(Modifier.size(40.dp))
-            Text("Scanning your media\u2026", style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+private fun VideoSkeletonGrid() {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(6) {
+            VideoCardSkeleton()
+        }
+    }
+}
+
+@Composable
+private fun AudioSkeletonList() {
+    LazyColumn(Modifier.fillMaxSize()) {
+        items(8) {
+            AudioRowSkeleton()
+        }
+    }
+}
+
+@Composable
+private fun FolderSkeletonGrid() {
+    LazyVerticalGrid(
+        columns = GridCells.Fixed(2),
+        modifier = Modifier.fillMaxSize().padding(horizontal = 12.dp, vertical = 8.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        items(6) {
+            FolderCardSkeleton(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(8.dp)
+            )
         }
     }
 }
 
 @Composable
 private fun EmptyLibraryPlaceholder(onRescan: () -> Unit) {
-    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Icon(Icons.Rounded.MusicNote, null, Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            Text("No audio on this device", style = MaterialTheme.typography.bodyLarge)
-            FilledTonalButton(onClick = onRescan, shape = RoundedCornerShape(12.dp)) {
+    LumenEmptyState(
+        blobColor = LumenLavender,
+        blobMood = Mood.HAPPY,
+        title = "no audio on this device",
+        accents = { AudioAccents(LumenLavender) },
+        actions = {
+            FilledTonalButton(onClick = onRescan, shape = LumenSquircle(12.dp)) {
                 Icon(Icons.Rounded.Refresh, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("Scan again")
+                Text("scan again")
             }
         }
-    }
+    )
 }

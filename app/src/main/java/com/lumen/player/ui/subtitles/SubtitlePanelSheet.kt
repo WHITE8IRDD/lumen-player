@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
@@ -29,7 +28,8 @@ import androidx.compose.material.icons.rounded.FileOpen
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.CircularProgressIndicator
+import com.lumen.player.ui.components.LumenSquircle
+import com.lumen.player.ui.components.ShimmerBox
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuBox
@@ -381,12 +381,12 @@ fun SubtitlePanelSheet(
 
                     when {
                         isDownloading -> {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            ShimmerBox(modifier = Modifier.size(24.dp), shape = LumenSquircle(12.dp))
                             Spacer(Modifier.width(8.dp))
                             Text("Downloading\u2026", style = MaterialTheme.typography.bodySmall)
                         }
                         isSearching -> {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            ShimmerBox(modifier = Modifier.size(24.dp), shape = LumenSquircle(12.dp))
                             Spacer(Modifier.width(8.dp))
                             Text("Searching\u2026", style = MaterialTheme.typography.bodySmall)
                         }

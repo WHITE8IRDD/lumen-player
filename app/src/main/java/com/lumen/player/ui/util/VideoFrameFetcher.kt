@@ -45,29 +45,42 @@ class VideoFrameFetcher(
 
     override suspend fun fetch(): FetchResult {
         val ctx = options.context
-        val cacheFile = ThumbnailExtractor.cacheFileFor(ctx, data.id, data.uri, data.timeUs)
-        val bitmap: Bitmap = withContext(Dispatchers.IO) {
-            if (cacheFile != null && cacheFile.exists() && cacheFile.length() > 0L) {
-                val cached = BitmapFactory.decodeFile(cacheFile.absolutePath)
-                if (cached != null) return@withContext cached
+        return try {
+            val cacheFile = ThumbnailExtractor.cacheFileFor(ctx, data.id, data.uri, data.timeUs)
+            val bitmap: Bitmap = withContext(Dispatchers.IO) {
+                if (cacheFile != null && cacheFile.exists() && cacheFile.length() > 0L) {
+                    val cached = BitmapFactory.decodeFile(cacheFile.absolutePath)
+                    if (cached != null) return@withContext cached
+                }
+                val frame = extractWithRetry(ctx, data.uri)
+                if (frame != null && cacheFile != null) {
+                    ThumbnailExtractor.writeCache(cacheFile, frame)
+                }
+                frame ?: ThumbnailExtractor.fallbackBitmap()
             }
-            val frame = extractWithRetry(ctx, data.uri)
-            if (frame != null && cacheFile != null) {
-                ThumbnailExtractor.writeCache(cacheFile, frame)
-            }
-            frame ?: ThumbnailExtractor.fallbackBitmap()
+
+            val out = java.io.ByteArrayOutputStream()
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
+            bitmap.recycle()
+            val bytes = out.toByteArray()
+
+            SourceResult(
+                source = ImageSource(Buffer().write(bytes), ctx),
+                mimeType = "image/jpeg",
+                dataSource = DataSource.DISK
+            )
+        } catch (e: Exception) {
+            Log.w("VideoFrameFetcher", "fetch failed, using fallback: ${e.message}")
+            val fallback = ThumbnailExtractor.fallbackBitmap()
+            val out = java.io.ByteArrayOutputStream()
+            fallback.compress(Bitmap.CompressFormat.JPEG, 85, out)
+            fallback.recycle()
+            SourceResult(
+                source = ImageSource(Buffer().write(out.toByteArray()), ctx),
+                mimeType = "image/jpeg",
+                dataSource = DataSource.DISK
+            )
         }
-
-        val out = java.io.ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 85, out)
-        bitmap.recycle()
-        val bytes = out.toByteArray()
-
-        return SourceResult(
-            source = ImageSource(Buffer().write(bytes), ctx),
-            mimeType = "image/jpeg",
-            dataSource = DataSource.DISK
-        )
     }
 
     private suspend fun extractWithRetry(ctx: Context, uri: Uri): Bitmap? = withContext(Dispatchers.IO) {
@@ -113,6 +126,32 @@ object ThumbnailExtractor {
         }
     }
 
+    fun isMostlyBlack(bitmap: Bitmap, threshold: Float = 0.95f): Boolean {
+        val stepX = maxOf(1, bitmap.width / 50)
+        val stepY = maxOf(1, bitmap.height / 50)
+        var blackPixels = 0
+        var totalPixels = 0
+        for (x in 0 until bitmap.width step stepX) {
+            for (y in 0 until bitmap.height step stepY) {
+                val pixel = bitmap.getPixel(x, y)
+                if (android.graphics.Color.red(pixel) < 25 &&
+                    android.graphics.Color.green(pixel) < 25 &&
+                    android.graphics.Color.blue(pixel) < 25
+                ) blackPixels++
+                totalPixels++
+            }
+        }
+        return totalPixels > 0 && blackPixels.toFloat() / totalPixels >= threshold
+    }
+
+    fun extractBestFrame(context: Context, uri: Uri): Bitmap? {
+        val timestamps = listOf(1_000_000L, 5_000_000L, 30_000_000L, 60_000_000L, 120_000_000L, 0L)
+        val candidates = timestamps.mapNotNull { ts ->
+            runCatching { extractFrame(context, uri, ts) }.getOrNull()
+        }
+        return candidates.firstOrNull { !isMostlyBlack(it) } ?: candidates.firstOrNull()
+    }
+
     private fun cacheDir(context: Context): File =
         File(context.cacheDir, CACHE_SUBDIR).apply { mkdirs() }
 
@@ -145,24 +184,18 @@ object ThumbnailExtractor {
      * 3. File-path-based fallback (existing strategy)
      */
     fun extractWithFallback(context: Context, uri: Uri): Bitmap? {
-        // Strategy 1: OS-cached thumbnail
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            try {
-                val cached = context.contentResolver.loadThumbnail(uri, Size(512, 288), null)
-                if (cached != null) return cached
-            } catch (_: Exception) { }
-        }
+        return runCatching {
+            // Strategy 1: OS-cached thumbnail
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                try {
+                    val cached = context.contentResolver.loadThumbnail(uri, Size(512, 288), null)
+                    if (cached != null && !isMostlyBlack(cached)) return cached
+                } catch (_: Exception) {}
+            }
 
-        // Strategy 2: MediaMetadataRetriever with multi-timestamp
-        val timestamps = listOf(
-            1_000_000L, 5_000_000L, 30_000_000L, 0L
-        )
-        for (ts in timestamps) {
-            val frame = extractFrame(context, uri, ts)
-            if (frame != null) return frame
-        }
-
-        return null
+            // Strategy 2: extractBestFrame with multi-timestamp + black frame rejection
+            extractBestFrame(context, uri)
+        }.getOrNull()
     }
 
     private fun extractFrame(context: Context, uri: Uri, timeUs: Long): Bitmap? {
