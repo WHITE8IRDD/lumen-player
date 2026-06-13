@@ -62,8 +62,8 @@ class MediaTitleParser @Inject constructor() : MetadataResolver {
     )
 
     private val bracketPattern = Regex("\\[.*?\\]")
-    private val tagParenPattern = Regex("\\([^)]*?(?:1080p|720p|2160p|480p|360p|4K|x264|x265|HEVC|AVC|XviD|DivX|BluRay|WEBRip|WEB-DL|HDRip|DVDRip|BrRip|HDTV|YTS|ELiTE|Panda|RARBG|ROVERS|JVT|AMCORD|IMAX|EVO|SPARKS|FGT|UNRATED|EXTENDED|REPACK|PROPER|INTERNAL|AAC5\\.1|DD5\\.1|DDP5\\.1|EAC3|AC3|DTS|DTS-HD|TrueHD|Atmos|FLAC|MP3|OGG|OPUS|WAV|AMZN|NF|DSNP|HMAX|ATVP|CAM|TS|TC|R5|SCREENER|10bit|8bit|HDR|HDR10|DolbyVision|DV).*?\\)", RegexOption.IGNORE_CASE)
-    private val qualityPattern = Regex("(?i)\\b(?:1080p|720p|2160p|480p|360p|4K|8K|UHD|UHDR|2K|HD|SD|x264|x265|h264|h265|HEVC|AVC|XviD|DivX|BluRay|WEBRip|WEB-DL|WEB DL|WEBDL|HDRip|DVDRip|BrRip|HDTV|HDTVRip|UNRATED|EXTENDED|REPACK|PROPER|INTERNAL|FHD|HDR|HDR10|DolbyVision|Dolby Vision|DV|10bit|8bit|YTS|YIFY|RARBG|ELiTE|Panda|ROVERS|JVT|AMCORD|IMAX|EVO|SPARKS|FGT|GECKOS|EZTV|ETRG|AMZN|NF|DSNP|HMAX|ATVP|PMTP|CAM|TS|TC|R5|SCREENER|DSR|PDTV|DVD|BD|AAC5\\.1|AAC 5\\.1|DD5\\.1|DDP5\\.1|DD\\+5\\.1|EAC3|E-AC3|AC3|AC-3|DTS|DTS-HD|DTS-X|DTSHD|TrueHD|True HD|Atmos|Dolby Atmos|DolbyDigital|FLAC|MP3|OGG|OPUS|WAV|5\\.1|7\\.1|2\\.0|2\\.1|6CH|2CH|8CH)\\b")
+    private val tagParenPattern = Regex("\\([^)]*?(?:1080p|720p|2160p|480p|360p|4K|x264|x265|HEVC|AVC|XviD|DivX|BluRay|WEBRip|WEB-DL|HDRip|DVDRip|BrRip|HDTV|YTS|ELiTE|Panda|RARBG|ROVERS|JVT|AMCORD|IMAX|EVO|SPARKS|FGT|UNCUT|UNRATED|EXTENDED|REMASTERED|RESTORED|RECUT|REDUX|REPACK|PROPER|INTERNAL|LIMITED|COMPLETE|AAC5\\.1|DD5\\.1|DDP5\\.1|EAC3|AC3|DTS|DTS-HD|TrueHD|Atmos|FLAC|MP3|OGG|OPUS|WAV|AMZN|NF|DSNP|HMAX|ATVP|CAM|TS|TC|R5|SCREENER|10bit|8bit|HDR|HDR10|DolbyVision|DV).*?\\)", RegexOption.IGNORE_CASE)
+    private val qualityPattern = Regex("(?i)\\b(?:1080p|720p|2160p|480p|360p|4K|8K|UHD|UHDR|2K|HD|SD|x264|x265|h264|h265|HEVC|AVC|XviD|DivX|BluRay|WEBRip|WEB-DL|WEB DL|WEBDL|HDRip|DVDRip|BrRip|HDTV|HDTVRip|UNRATED|UNCUT|EXTENDED|REMASTERED|RESTORED|RECUT|REDUX|REPACK|PROPER|INTERNAL|LIMITED|COMPLETE|FHD|HDR|HDR10|DolbyVision|Dolby Vision|DV|10bit|8bit|YTS|YIFY|RARBG|ELiTE|Panda|ROVERS|JVT|AMCORD|IMAX|EVO|SPARKS|FGT|GECKOS|EZTV|ETRG|AMZN|NF|DSNP|HMAX|ATVP|PMTP|CAM|TS|TC|R5|SCREENER|DSR|PDTV|DVD|BD|AAC5\\.1|AAC 5\\.1|DD5\\.1|DDP5\\.1|DD\\+5\\.1|EAC3|E-AC3|AC3|AC-3|DTS|DTS-HD|DTS-X|DTSHD|TrueHD|True HD|Atmos|Dolby Atmos|DolbyDigital|FLAC|MP3|OGG|OPUS|WAV|5\\.1|7\\.1|2\\.0|2\\.1|6CH|2CH|8CH)\\b")
     private val groupSuffixPattern = Regex("-[a-zA-Z0-9]+(?:\\.[a-zA-Z0-9]+)*$")
     private val separatorPattern = Regex("[\\._]")
     private val spacePattern = Regex("\\s+")
@@ -73,6 +73,7 @@ class MediaTitleParser @Inject constructor() : MetadataResolver {
     private val dashPattern = Regex("\\s*[-–—]+\\s*")
     private val trailingPunct = Regex("[,\\s]+$")
     private val leadingPunct = Regex("^[,\\s]+")
+    private val trailingStopwordPattern = Regex("\\s+(?:and|&|the|or|for)\\s*$", RegexOption.IGNORE_CASE)
 
     private val stopwords = setOf(
         "of", "the", "a", "an", "and", "or", "but", "for",
@@ -98,6 +99,7 @@ class MediaTitleParser @Inject constructor() : MetadataResolver {
         s = groupSuffixPattern.replace(s, "")
         s = separatorPattern.replace(s, " ")
         s = spacePattern.replace(s, " ").trim()
+        s = trailingStopwordPattern.replace(s, "")
 
         // Extract year
         val yearMatch = yearPattern.find(s)
