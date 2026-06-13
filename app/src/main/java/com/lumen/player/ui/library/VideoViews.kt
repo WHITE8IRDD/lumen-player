@@ -230,6 +230,23 @@ fun VideoGridCard(
                         )
                     }
                 }
+                if (item.durationMs > 0L) {
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(6.dp),
+                        color = Color.Black.copy(alpha = 0.78f),
+                        shape = RoundedCornerShape(4.dp)
+                    ) {
+                        Text(
+                            text = TimeFormatter.format(item.durationMs),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
                 if (item.lastPositionMs > 0L) {
                     Box(
                         Modifier
@@ -530,6 +547,23 @@ fun VideoListRow(
                                 .height(3.dp)
                                 .clip(RoundedCornerShape(2.dp))
                                 .background(MaterialTheme.colorScheme.tertiary)
+                        )
+                    }
+                }
+                if (item.durationMs > 0L) {
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(3.dp),
+                        color = Color.Black.copy(alpha = 0.78f),
+                        shape = RoundedCornerShape(3.dp)
+                    ) {
+                        Text(
+                            text = TimeFormatter.format(item.durationMs),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
                         )
                     }
                 }
