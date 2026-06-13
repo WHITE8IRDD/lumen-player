@@ -963,16 +963,43 @@ private fun FoldersTabContent(
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                if (folder.firstItemArtUri != null) {
-                    AsyncImage(
-                        model = folder.firstItemArtUri,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier.size(48.dp).clip(LumenSquircle(12.dp))
-                    )
-                } else {
-                    Icon(Icons.Rounded.Folder, null, Modifier.size(48.dp),
-                        tint = MaterialTheme.colorScheme.primary)
+                Box(modifier = Modifier.size(56.dp)) {
+                    if (folder.firstItemArtUri != null) {
+                        AsyncImage(
+                            model = folder.firstItemArtUri,
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .clip(LumenSquircle(12.dp))
+                        )
+                    } else {
+                        Box(
+                            Modifier
+                                .fillMaxSize()
+                                .clip(LumenSquircle(12.dp))
+                                .background(MaterialTheme.colorScheme.surfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Rounded.Folder, null, Modifier.size(28.dp),
+                                tint = MaterialTheme.colorScheme.primary)
+                        }
+                    }
+                    Surface(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(2.dp),
+                        color = Color.Black.copy(alpha = 0.75f),
+                        shape = RoundedCornerShape(3.dp)
+                    ) {
+                        Text(
+                            "${folder.mediaCount}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = Color.White,
+                            fontWeight = FontWeight.SemiBold,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                        )
+                    }
                 }
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
@@ -982,14 +1009,6 @@ private fun FoldersTabContent(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
-                Text(
-                    "${folder.mediaCount} VIDEOS",
-                    style = MaterialTheme.typography.labelSmall,
-                    fontWeight = FontWeight.Medium,
-                    letterSpacing = 1.sp,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    maxLines = 1
-                )
             }
         }
     }
