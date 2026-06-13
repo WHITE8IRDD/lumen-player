@@ -121,8 +121,6 @@ fun SettingsScreen(
         )
 
         // ── PLAYBACK GROUP ──
-        SettingsEyebrow("Playback")
-
         SettingsSectionHeader(
             title = "playback",
             subtitle = "resume, focus, gapless",
@@ -200,9 +198,6 @@ fun SettingsScreen(
         SettingsDivider()
 
         // ── LIBRARY GROUP ──
-        Spacer(Modifier.height(32.dp))
-        SettingsEyebrow("Library")
-
         SettingsSectionHeader(
             title = "library",
             subtitle = "excluded folders, auto-scan",
@@ -253,7 +248,6 @@ fun SettingsScreen(
 
         // ── APPEARANCE GROUP ──
         Spacer(Modifier.height(32.dp))
-        SettingsEyebrow("Appearance")
 
         SettingsSectionHeader(
             title = "appearance",
@@ -284,7 +278,6 @@ fun SettingsScreen(
 
         // ── SYSTEM GROUP ──
         Spacer(Modifier.height(32.dp))
-        SettingsEyebrow("System")
 
         SettingsSectionHeader(
             title = "advanced",
@@ -331,12 +324,6 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        "v1.0.0",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(8.dp))
-                    Text(
                         "a premium local-first media player",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -361,8 +348,10 @@ fun SettingsScreen(
                         ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/anomalco/lumen")))
                     } catch (_: Exception) { }
                 }, chevronIcon = Icons.AutoMirrored.Rounded.OpenInNew)
-                SettingsDivider()
-                SettingsClickableRow(title = "LumenBlob Debug", subtitle = "preview animated blob moods", onClick = onDebugBlob)
+                if (BuildConfig.DEBUG) {
+                    SettingsDivider()
+                    SettingsClickableRow(title = "LumenBlob Debug", subtitle = "preview animated blob moods", onClick = onDebugBlob)
+                }
             }
         }
     }
@@ -512,23 +501,6 @@ private fun SubtitleDelaySlider(
         optionLabel = { "${it}ms" },
         onPick = { onConfirm(it * 1000) }
     )
-}
-
-@Composable
-private fun SettingsEyebrow(label: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(start = 16.dp, end = 16.dp, bottom = 10.dp, top = 6.dp)
-    ) {
-        Text(
-            text = label.uppercase(),
-            style = MaterialTheme.typography.labelSmall.copy(
-                letterSpacing = 2.sp
-            ),
-            color = Color(0xFFFFC857)
-        )
-    }
 }
 
 @Composable

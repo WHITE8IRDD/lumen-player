@@ -5,13 +5,65 @@ import com.lumen.player.domain.repository.MetadataResolver
 import java.util.Locale
 import javax.inject.Inject
 import javax.inject.Singleton
+import java.io.File
+
+fun friendlyPath(path: String?): String {
+    if (path.isNullOrBlank()) return "Internal Storage"
+    val normalized = path.trimEnd('/')
+    val internalPrefixes = listOf(
+        "/storage/emulated/0",
+        "/sdcard",
+        "/mnt/sdcard",
+        "/data/media/0"
+    )
+    val sdCardPattern = Regex("^/storage/[^/]+\\d.*$")
+    for (prefix in internalPrefixes) {
+        if (normalized.startsWith(prefix)) {
+            val suffix = normalized.removePrefix(prefix).trimStart('/')
+            return if (suffix.isEmpty()) "Internal Storage" else suffix
+        }
+    }
+    if (sdCardPattern.matches(normalized)) {
+        val parts = normalized.split("/")
+        if (parts.size >= 4) {
+            val afterStorage = parts.drop(2).joinToString("/")
+            return "SD Card/$afterStorage"
+        }
+        return "SD Card"
+    }
+    return "Internal Storage"
+}
+
+fun friendlyParentFolder(path: String?): String {
+    if (path.isNullOrBlank()) return "Internal Storage"
+    val file = File(path.trimEnd('/'))
+    val parent = file.parentFile ?: return friendlyPath(path)
+    val segments = parent.path.split(Regex("/+")).filter { it.isNotEmpty() }
+    if (segments.size <= 2) return friendlyPath(parent.path)
+    val lastTwo = segments.takeLast(2).joinToString("/")
+    return if (segments.first() == "storage" && segments.size >= 3) {
+        if (segments[1] == "emulated" && segments[2] == "0") {
+            val suffix = segments.drop(3)
+            if (suffix.size <= 2) suffix.joinToString("/")
+            else suffix.takeLast(2).joinToString("/")
+        } else {
+            lastTwo
+        }
+    } else lastTwo
+}
 
 @Singleton
 class MediaTitleParser @Inject constructor() : MetadataResolver {
 
+    private val knownExtensions = setOf(
+        "mp4", "mkv", "avi", "mov", "wmv", "flv", "webm", "m4v", "mpg", "mpeg",
+        "3gp", "ts", "m2ts", "vob", "ogv",
+        "mp3", "flac", "wav", "aac", "ogg", "wma", "m4a", "opus", "alac"
+    )
+
     private val bracketPattern = Regex("\\[.*?\\]")
-    private val tagParenPattern = Regex("\\([^)]*?(?:1080p|720p|2160p|480p|x264|x265|HEVC|BluRay|WEBRip|WEB-DL|HDRip|DVDRip|BrRip|YTS|ELiTE|Panda|RARBG|ROVERS|JVT|AMCORD|IMAX|HDTV|UNRATED|EXTENDED|REPACK|PROPER|INTERNAL).*?\\)", RegexOption.IGNORE_CASE)
-    private val qualityPattern = Regex("(?i)\\b(?:1080p|720p|2160p|480p|360p|4K|8K|UHD|UHDR|2K|HD|SD|x264|x265|h264|h265|HEVC|BluRay|WEBRip|WEB-DL|WEB DL|HDRip|DVDRip|BrRip|HDTV|HDTVRip|UNRATED|EXTENDED|REPACK|PROPER|INTERNAL|FHD|HDR|YTS|YIFY|RARBG|ELiTE|Panda|ROVERS|JVT|AMCORD|IMAX)\\b")
+    private val tagParenPattern = Regex("\\([^)]*?(?:1080p|720p|2160p|480p|360p|4K|x264|x265|HEVC|AVC|XviD|DivX|BluRay|WEBRip|WEB-DL|HDRip|DVDRip|BrRip|HDTV|YTS|ELiTE|Panda|RARBG|ROVERS|JVT|AMCORD|IMAX|EVO|SPARKS|FGT|UNRATED|EXTENDED|REPACK|PROPER|INTERNAL|AAC5\\.1|DD5\\.1|DDP5\\.1|EAC3|AC3|DTS|DTS-HD|TrueHD|Atmos|FLAC|MP3|OGG|OPUS|WAV|AMZN|NF|DSNP|HMAX|ATVP|CAM|TS|TC|R5|SCREENER|10bit|8bit|HDR|HDR10|DolbyVision|DV).*?\\)", RegexOption.IGNORE_CASE)
+    private val qualityPattern = Regex("(?i)\\b(?:1080p|720p|2160p|480p|360p|4K|8K|UHD|UHDR|2K|HD|SD|x264|x265|h264|h265|HEVC|AVC|XviD|DivX|BluRay|WEBRip|WEB-DL|WEB DL|WEBDL|HDRip|DVDRip|BrRip|HDTV|HDTVRip|UNRATED|EXTENDED|REPACK|PROPER|INTERNAL|FHD|HDR|HDR10|DolbyVision|Dolby Vision|DV|10bit|8bit|YTS|YIFY|RARBG|ELiTE|Panda|ROVERS|JVT|AMCORD|IMAX|EVO|SPARKS|FGT|GECKOS|EZTV|ETRG|AMZN|NF|DSNP|HMAX|ATVP|PMTP|CAM|TS|TC|R5|SCREENER|DSR|PDTV|DVD|BD|AAC5\\.1|AAC 5\\.1|DD5\\.1|DDP5\\.1|DD\\+5\\.1|EAC3|E-AC3|AC3|AC-3|DTS|DTS-HD|DTS-X|DTSHD|TrueHD|True HD|Atmos|Dolby Atmos|DolbyDigital|FLAC|MP3|OGG|OPUS|WAV|5\\.1|7\\.1|2\\.0|2\\.1|6CH|2CH|8CH)\\b")
     private val groupSuffixPattern = Regex("-[a-zA-Z0-9]+(?:\\.[a-zA-Z0-9]+)*$")
     private val separatorPattern = Regex("[\\._]")
     private val spacePattern = Regex("\\s+")
@@ -31,12 +83,13 @@ class MediaTitleParser @Inject constructor() : MetadataResolver {
     override suspend fun resolve(rawFilename: String): MediaMetadata {
         var s = rawFilename.trim()
 
-        // Strip file extension — only if the part after the last dot
-        // contains no spaces (avoids treating "Witanime.com" as an extension)
-        val dot = s.lastIndexOf('.')
-        if (dot > s.lastIndexOf('/') && dot > s.lastIndexOf('\\') && dot > 0
-            && dot + 1 < s.length && !s.substring(dot).contains(' ')) {
-            s = s.substring(0, dot)
+        // Strip file extension — only if last segment is a known media extension
+        val lastDotIndex = s.lastIndexOf('.')
+        if (lastDotIndex > 0) {
+            val possibleExt = s.substring(lastDotIndex + 1).lowercase(Locale.getDefault())
+            if (possibleExt in knownExtensions) {
+                s = s.substring(0, lastDotIndex)
+            }
         }
 
         s = bracketPattern.replace(s, "")
@@ -119,8 +172,14 @@ class MediaTitleParser @Inject constructor() : MetadataResolver {
             .replace(Regex("\\s+"), " ")
             .trim()
 
+        val expanded = cleaned
+            .replace(Regex("\\bDC\\b"), "Director's Cut")
+            .replace(Regex("\\bEC\\b"), "Extended Cut")
+            .replace(Regex("\\bUC\\b"), "Ultimate Cut")
+            .replace(Regex("\\bTC\\b"), "Theatrical Cut")
+
         return MediaMetadata(
-            cleanTitle = cleaned.ifEmpty { rawFilename },
+            cleanTitle = expanded.ifEmpty { rawFilename },
             year = year,
             seasonEpisode = seasonEpisode ?: episodeOnly
         )

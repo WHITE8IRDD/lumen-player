@@ -40,7 +40,7 @@ fun LumenEmptyState(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Box(
-            modifier = Modifier.size(blobSize * 2.5f),
+            modifier = Modifier.size(blobSize * 1.8f),
             contentAlignment = Alignment.Center
         ) {
             LumenBlob(

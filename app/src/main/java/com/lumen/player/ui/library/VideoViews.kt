@@ -36,7 +36,9 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import com.lumen.player.data.metadata.MediaTitleParser
 import com.lumen.player.ui.components.LumenSquircle
+import kotlinx.coroutines.runBlocking
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
@@ -772,52 +774,80 @@ fun SelectionActionBar(
         enter = slideInVertically { it } + fadeIn(),
         exit = slideOutVertically { it } + fadeOut()
     ) {
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.97f))
-                .padding(horizontal = 8.dp, vertical = 4.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Surface(
+            tonalElevation = 3.dp,
+            color = MaterialTheme.colorScheme.surface,
+            modifier = Modifier.fillMaxWidth()
         ) {
-            IconButton(onClick = onClear) {
-                Icon(Icons.Rounded.Close, contentDescription = "exit selection")
-            }
-            Text(
-                "$selectedCount selected",
-                style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-                modifier = Modifier.weight(1f)
-            )
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                SelectionActionButton(
-                    icon = Icons.Rounded.QueuePlayNext,
-                    label = "play next",
-                    onClick = onPlayNext
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(end = 4.dp)
+            ) {
+                IconButton(onClick = onClear) {
+                    Icon(Icons.Rounded.Close, contentDescription = "exit selection")
+                }
+                Text(
+                    text = "$selectedCount selected",
+                    color = Color.White,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f)
                 )
-                SelectionActionButton(
-                    icon = Icons.Rounded.PlaylistAdd,
-                    label = "add to queue",
-                    onClick = onAddToQueue
-                )
-                SelectionActionButton(
-                    icon = Icons.Rounded.Share,
-                    label = "share",
-                    onClick = onShare
-                )
-                if (onAddToPlaylist != null) {
-                    SelectionActionButton(
+                Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+                    SelectionActionMinimalButton(
+                        icon = Icons.Rounded.QueuePlayNext,
+                        label = "play next",
+                        onClick = onPlayNext
+                    )
+                    SelectionActionMinimalButton(
                         icon = Icons.Rounded.PlaylistAdd,
-                        label = "add to playlist",
-                        onClick = onAddToPlaylist
+                        label = "add to queue",
+                        onClick = onAddToQueue
+                    )
+                    SelectionActionMinimalButton(
+                        icon = Icons.Rounded.Share,
+                        label = "share",
+                        onClick = onShare
+                    )
+                    if (onAddToPlaylist != null) {
+                        SelectionActionMinimalButton(
+                            icon = Icons.Rounded.PlaylistAdd,
+                            label = "add to playlist",
+                            onClick = onAddToPlaylist
+                        )
+                    }
+                    SelectionActionMinimalButton(
+                        icon = Icons.Rounded.Delete,
+                        label = "delete",
+                        onClick = onDelete,
+                        isDestructive = true
                     )
                 }
-                SelectionActionButton(
-                    icon = Icons.Rounded.Delete,
-                    label = "delete",
-                    onClick = onDelete,
-                    isDestructive = true
-                )
             }
         }
+    }
+}
+
+@Composable
+private fun SelectionActionMinimalButton(
+    icon: ImageVector,
+    label: String,
+    onClick: () -> Unit,
+    isDestructive: Boolean = false
+) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.size(40.dp)
+    ) {
+        Icon(
+            imageVector = icon,
+            contentDescription = label,
+            tint = if (isDestructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+        )
     }
 }
 
@@ -850,11 +880,14 @@ fun humanSize(bytes: Long): String {
     else String.format(java.util.Locale.getDefault(), "%.1f %s", b, units[i])
 }
 
-fun Folder.toSingleVideo(): MediaItem = MediaItem(
+fun Folder.toSingleVideo(parser: MediaTitleParser = MediaTitleParser()): MediaItem {
+    val rawTitle = firstVideoTitle ?: displayName
+    val parsed = runBlocking { parser.resolve(rawTitle) }
+    return MediaItem(
     id = firstVideoId ?: 0L,
     uri = firstVideoUri ?: Uri.EMPTY,
-    title = firstVideoTitle ?: displayName,
-    cleanTitle = firstVideoTitle ?: displayName,
+    title = rawTitle,
+    cleanTitle = parsed.cleanTitle,
     year = null,
     seasonEpisode = null,
     artist = null,
@@ -874,7 +907,8 @@ fun Folder.toSingleVideo(): MediaItem = MediaItem(
     isHiddenFromHome = false,
     isHiddenFromContinueWatching = false,
     posterUrl = firstVideoPosterUrl
-)
+    )
+}
 
 enum class VideoSort { TITLE, DATE, DURATION, SIZE, RESOLUTION }
 

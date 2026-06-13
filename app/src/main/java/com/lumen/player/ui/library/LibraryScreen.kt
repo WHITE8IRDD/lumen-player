@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
 import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -139,6 +140,7 @@ import com.lumen.player.ui.components.LumenInfoDialog
 import com.lumen.player.ui.components.LumenInputDialog
 import java.util.Locale
 import kotlinx.coroutines.launch
+import com.lumen.player.data.metadata.friendlyPath
 import com.lumen.player.core.theme.LumenAmber
 import com.lumen.player.core.theme.LumenLavender
 import com.lumen.player.core.theme.LumenOcean
@@ -878,7 +880,12 @@ private fun AudioTabContent(
 
             when {
                 hasPermission && isScanning && items.isEmpty() -> AudioSkeletonList()
-                hasPermission && items.isEmpty() -> EmptyLibraryPlaceholder(onRescan = viewModel::rescan)
+                hasPermission && items.isEmpty() -> {
+                    EmptyLibraryPlaceholder(
+                        onRescan = viewModel::rescan,
+                        modifier = Modifier.navigationBarsPadding()
+                    )
+                }
                 else -> LazyColumn(state = listState, modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())) {
                     items(items, key = { it.id }) { item ->
@@ -930,6 +937,7 @@ private fun FoldersTabContent(
 
     if (folders.isEmpty()) {
         LumenEmptyState(
+            modifier = Modifier.navigationBarsPadding(),
             blobColor = LumenAmber,
             blobMood = Mood.SLEEPING,
             title = "no folders yet",
@@ -962,7 +970,7 @@ private fun FoldersTabContent(
                 Column(Modifier.weight(1f)) {
                     Text(folder.displayName, style = MaterialTheme.typography.bodyLarge,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text(folder.path, style = MaterialTheme.typography.bodySmall,
+                    Text(friendlyPath(folder.path), style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
@@ -1012,36 +1020,37 @@ private fun StreamsTabContent(
 
     Box(Modifier.fillMaxSize()) {
         if (groups.isEmpty()) {
-            LumenEmptyState(
-                blobColor = LumenOcean,
-                blobMood = Mood.SLEEPING,
-                title = "no streams yet",
-                subtitle = "add a network stream URL or import an M3U playlist",
-                accents = { StreamAccents(LumenOcean) },
-                actions = {
-                    Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                        FilledTonalButton(
-                            onClick = { m3uPicker.launch(arrayOf(
-                                "audio/x-mpegurl", "application/vnd.apple.mpegurl",
-                                "application/x-mpegurl", "*/*"
-                            )) },
-                            shape = LumenSquircle(12.dp)
-                        ) {
-                            Icon(Icons.Rounded.Folder, null, Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("import M3U")
-                        }
-                        FilledTonalButton(
-                            onClick = { showAddDialog = true },
-                            shape = LumenSquircle(12.dp)
-                        ) {
-                            Icon(Icons.Rounded.Add, null, Modifier.size(18.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("add URL")
+                LumenEmptyState(
+                    modifier = Modifier.navigationBarsPadding(),
+                    blobColor = LumenOcean,
+                    blobMood = Mood.SLEEPING,
+                    title = "no streams yet",
+                    subtitle = "add a network stream URL or import an M3U playlist",
+                    accents = { StreamAccents(LumenOcean) },
+                    actions = {
+                        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                            FilledTonalButton(
+                                onClick = { m3uPicker.launch(arrayOf(
+                                    "audio/x-mpegurl", "application/vnd.apple.mpegurl",
+                                    "application/x-mpegurl", "*/*"
+                                )) },
+                                shape = LumenSquircle(12.dp)
+                            ) {
+                                Icon(Icons.Rounded.Folder, null, Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("import M3U")
+                            }
+                            FilledTonalButton(
+                                onClick = { showAddDialog = true },
+                                shape = LumenSquircle(12.dp)
+                            ) {
+                                Icon(Icons.Rounded.Add, null, Modifier.size(18.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text("add URL")
+                            }
                         }
                     }
-                }
-            )
+                )
         } else {
             Box(Modifier.fillMaxSize()) {
                 Column(Modifier.fillMaxSize()) {
@@ -1374,22 +1383,23 @@ private fun PlaylistsTabContent(
 
     Box(Modifier.fillMaxSize()) {
         if (playlists.isEmpty()) {
-            LumenEmptyState(
-                blobColor = LumenSage,
-                blobMood = Mood.IDLE,
-                title = "no playlists yet",
-                accents = { PlaylistAccents(LumenSage) },
-                actions = {
-                    FilledTonalButton(
-                        onClick = { showCreateDialog = true },
-                        shape = LumenSquircle(12.dp)
-                    ) {
-                        Icon(Icons.Rounded.Add, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(6.dp))
-                        Text("create your first playlist")
+                LumenEmptyState(
+                    modifier = Modifier.navigationBarsPadding(),
+                    blobColor = LumenSage,
+                    blobMood = Mood.IDLE,
+                    title = "no playlists yet",
+                    accents = { PlaylistAccents(LumenSage) },
+                    actions = {
+                        FilledTonalButton(
+                            onClick = { showCreateDialog = true },
+                            shape = LumenSquircle(12.dp)
+                        ) {
+                            Icon(Icons.Rounded.Add, null, Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text("create your first playlist")
+                        }
                     }
-                }
-            )
+                )
         } else {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())) {
                 items(playlists, key = { it.id }) { playlist ->
@@ -1493,8 +1503,9 @@ private fun FolderSkeletonGrid() {
 }
 
 @Composable
-private fun EmptyLibraryPlaceholder(onRescan: () -> Unit) {
+private fun EmptyLibraryPlaceholder(onRescan: () -> Unit, modifier: Modifier = Modifier) {
     LumenEmptyState(
+        modifier = modifier,
         blobColor = LumenLavender,
         blobMood = Mood.HAPPY,
         title = "no audio on this device",

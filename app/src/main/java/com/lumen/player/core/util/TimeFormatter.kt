@@ -14,4 +14,11 @@ object TimeFormatter {
         return if (h > 0) "%d:%02d:%02d".format(h, m, s)
         else "%d:%02d".format(m, s)
     }
+
+    fun formatDuration(minutes: Int): String {
+        if (minutes <= 0) return "0m"
+        val h = minutes / 60
+        val m = minutes % 60
+        return if (h > 0) "${h}h ${m}m" else "${m}m"
+    }
 }

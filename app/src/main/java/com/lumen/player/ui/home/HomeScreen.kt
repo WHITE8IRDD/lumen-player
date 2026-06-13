@@ -474,33 +474,20 @@ private fun SearchBar(onClick: () -> Unit) {
 
 @Composable
 private fun SectionHeader(title: String, color: Color, onSeeAll: () -> Unit) {
-    Column(
+    Row(
         Modifier
             .fillMaxWidth()
-            .padding(start = 16.dp, end = 8.dp, top = 24.dp, bottom = 12.dp)
+            .padding(start = 16.dp, end = 8.dp, top = 16.dp, bottom = 12.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
-            text = title.uppercase(),
-            style = MaterialTheme.typography.labelSmall.copy(
-                fontWeight = FontWeight.SemiBold,
-                letterSpacing = 2.sp
-            ),
-            color = color.copy(alpha = 0.8f),
-            modifier = Modifier.padding(bottom = 4.dp)
+            title,
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f)
         )
-        Row(
-            Modifier.fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                title,
-                style = MaterialTheme.typography.headlineSmall,
-                color = MaterialTheme.colorScheme.onSurface,
-                modifier = Modifier.weight(1f)
-            )
-            TextButton(onClick = onSeeAll) {
-                Text("see all", color = color, style = MaterialTheme.typography.labelLarge)
-            }
+        TextButton(onClick = onSeeAll) {
+            Text("see all", color = color, style = MaterialTheme.typography.labelLarge)
         }
     }
 }

@@ -200,7 +200,7 @@ private fun PermissionsSlide(onGrant: () -> Unit) {
         )
         Spacer(Modifier.height(16.dp))
         Text(
-            "Lumen needs permission to read videos and audio on your device. we also use notifications for playback controls.",
+            "Lumen needs permission to read videos and audio on your device. We also use notifications for playback controls.",
             style = MaterialTheme.typography.bodyLarge,
             color = Color.White.copy(alpha = 0.6f),
             textAlign = TextAlign.Center,
