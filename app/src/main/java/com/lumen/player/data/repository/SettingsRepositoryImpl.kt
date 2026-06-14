@@ -18,7 +18,6 @@ class SettingsRepositoryImpl @Inject constructor(
     override val settings: StateFlow<UserSettings> = store.sharedFlow
 
     override suspend fun setThemeMode(mode: ThemeMode) = store.setThemeMode(mode)
-    override suspend fun setDynamicColor(enabled: Boolean) = store.setDynamicColor(enabled)
     override suspend fun setResumePlayback(enabled: Boolean) = store.setResumePlayback(enabled)
     override suspend fun setRespectAudioFocus(enabled: Boolean) = store.setRespectAudioFocus(enabled)
     override suspend fun setSkipSilence(enabled: Boolean) = store.setSkipSilence(enabled)

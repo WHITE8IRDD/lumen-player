@@ -194,7 +194,7 @@ fun LibraryScreen(
             .statusBarsPadding()
     ) {
         GradientBlob(
-            color = LumenAmber,
+            color = MaterialTheme.colorScheme.secondary,
             size = 250.dp,
             alpha = 0.2f,
             modifier = Modifier
@@ -234,7 +234,7 @@ fun LibraryScreen(
                 TabRowDefaults.SecondaryIndicator(
                     Modifier.tabIndicatorOffset(tabPositions[pagerState.currentPage]),
                     height = 2.dp,
-                    color = Color(0xFFFFC857)
+                    color = MaterialTheme.colorScheme.secondary
                 )
             },
             modifier = Modifier.fillMaxWidth()
@@ -252,7 +252,7 @@ fun LibraryScreen(
                         Icon(
                             imageVector = tabIcons[index],
                             contentDescription = title,
-                            tint = if (selected) Color(0xFFFFC857)
+                            tint = if (selected) MaterialTheme.colorScheme.secondary
                                 else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(24.dp)
                         )
@@ -365,11 +365,11 @@ private fun VideosTabContent(
     if (items.isEmpty()) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
             LumenEmptyState(
-                blobColor = LumenAmber,
+                blobColor = MaterialTheme.colorScheme.secondary,
                 blobMood = Mood.IDLE,
                 title = "No videos yet",
                 subtitle = "Add video files to your device to begin",
-                accents = { VideoAccents(LumenAmber) }
+                accents = { VideoAccents(MaterialTheme.colorScheme.secondary) }
             )
         }
         return
@@ -952,11 +952,11 @@ private fun FoldersTabContent(
     if (folders.isEmpty()) {
         LumenEmptyState(
             modifier = Modifier.navigationBarsPadding(),
-            blobColor = LumenAmber,
+            blobColor = MaterialTheme.colorScheme.secondary,
             blobMood = Mood.SLEEPING,
             title = "No folders yet",
             subtitle = "Videos are grouped by their folder on your device",
-            accents = { FolderAccents(LumenAmber) }
+            accents = { FolderAccents(MaterialTheme.colorScheme.secondary) }
         )
         return
     }
@@ -1347,7 +1347,7 @@ private fun StreamsTabContent(
                 ColoredFAB(
                     icon = Icons.Rounded.Add,
                     contentDescription = "Add stream",
-                    color = LumenAmber,
+                    color = MaterialTheme.colorScheme.secondary,
                     onClick = { showAddDialog = true },
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
@@ -1500,7 +1500,7 @@ private fun PlaylistsTabContent(
             ColoredFAB(
                 icon = Icons.Rounded.Add,
                 contentDescription = "create playlist",
-                color = LumenAmber,
+                color = MaterialTheme.colorScheme.secondary,
                 onClick = { showCreateDialog = true },
                 modifier = Modifier
                     .align(Alignment.BottomEnd)

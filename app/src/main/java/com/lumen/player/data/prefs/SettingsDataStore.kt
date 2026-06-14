@@ -35,19 +35,19 @@ class SettingsDataStore @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     init {
-        // One-time migration: old teal default (#00E5C8) → new amber default (#FFC857)
+        // One-time migration: old teal default (#00E5C8) → amber (#FFC857) → current (#FFAB40)
         settingsScope.launch {
             context.prefsDataStore.edit { prefs ->
                 val current = prefs[Keys.ACCENT_COLOR_HEX]
-                if (current != null && current == "#00E5C8") {
-                    prefs[Keys.ACCENT_COLOR_HEX] = "#FFC857"
+                if (current != null && (current == "#00E5C8" || current == "#FFC857")) {
+                    prefs[Keys.ACCENT_COLOR_HEX] = "#FFAB40"
                 }
             }
         }
     }
     private object Keys {
         val THEME_MODE        = stringPreferencesKey("theme_mode")
-        val DYNAMIC_COLOR     = booleanPreferencesKey("dynamic_color")
+
         val RESUME_PLAYBACK   = booleanPreferencesKey("resume_playback")
         val AUDIO_FOCUS       = booleanPreferencesKey("respect_audio_focus")
         val SKIP_SILENCE      = booleanPreferencesKey("skip_silence")
@@ -101,7 +101,6 @@ class SettingsDataStore @Inject constructor(
         UserSettings(
             themeMode = runCatching { ThemeMode.valueOf(p[Keys.THEME_MODE] ?: ThemeMode.SYSTEM.name) }
                 .getOrDefault(ThemeMode.SYSTEM),
-            dynamicColor = p[Keys.DYNAMIC_COLOR] ?: true,
             resumePlayback = p[Keys.RESUME_PLAYBACK] ?: true,
             respectAudioFocus = p[Keys.AUDIO_FOCUS] ?: true,
             skipSilence = p[Keys.SKIP_SILENCE] ?: false,
@@ -113,7 +112,7 @@ class SettingsDataStore @Inject constructor(
             subtitleDelayUs = p[Keys.SUBTITLE_DELAY_US] ?: 0L,
             subtitleTextSize = p[Keys.SUBTITLE_TEXT_SIZE] ?: 16f,
             onboardingCompleted = p[Keys.ONBOARDING_COMPLETED] ?: false,
-            accentColorHex = p[Keys.ACCENT_COLOR_HEX] ?: "#FFC857",
+            accentColorHex = p[Keys.ACCENT_COLOR_HEX] ?: "#FFAB40",
             fontSize = p[Keys.FONT_SIZE] ?: "DEFAULT",
             aspectRatio = p[Keys.ASPECT_RATIO] ?: "AUTO",
             brightnessMode = p[Keys.BRIGHTNESS_MODE] ?: "SYSTEM",
@@ -157,10 +156,6 @@ class SettingsDataStore @Inject constructor(
 
     suspend fun setThemeMode(mode: ThemeMode) {
         context.prefsDataStore.edit { it[Keys.THEME_MODE] = mode.name }
-    }
-
-    suspend fun setDynamicColor(v: Boolean) {
-        context.prefsDataStore.edit { it[Keys.DYNAMIC_COLOR] = v }
     }
 
     suspend fun setResumePlayback(v: Boolean) {

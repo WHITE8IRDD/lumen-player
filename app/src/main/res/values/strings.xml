@@ -29,8 +29,6 @@
 
     <!-- Settings -->
     <string name="settings">Settings</string>
-    <string name="dynamic_color">Dynamic color</string>
-    <string name="dynamic_color_summary">Material you theming on Android 12+</string>
     <string name="theme_mode">Theme</string>
     <string name="resume_playback">Resume playback</string>
     <string name="resume_playback_summary">Continue tracks from where you left off</string>

@@ -1,10 +1,8 @@
 package com.lumen.player.core.theme
 
 import android.app.Activity
-import android.os.Build
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
-import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.SideEffect
@@ -20,8 +18,7 @@ import com.lumen.player.ui.theme.LumenTextCase
 
 @Composable
 fun LumenTheme(
-    dynamicColor: Boolean = false,
-    accentColor: Color = Color(0xFFFFC857),
+    accentColor: Color = Color(0xFFFFAB40),
     fontFamily: FontFamily = LumenFontChoice.SERIF_DISPLAY.family,
     textCase: LumenTextCase = LumenTextCase.LOWERCASE,
     weightOffset: Int = 0,
@@ -31,24 +28,7 @@ fun LumenTheme(
     val bright = 0.299f * accentColor.red + 0.587f * accentColor.green + 0.114f * accentColor.blue
     val onAccent = if (bright > 0.5f) Color(0xFF1C1B1F) else Color.White
 
-    val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            dynamicDarkColorScheme(view.context).copy(
-                primary = accentColor,
-                secondary = accentColor,
-                tertiary = accentColor,
-                background = LumenBlack,
-                surface = LumenSurfaceElevated,
-                surfaceVariant = LumenSurfaceHigh,
-                surfaceContainer = LumenSurfaceHigh,
-                surfaceContainerHigh = Color(0xFF1F1F28),
-                surfaceContainerHighest = Color(0xFF252530),
-                onSurface = LumenTextPrimary,
-                onSurfaceVariant = LumenTextSecondary,
-                outline = LumenBorderSubtle
-            )
-        }
-        else -> darkColorScheme(
+    val colorScheme = darkColorScheme(
             primary = accentColor,
             onPrimary = onAccent,
             primaryContainer = Color(0xFF2A2A4A),
@@ -71,7 +51,6 @@ fun LumenTheme(
             error = Color(0xFFE84D8A),
             onError = Color(0xFF2A1020)
         )
-    }
 
     if (!view.isInEditMode) {
         SideEffect {

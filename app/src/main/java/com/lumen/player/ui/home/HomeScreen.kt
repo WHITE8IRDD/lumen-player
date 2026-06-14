@@ -255,7 +255,7 @@ fun HomeScreen(
                 item { HomeSectionRowSkeleton() }
             } else if (!allEmpty) {
                 if (cw.isNotEmpty()) {
-                    item { SectionHeader("Continue watching", color = LumenAmber, onSeeAll = { onSeeAll("continue_watching") }) }
+                    item { SectionHeader("Continue watching", color = MaterialTheme.colorScheme.secondary, onSeeAll = { onSeeAll("continue_watching") }) }
                     item {
                         ContinueWatchingRow(
                             items = cw,
@@ -266,7 +266,7 @@ fun HomeScreen(
                 }
 
                 if (recent.isNotEmpty()) {
-                    item { SectionHeader("Recently added", color = LumenAmber, onSeeAll = { onSeeAll("recently_added") }) }
+                    item { SectionHeader("Recently added", color = MaterialTheme.colorScheme.secondary, onSeeAll = { onSeeAll("recently_added") }) }
                     item {
                         RecentlyAddedRow(
                             items = recent,
@@ -277,7 +277,7 @@ fun HomeScreen(
                 }
 
                 if (folders.isNotEmpty()) {
-                    item { SectionHeader("Your folders", color = LumenAmber, onSeeAll = { onSeeAll("folders") }) }
+                    item { SectionHeader("Your folders", color = MaterialTheme.colorScheme.secondary, onSeeAll = { onSeeAll("folders") }) }
                     item {
                         HomeFolderRow(
                             folders = folders,
@@ -288,7 +288,7 @@ fun HomeScreen(
                 }
 
                 if (audio.isNotEmpty()) {
-                    item { SectionHeader("Recent audio", color = LumenAmber, onSeeAll = { onSeeAll("recent_audio") }) }
+                    item { SectionHeader("Recent audio", color = MaterialTheme.colorScheme.secondary, onSeeAll = { onSeeAll("recent_audio") }) }
                     item {
                         RecentAudioColumn(
                             items = audio,
@@ -967,11 +967,11 @@ private fun RecentAudioRow(item: MediaItem, onClick: () -> Unit) {
 @Composable
 private fun HomeEmptyState(refreshing: Boolean, onRefresh: () -> Unit) {
     LumenEmptyState(
-        blobColor = LumenAmber,
+        blobColor = MaterialTheme.colorScheme.secondary,
         blobMood = Mood.CURIOUS,
         title = "Welcome to Lumen",
         subtitle = "Add media to your device and tap refresh",
-        accents = { HomeAccents(LumenAmber) },
+        accents = { HomeAccents(MaterialTheme.colorScheme.secondary) },
         actions = {
             if (refreshing) {
                 ShimmerBox(

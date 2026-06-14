@@ -35,7 +35,6 @@ class SettingsViewModel @Inject constructor(
     val isTmdbApiAvailable = BuildConfig.TMDB_API_KEY.isNotEmpty()
 
     fun setThemeMode(mode: ThemeMode) = viewModelScope.launch { repository.setThemeMode(mode) }
-    fun setDynamicColor(v: Boolean) = viewModelScope.launch { repository.setDynamicColor(v) }
     fun setResumePlayback(v: Boolean) = viewModelScope.launch { repository.setResumePlayback(v) }
     fun setRespectAudioFocus(v: Boolean) = viewModelScope.launch { repository.setRespectAudioFocus(v) }
     fun setSkipSilence(v: Boolean) = viewModelScope.launch { repository.setSkipSilence(v) }
@@ -77,7 +76,6 @@ class SettingsViewModel @Inject constructor(
 
     fun resetAllSettings() = viewModelScope.launch {
         repository.setThemeMode(ThemeMode.SYSTEM)
-        repository.setDynamicColor(true)
         repository.setResumePlayback(true)
         repository.setRespectAudioFocus(true)
         repository.setSkipSilence(false)

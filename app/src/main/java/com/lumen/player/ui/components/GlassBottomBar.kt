@@ -74,7 +74,7 @@ fun GlassNavigationBar(
                         Icon(
                             imageVector = if (selected) tab.activeIcon else tab.inactiveIcon,
                             contentDescription = stringResource(tab.labelRes),
-                            tint = if (selected) Color(0xFFFFC857)
+                            tint = if (selected) MaterialTheme.colorScheme.secondary
                                 else MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(22.dp)
                         )
@@ -107,7 +107,7 @@ private fun BottomNavItem(
             Text(
                 text = label,
                 style = MaterialTheme.typography.labelSmall,
-                color = if (selected) Color(0xFFFFC857)
+                color = if (selected) MaterialTheme.colorScheme.secondary
                     else MaterialTheme.colorScheme.onSurfaceVariant,
                 fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium
             )

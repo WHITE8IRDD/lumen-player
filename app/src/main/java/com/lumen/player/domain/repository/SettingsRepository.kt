@@ -8,7 +8,6 @@ enum class ThemeMode { SYSTEM, LIGHT, DARK }
 
 data class UserSettings(
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
-    val dynamicColor: Boolean = true,
     val resumePlayback: Boolean = true,
     val respectAudioFocus: Boolean = true,
     val skipSilence: Boolean = false,
@@ -21,7 +20,7 @@ data class UserSettings(
     val fetchOnlineMetadata: Boolean = false,
     val metadataWifiOnly: Boolean = true,
     val onboardingCompleted: Boolean = false,
-    val accentColorHex: String = "#FFC857",
+    val accentColorHex: String = "#FFAB40",
     val fontSize: String = "DEFAULT",
     val aspectRatio: String = "AUTO",
     val brightnessMode: String = "SYSTEM",
@@ -48,7 +47,6 @@ data class UserSettings(
 interface SettingsRepository {
     val settings: StateFlow<UserSettings>
     suspend fun setThemeMode(mode: ThemeMode)
-    suspend fun setDynamicColor(enabled: Boolean)
     suspend fun setResumePlayback(enabled: Boolean)
     suspend fun setRespectAudioFocus(enabled: Boolean)
     suspend fun setSkipSilence(enabled: Boolean)

@@ -13,6 +13,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Density
+import com.lumen.player.ui.theme.LocalAccentColor
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import com.lumen.player.core.theme.LumenTheme
@@ -48,7 +49,7 @@ class MainActivity : ComponentActivity() {
             val accentColor = runCatching {
                 val hex = settings.accentColorHex.removePrefix("#")
                 Color(("FF$hex").toLong(16))
-            }.getOrDefault(Color(0xFFFFC857))
+            }.getOrDefault(Color(0xFFFFAB40))
 
             val fontFamily = remember(settings.fontFamilyChoice) {
                 try { LumenFontChoice.valueOf(settings.fontFamilyChoice).family }
@@ -62,7 +63,6 @@ class MainActivity : ComponentActivity() {
             Log.d("LumenTheme", "Rendering with fontFamilyChoice=${settings.fontFamilyChoice} textCaseChoice=${settings.textCaseChoice} weightOffset=${settings.weightOffset}")
 
             LumenTheme(
-                dynamicColor = settings.dynamicColor,
                 accentColor = accentColor,
                 fontFamily = fontFamily,
                 textCase = textCase,
@@ -72,7 +72,8 @@ class MainActivity : ComponentActivity() {
                     LocalDensity provides Density(
                         density = LocalDensity.current.density,
                         fontScale = LocalDensity.current.fontScale * fontScale
-                    )
+                    ),
+                    LocalAccentColor provides accentColor
                 ) {
                 val ctx = LocalContext.current
 

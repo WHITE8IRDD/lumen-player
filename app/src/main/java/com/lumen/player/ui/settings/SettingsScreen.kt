@@ -25,8 +25,10 @@ import androidx.compose.material.icons.Icons
 import com.lumen.player.ui.components.LumenSquircle
 import androidx.compose.material.icons.automirrored.rounded.OpenInNew
 import androidx.compose.material.icons.automirrored.rounded.ArrowForwardIos
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
-import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.ui.draw.rotate
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.FilledTonalButton
@@ -259,11 +261,38 @@ fun SettingsScreen(
         AnimatedVisibility(visible = s.sectionAppearance) {
             Column {
                 SettingsDivider()
-                SettingsSwitchRow(title = stringResource(R.string.dynamic_color), summary = stringResource(R.string.dynamic_color_summary), checked = s.dynamicColor, onToggle = viewModel::setDynamicColor)
-                SettingsDivider()
                 SettingsClickableRow(title = "Font size", subtitle = s.fontSize.lowercase().replaceFirstChar { it.uppercase() }, onClick = { showFontSizePicker = true })
                 SettingsDivider()
-                AccentColorRow(hex = s.accentColorHex, onClick = { showAccentColorPicker = true })
+                Row(
+                    Modifier
+                        .fillMaxWidth()
+                        .clickable { showAccentColorPicker = true }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column(Modifier.weight(1f)) {
+                        Text("Accent Color", style = MaterialTheme.typography.bodyLarge)
+                        Text(s.accentColorHex, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    val parsedColor = remember(s.accentColorHex) {
+                        try { Color(android.graphics.Color.parseColor(s.accentColorHex)) }
+                        catch (_: Exception) { Color(0xFF00E5C8) }
+                    }
+                    Box(
+                        Modifier
+                            .size(28.dp)
+                            .clip(CircleShape)
+                            .background(parsedColor)
+                            .border(1.5.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.3f), CircleShape)
+                    )
+                    Spacer(Modifier.width(8.dp))
+                    Icon(
+                        Icons.Rounded.ChevronRight,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    )
+                }
                 SettingsDivider()
                 TypographySection(
                     currentFontChoice = try { LumenFontChoice.valueOf(s.fontFamilyChoice) } catch (_: Exception) { LumenFontChoice.SERIF_DISPLAY },
@@ -512,6 +541,10 @@ private fun SettingsSectionHeader(
     onToggle: () -> Unit
 ) {
     val interactionSource = remember { MutableInteractionSource() }
+    val chevronRotation by animateFloatAsState(
+        targetValue = if (expanded) 180f else 0f,
+        label = "chevron"
+    )
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -521,13 +554,16 @@ private fun SettingsSectionHeader(
                 onClick = onToggle
             )
             .defaultMinSize(minHeight = 56.dp)
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 16.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
             Text(
                 title,
-                style = MaterialTheme.typography.titleMedium,
+                style = MaterialTheme.typography.labelLarge.copy(
+                    letterSpacing = 0.5.sp,
+                    fontWeight = FontWeight.Bold
+                ),
                 color = MaterialTheme.colorScheme.onSurface
             )
             Spacer(Modifier.height(2.dp))
@@ -535,16 +571,16 @@ private fun SettingsSectionHeader(
                 subtitle,
                 style = MaterialTheme.typography.labelSmall.copy(
                     letterSpacing = 0.sp,
-                    fontWeight = androidx.compose.ui.text.font.FontWeight.Normal
+                    fontWeight = FontWeight.Normal
                 ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
         Icon(
-            if (expanded) Icons.Rounded.KeyboardArrowUp else Icons.Rounded.KeyboardArrowDown,
-            contentDescription = if (expanded) "collapse" else "expand",
+            Icons.Rounded.KeyboardArrowDown,
+            contentDescription = if (expanded) "Collapse" else "Expand",
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(20.dp)
+            modifier = Modifier.size(24.dp).rotate(chevronRotation)
         )
     }
 }
@@ -575,7 +611,7 @@ private fun SettingsSwitchRow(
                 indication = null,
                 onClick = { onToggle(!checked) }
             )
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f).padding(end = 16.dp)) {
@@ -613,7 +649,7 @@ private fun SettingsClickableRow(
                 indication = null,
                 onClick = onClick
             )
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
@@ -635,6 +671,12 @@ private fun SettingsClickableRow(
             contentDescription = null,
             tint = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.size(20.dp)
+        )
+        Icon(
+            Icons.Rounded.ChevronRight,
+            contentDescription = null,
+            modifier = Modifier.size(18.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
         )
     }
 }
@@ -711,7 +753,7 @@ private fun AboutRow(
 }
 
 private val ACCENT_COLORS = listOf(
-    "#FFC857" to "amber",
+    "#FFAB40" to "amber",
     "#FF4D6D" to "rose",
     "#7C5CFF" to "purple",
     "#FFB347" to "warm",
@@ -826,7 +868,7 @@ private fun TypographySection(
     LumenText(
         value = "font",
         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 2.sp),
-        color = LumenAmber,
+        color = MaterialTheme.colorScheme.secondary,
         modifier = Modifier.padding(start = 16.dp, bottom = 10.dp)
     )
 
@@ -881,7 +923,7 @@ private fun TypographySection(
     LumenText(
         value = "case",
         style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 2.sp),
-        color = LumenAmber,
+        color = MaterialTheme.colorScheme.secondary,
         modifier = Modifier.padding(start = 16.dp, bottom = 10.dp)
     )
 
@@ -918,7 +960,7 @@ private fun TypographySection(
     LumenText(
         value = "${weightNames[currentWeightOffset.coerceIn(0, 4)]}",
         style = MaterialTheme.typography.titleMedium,
-        color = LumenAmber,
+        color = MaterialTheme.colorScheme.secondary,
         modifier = Modifier.padding(start = 16.dp, bottom = 4.dp)
     )
 

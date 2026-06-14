@@ -48,12 +48,14 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.border
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import com.lumen.player.ui.theme.LocalAccentColor
 import com.lumen.player.ui.components.LumenSquircle
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.VolumeUp
@@ -84,12 +86,16 @@ import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Equalizer
+import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Audiotrack
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Switch
 import com.lumen.player.ui.components.LumenPickerDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -119,6 +125,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
@@ -157,13 +164,16 @@ import com.lumen.player.domain.model.NetworkStream
 import com.lumen.player.ui.components.FloatingGlassCard
 import com.lumen.player.ui.components.LumenConfirmationDialog
 import com.lumen.player.ui.library.StreamsViewModel
+import com.lumen.player.ui.equalizer.EqualizerViewModel
 import com.lumen.player.ui.subtitles.SubtitlePanelSheet
 import kotlin.math.abs
 import java.io.File
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withContext
+import kotlin.coroutines.resume
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -171,10 +181,14 @@ import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.graphics.Bitmap
 import android.view.TextureView
-import android.media.MediaMetadataRetriever
+import android.view.View
 import android.media.MediaScannerConnection
 import android.os.Environment
+import android.os.Handler
+import android.os.HandlerThread
 import android.provider.MediaStore
+import android.view.PixelCopy
+import android.view.SurfaceView
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.unit.DpOffset
 
@@ -216,6 +230,7 @@ fun VideoPlayerScreen(
     var locked by remember { mutableStateOf(false) }
     var lockOverlayVisible by remember { mutableStateOf(false) }
     var lockRevealToken by remember { mutableStateOf(0) }
+    var lockHintShown by remember { mutableStateOf(false) }
     var showSubtitles by remember { mutableStateOf(false) }
     var subtitleDelayUs by remember { mutableStateOf(0L) }
     var menuExpanded by remember { mutableStateOf(false) }
@@ -230,6 +245,7 @@ fun VideoPlayerScreen(
     var currentAspectLabel by remember { mutableStateOf("Fit") }
     var showSkipMenu by remember { mutableStateOf(false) }
     var showSpeedMenu by remember { mutableStateOf(false) }
+    var showEqPanel by remember { mutableStateOf(false) }
     val playerViewRef = remember { mutableStateOf<PlayerView?>(null) }
     val screenshotScope = rememberCoroutineScope()
 
@@ -565,8 +581,11 @@ fun VideoPlayerScreen(
                             Icon(Icons.Rounded.ClosedCaption, "Subtitles", tint = Color.White, modifier = Modifier.size(22.dp))
                         }
                         IconButton(onClick = {
-                            screenshotScope.launch {
-                                takeScreenshot(context, player)
+                            val pv = playerViewRef.value
+                            if (pv != null) {
+                                screenshotScope.launch {
+                                    takeScreenshot(context, pv)
+                                }
                             }
                         }) {
                             Icon(Icons.Rounded.PhotoCamera, "Screenshot", tint = Color.White, modifier = Modifier.size(22.dp))
@@ -583,7 +602,7 @@ fun VideoPlayerScreen(
                                     indication = null,
                                     onClick = {
                                         if (locked) {
-                                            android.widget.Toast.makeText(context, "Long-press to unlock", android.widget.Toast.LENGTH_SHORT).show()
+                                            android.widget.Toast.makeText(context, "Long-press anywhere to unlock", android.widget.Toast.LENGTH_SHORT).show()
                                         } else {
                                             haptic.performHapticFeedback(HapticFeedbackType.LongPress)
                                             locked = true
@@ -601,7 +620,7 @@ fun VideoPlayerScreen(
                             Icon(
                                 if (locked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
                                 "Lock",
-                                tint = if (locked) Color(0xFFFFAB40) else Color.White,
+                                tint = if (locked) LocalAccentColor.current else Color.White,
                                 modifier = Modifier.size(22.dp)
                             )
                         }
@@ -631,6 +650,11 @@ fun VideoPlayerScreen(
                                     onClick = { menuExpanded = false; showSubtitles = true }
                                 )
                                 DropdownMenuItem(
+                                    text = { Text("Equalizer", color = Color.White, fontSize = 15.sp) },
+                                    leadingIcon = { Icon(Icons.Rounded.Equalizer, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(22.dp)) },
+                                    onClick = { menuExpanded = false; showEqPanel = true }
+                                )
+                                DropdownMenuItem(
                                     text = { Text("Video info", color = Color.White, fontSize = 15.sp) },
                                     leadingIcon = { Icon(Icons.Rounded.Info, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(22.dp)) },
                                     onClick = { menuExpanded = false; showVideoInfo = true }
@@ -640,8 +664,11 @@ fun VideoPlayerScreen(
                                     leadingIcon = { Icon(Icons.Rounded.CameraAlt, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(22.dp)) },
                                     onClick = {
                                         menuExpanded = false
-                                        screenshotScope.launch {
-                                            takeScreenshot(context, player)
+                                        val pv = playerViewRef.value
+                                        if (pv != null) {
+                                            screenshotScope.launch {
+                                                takeScreenshot(context, pv)
+                                            }
                                         }
                                     }
                                 )
@@ -720,6 +747,7 @@ fun VideoPlayerScreen(
                         showAspectBadge = true
                     },
                     onOpenSubtitles = { showSubtitles = true },
+                    onOpenEqPanel = { showEqPanel = true },
                     onRequestSkipMenu = { showSkipMenu = true },
                     onToggleLock = {
                         if (!locked) locked = true
@@ -798,6 +826,16 @@ fun VideoPlayerScreen(
                 if (lockRevealToken == myToken) lockOverlayVisible = false
             }
         }
+        // Show hint toast on first lock
+        LaunchedEffect(locked) {
+            if (locked && !lockHintShown) {
+                lockHintShown = true
+                android.widget.Toast.makeText(context, "Long-press anywhere to unlock", android.widget.Toast.LENGTH_LONG).show()
+            }
+            if (!locked) {
+                lockHintShown = false
+            }
+        }
         if (locked) {
             Box(
                 Modifier
@@ -806,7 +844,14 @@ fun VideoPlayerScreen(
                     .pointerInput(Unit) {
                         detectTapGestures(
                             onTap = {
-                                if (locked) lockRevealToken++
+                                lockRevealToken++
+                                android.widget.Toast.makeText(context, "Long-press anywhere to unlock", android.widget.Toast.LENGTH_SHORT).show()
+                            },
+                            onLongPress = {
+                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                locked = false
+                                controlsVisible = true
+                                lockOverlayVisible = false
                             }
                         )
                     }
@@ -818,18 +863,16 @@ fun VideoPlayerScreen(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     Box(Modifier.fillMaxSize().padding(16.dp)) {
-                        IconButton(
-                            onClick = {
-                                locked = false
-                                controlsVisible = true
-                                lockOverlayVisible = false
-                            },
-                            modifier = Modifier.align(Alignment.TopEnd)
-                        ) {
-                            Icon(Icons.Rounded.Lock, "Unlock", tint = Color.White)
-                        }
+                        Icon(
+                            Icons.Rounded.Lock,
+                            "Locked",
+                            tint = Color.White.copy(alpha = 0.5f),
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .size(28.dp)
+                        )
                         Text(
-                            "Tap to unlock",
+                            "Long-press to unlock",
                             color = Color.White.copy(alpha = 0.7f),
                             modifier = Modifier
                                 .align(Alignment.BottomCenter)
@@ -903,16 +946,14 @@ fun VideoPlayerScreen(
                             ) {
                                 Text(
                                     "${speed}x",
-                                    color = if (isSelected) Color(0xFFFFAB40) else Color.White,
-                                    fontSize = 14.sp,
+                                    color = if (isSelected) LocalAccentColor.current else Color.White,                                    fontSize = 14.sp,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                 )
                                 if (isSelected) {
                                     Icon(
                                         Icons.Rounded.Check,
                                         contentDescription = null,
-                                        tint = Color(0xFFFFAB40),
-                                        modifier = Modifier.size(16.dp)
+                                        tint = LocalAccentColor.current,                                        modifier = Modifier.size(16.dp)
                                     )
                                 }
                             }
@@ -1082,6 +1123,11 @@ fun VideoPlayerScreen(
             )
         }
 
+        // === Inline equalizer panel (bottom sheet) ===
+        if (showEqPanel) {
+            InlineEqualizerPanel(onDismiss = { showEqPanel = false })
+        }
+
         // === Audio tracks sheet ===
         if (showAudioSheet) {
             val groups = player?.currentTracks?.groups?.filter { it.type == C.TRACK_TYPE_AUDIO }.orEmpty()
@@ -1121,9 +1167,9 @@ fun VideoPlayerScreen(
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
                                     Text(label, fontSize = 15.sp,
-                                        color = if (isSelected) Color(0xFFFFAB40) else Color.White)
+                                        color = if (isSelected) LocalAccentColor.current else Color.White)
                                     if (isSelected) {
-                                        Icon(Icons.Rounded.Check, null, tint = Color(0xFFFFAB40), modifier = Modifier.size(18.dp))
+                                        Icon(Icons.Rounded.Check, null, tint = LocalAccentColor.current, modifier = Modifier.size(18.dp))
                                     }
                                 }
                             }
@@ -1352,11 +1398,11 @@ private fun VideoSeekBar(
                 Modifier
                     .fillMaxWidth(playedFraction.coerceIn(0f, 1f))
                     .fillMaxHeight()
-                    .background(Color(0xFFFFAB40))
+                    .background(LocalAccentColor.current)
             )
         }
 
-        // Amber glow behind thumb while dragging
+        // Glow behind thumb while dragging
         if (isActive) {
             Box(
                 modifier = Modifier
@@ -1364,7 +1410,7 @@ private fun VideoSeekBar(
                     .padding(start = thumbXDp)
                     .size(thumbSize * 1.8f)
                     .clip(CircleShape)
-                    .background(Color(0xFFFFAB40).copy(alpha = 0.25f))
+                    .background(LocalAccentColor.current.copy(alpha = 0.25f))
             )
         }
 
@@ -1401,6 +1447,7 @@ private fun VideoBottomControls(
     onOpenSpeed: () -> Unit,
     onOpenAspect: () -> Unit,
     onOpenSubtitles: () -> Unit,
+    onOpenEqPanel: () -> Unit,
     onRequestSkipMenu: () -> Unit,
     onToggleLock: () -> Unit,
     locked: Boolean,
@@ -1550,11 +1597,16 @@ private fun VideoBottomControls(
                         label = aspectLabel(resizeMode),
                         onClick = onOpenAspect
                     )
+                    ControlItem(
+                        icon = Icons.Rounded.GraphicEq,
+                        label = "EQ",
+                        onClick = onOpenEqPanel
+                    )
                 }
                 ControlItem(
                     icon = Icons.Rounded.SkipNext,
                     label = "+85s",
-                    tint = Color(0xFFFFAB40),
+                    tint = LocalAccentColor.current,
                     onClick = {
                         val target = ((player?.currentPosition ?: 0L) + 85_000L)
                             .coerceAtMost(player?.duration ?: 0L)
@@ -1758,18 +1810,14 @@ private fun VideoSurface(
 }
 
 @SuppressLint("SimpleDateFormat")
-private suspend fun takeScreenshot(context: Context, player: Player?) {
-    val uri = player?.currentMediaItem?.localConfiguration?.uri ?: return
-    val positionMs = player.currentPosition
+private suspend fun takeScreenshot(context: Context, playerView: PlayerView) {
     withContext(Dispatchers.IO) {
         try {
-            val retriever = MediaMetadataRetriever()
-            retriever.setDataSource(context, uri)
-            val bmp = retriever.getFrameAtTime(positionMs * 1000, MediaMetadataRetriever.OPTION_CLOSEST)
-            retriever.release()
+            val surfaceView = playerView.videoSurfaceView ?: return@withContext
+            val bmp = captureViewToBitmap(surfaceView)
             if (bmp == null) {
                 withContext(Dispatchers.Main) {
-                    android.widget.Toast.makeText(context, "Could not capture frame", android.widget.Toast.LENGTH_SHORT).show()
+                    android.widget.Toast.makeText(context, "Screenshot failed (capture returned null)", android.widget.Toast.LENGTH_SHORT).show()
                 }
                 return@withContext
             }
@@ -1817,6 +1865,41 @@ private suspend fun takeScreenshot(context: Context, player: Player?) {
                 android.widget.Toast.makeText(context, "Screenshot failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
             }
         }
+    }
+}
+
+private suspend fun captureViewToBitmap(view: View): Bitmap? = suspendCancellableCoroutine { cont ->
+    try {
+        val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
+        val handlerThread = HandlerThread("PixelCopyHelper")
+        handlerThread.start()
+        val handler = Handler(handlerThread.looper)
+        when (view) {
+            is SurfaceView -> {
+                PixelCopy.request(view, bitmap, { result ->
+                    handlerThread.quitSafely()
+                    if (result == PixelCopy.SUCCESS) {
+                        cont.resume(bitmap)
+                    } else {
+                        bitmap.recycle()
+                        cont.resume(null)
+                    }
+                }, handler)
+            }
+            is TextureView -> {
+                val tvBitmap = view.getBitmap(view.width, view.height)
+                handlerThread.quitSafely()
+                cont.resume(tvBitmap)
+            }
+            else -> {
+                handlerThread.quitSafely()
+                bitmap.recycle()
+                cont.resume(null)
+            }
+        }
+    } catch (e: Exception) {
+        e.printStackTrace()
+        cont.resume(null)
     }
 }
 
@@ -1881,6 +1964,118 @@ private fun getParentUri(context: Context, uri: Uri): Uri? {
         null
     }
 }
+
+// ══════════════════════════════════════════
+// INLINE EQUALIZER PANEL
+// ══════════════════════════════════════════
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun InlineEqualizerPanel(
+    onDismiss: () -> Unit,
+    viewModel: EqualizerViewModel = hiltViewModel()
+) {
+    val state by viewModel.ui.collectAsStateWithLifecycle()
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        containerColor = Color(0xFF0E0E12),
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+    ) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp)
+                .padding(bottom = 32.dp)
+                .heightIn(max = 520.dp)
+                .verticalScroll(rememberScrollState())
+        ) {
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = 12.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    "Equalizer",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = Color.White,
+                    modifier = Modifier.weight(1f)
+                )
+                Switch(checked = state.enabled, onCheckedChange = viewModel::setEnabled)
+            }
+
+            if (state.bandCount == 0) {
+                Text(
+                    "Equalizer unavailable — start playback first.",
+                    color = Color.White.copy(alpha = 0.5f),
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(vertical = 24.dp)
+                )
+            } else {
+                Column(Modifier.alpha(if (state.enabled) 1f else 0.4f)) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp)
+                            .padding(vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.Bottom
+                    ) {
+                        for (band in 0 until state.bandCount) {
+                            val current = state.bandLevels.getOrNull(band)?.toFloat() ?: 0f
+                            Column(
+                                horizontalAlignment = Alignment.CenterHorizontally,
+                                modifier = Modifier.fillMaxHeight().width(44.dp)
+                            ) {
+                                Box(Modifier.weight(1f).graphicsLayer(rotationZ = -90f)) {
+                                    Slider(
+                                        value = current,
+                                        onValueChange = { viewModel.setBand(band, it.toInt().toShort()) },
+                                        valueRange = state.minMb.toFloat()..state.maxMb.toFloat(),
+                                        enabled = state.enabled,
+                                        modifier = Modifier.width(180.dp)
+                                    )
+                                }
+                                Text(
+                                    formatHz(state.bandFreqs.getOrNull(band) ?: 0),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = Color.White.copy(alpha = 0.6f)
+                                )
+                            }
+                        }
+                    }
+
+                    if (state.presets.isNotEmpty()) {
+                        Text(
+                            "Preset",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = Color.White.copy(alpha = 0.6f),
+                            modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                        )
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            state.presets.forEachIndexed { idx, name ->
+                                FilterChip(
+                                    selected = idx == state.selectedPreset,
+                                    onClick = { if (state.enabled) viewModel.usePreset(idx) },
+                                    enabled = state.enabled,
+                                    label = { Text(name) }
+                                )
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+private fun formatHz(hz: Int): String =
+    if (hz >= 1000) "${hz / 1000}k" else "$hz"
 
 // ══════════════════════════════════════════
 // HELPERS

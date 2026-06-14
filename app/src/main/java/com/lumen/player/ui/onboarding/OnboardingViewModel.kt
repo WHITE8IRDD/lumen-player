@@ -12,10 +12,9 @@ class OnboardingViewModel @Inject constructor(
     private val repository: SettingsRepository
 ) : ViewModel() {
 
-    fun complete(dynamicColor: Boolean, tmdbEnabled: Boolean, hwAccel: Boolean) {
+    fun complete(tmdbEnabled: Boolean, hwAccel: Boolean) {
         viewModelScope.launch {
             repository.setOnboardingCompleted(true)
-            repository.setDynamicColor(dynamicColor)
             repository.setFetchOnlineMetadata(tmdbEnabled)
             repository.setHardwareAcceleration(hwAccel)
         }

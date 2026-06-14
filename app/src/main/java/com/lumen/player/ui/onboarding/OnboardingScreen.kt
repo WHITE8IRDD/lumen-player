@@ -5,7 +5,13 @@ import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -14,15 +20,19 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -36,26 +46,18 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.lumen.player.core.theme.LumenAmber
-import com.lumen.player.core.theme.LumenLavender
-import com.lumen.player.ui.components.LumenBlob
-import com.lumen.player.ui.components.Mood
+import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import kotlinx.coroutines.launch
 
-// Onboarding-specific legacy palette (vibrant experience, not UI chrome)
-private val OnboardingYellow = Color(0xFFFFD23F)
-private val OnboardingBlue = Color(0xFF60A5FA)
-private val OnboardingBlueDeep = Color(0xFF3B82F6)
-private val OnboardingGreen = Color(0xFF34D399)
-private val OnboardingGreenDeep = Color(0xFF10B981)
-private val OnboardingPurpleDeep = Color(0xFF7C3AED)
-private val OnboardingOrangeDeep = Color(0xFFEA580C)
-private val OnboardingCyanDeep = Color(0xFF0891B2)
+// Stable amber for page indicator (immune to theme changes)
+private val IndicatorAmber = Color(0xFFFFC857)
 
 @Composable
 fun OnboardingScreen(
@@ -63,18 +65,39 @@ fun OnboardingScreen(
 ) {
     val pagerState = rememberPagerState(pageCount = { 3 })
     val scope = rememberCoroutineScope()
+    val interactionSource = remember { MutableInteractionSource() }
 
-    var dynamicColor by remember { mutableStateOf(false) }
     var tmdbEnabled by remember { mutableStateOf(false) }
     var hwAccel by remember { mutableStateOf(true) }
 
     val permissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions()
-    ) {
-        scope.launch { pagerState.animateScrollToPage(2) }
+    ) { results ->
+        val allGranted = results.values.all { it }
+        if (allGranted) {
+            scope.launch { pagerState.animateScrollToPage(2) }
+        } else {
+            scope.launch { pagerState.animateScrollToPage(2) }
+        }
     }
 
-    val slideColors = listOf(OnboardingYellow, OnboardingBlue, OnboardingGreen)
+    val orbColors = listOf(Color(0xFFFFC857), Color(0xFFB4A7FF), Color(0xFFFFC857))
+    val currentPage = pagerState.currentPage
+    val offset = pagerState.currentPageOffsetFraction
+    val fromColor = orbColors[currentPage.coerceIn(0, orbColors.lastIndex)]
+    val toColor = orbColors[(currentPage + 1).coerceIn(0, orbColors.lastIndex)]
+    val lerpedColor = lerp(fromColor, toColor, offset.coerceIn(0f, 1f))
+
+    val orbOffsetY by animateFloatAsState(
+        targetValue = when (pagerState.currentPage) {
+            0 -> 0f
+            1 -> -20f
+            2 -> 10f
+            else -> 0f
+        },
+        animationSpec = spring(dampingRatio = Spring.DampingRatioMediumBouncy),
+        label = "orbY"
+    )
 
     Box(Modifier.fillMaxSize().background(Color.Black)) {
         Column(
@@ -93,6 +116,13 @@ fun OnboardingScreen(
                     }
                 }
             }
+
+            Spacer(Modifier.height(32.dp))
+            GlowOrb(
+                color = lerpedColor,
+                modifier = Modifier.offset(y = orbOffsetY.dp)
+            )
+            Spacer(Modifier.height(16.dp))
 
             HorizontalPager(
                 state = pagerState,
@@ -114,13 +144,11 @@ fun OnboardingScreen(
                         permissionLauncher.launch(perms.toTypedArray())
                     })
                     2 -> SetupSlide(
-                        dynamicColor = dynamicColor,
-                        onDynamicColorChange = { dynamicColor = it },
                         tmdbEnabled = tmdbEnabled,
                         onTmdbChange = { tmdbEnabled = it },
                         hwAccel = hwAccel,
                         onHwAccelChange = { hwAccel = it },
-                        onDone = { viewModel.complete(dynamicColor, tmdbEnabled, hwAccel) }
+                        onDone = { viewModel.complete(tmdbEnabled, hwAccel) }
                     )
                 }
             }
@@ -128,7 +156,6 @@ fun OnboardingScreen(
             PageIndicator(
                 pageCount = 3,
                 currentPage = pagerState.currentPage,
-                activeColor = slideColors[pagerState.currentPage],
                 modifier = Modifier.padding(bottom = 40.dp)
             )
 
@@ -138,13 +165,46 @@ fun OnboardingScreen(
 }
 
 @Composable
+private fun GlowOrb(color: Color, modifier: Modifier = Modifier) {
+    Box(
+        modifier = modifier.size(220.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .size(220.dp)
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(color.copy(alpha = 0.18f), Color.Transparent)
+                    ),
+                    shape = CircleShape
+                )
+        )
+        Box(
+            modifier = Modifier
+                .size(130.dp)
+                .background(
+                    brush = Brush.radialGradient(
+                        colors = listOf(
+                            color.copy(alpha = 0.9f),
+                            color.copy(alpha = 0.45f),
+                            Color.Transparent
+                        )
+                    ),
+                    shape = CircleShape
+                )
+        )
+    }
+}
+
+@Composable
 private fun WelcomeSlide(onNext: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
     Column(
         Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        LumenBlob(modifier = Modifier.size(200.dp), color = LumenAmber, mood = Mood.IDLE)
         Spacer(Modifier.height(48.dp))
         Text(
             "Welcome to Lumen",
@@ -160,37 +220,37 @@ private fun WelcomeSlide(onNext: () -> Unit) {
             textAlign = TextAlign.Center
         )
         Spacer(Modifier.height(48.dp))
-        Button(
-            onClick = onNext,
+        Box(
             modifier = Modifier
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onNext
+                )
                 .fillMaxWidth()
-                .padding(horizontal = 32.dp)
-                .height(56.dp)
-                .shadow(
-                    elevation = 20.dp,
-                    shape = RoundedCornerShape(percent = 50),
-                    spotColor = LumenAmber.copy(alpha = 0.6f),
-                    ambientColor = LumenAmber.copy(alpha = 0.3f)
+                .padding(horizontal = 32.dp, vertical = 16.dp)
+                .height(52.dp)
+                .clip(RoundedCornerShape(26.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color(0xFFFFD880), Color(0xFFFFC857))
+                    )
                 ),
-            shape = RoundedCornerShape(percent = 50),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = LumenAmber,
-                contentColor = Color.Black
-            )
+            contentAlignment = Alignment.Center
         ) {
-            Text("Get started", style = MaterialTheme.typography.labelLarge)
+            Text("Get Started", fontWeight = FontWeight.SemiBold, color = Color(0xFF1C1400), fontSize = 16.sp)
         }
     }
 }
 
 @Composable
 private fun PermissionsSlide(onGrant: () -> Unit) {
+    val interactionSource = remember { MutableInteractionSource() }
     Column(
         Modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        LumenBlob(modifier = Modifier.size(200.dp), color = LumenLavender, mood = Mood.CURIOUS)
         Spacer(Modifier.height(48.dp))
         Text(
             "Grant media access",
@@ -207,45 +267,45 @@ private fun PermissionsSlide(onGrant: () -> Unit) {
             modifier = Modifier.padding(horizontal = 32.dp)
         )
         Spacer(Modifier.height(48.dp))
-        Button(
-            onClick = onGrant,
+        Box(
             modifier = Modifier
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onGrant
+                )
                 .fillMaxWidth()
-                .padding(horizontal = 32.dp)
-                .height(56.dp)
-                .shadow(
-                    elevation = 20.dp,
-                    shape = RoundedCornerShape(percent = 50),
-                    spotColor = LumenAmber.copy(alpha = 0.6f),
-                    ambientColor = LumenAmber.copy(alpha = 0.3f)
+                .padding(horizontal = 32.dp, vertical = 16.dp)
+                .height(52.dp)
+                .clip(RoundedCornerShape(26.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color(0xFFFFD880), Color(0xFFFFC857))
+                    )
                 ),
-            shape = RoundedCornerShape(percent = 50),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = LumenAmber,
-                contentColor = Color.Black
-            )
+            contentAlignment = Alignment.Center
         ) {
-            Text("Grant permissions", style = MaterialTheme.typography.labelLarge)
+            Text("Grant Permissions", fontWeight = FontWeight.SemiBold, color = Color(0xFF1C1400), fontSize = 16.sp)
         }
     }
 }
 
 @Composable
 private fun SetupSlide(
-    dynamicColor: Boolean,
-    onDynamicColorChange: (Boolean) -> Unit,
     tmdbEnabled: Boolean,
     onTmdbChange: (Boolean) -> Unit,
     hwAccel: Boolean,
     onHwAccelChange: (Boolean) -> Unit,
     onDone: () -> Unit
 ) {
+    val interactionSource = remember { MutableInteractionSource() }
     Column(
-        Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+        Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(bottom = 32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        LumenBlob(modifier = Modifier.size(200.dp), color = LumenAmber, mood = Mood.HAPPY)
         Spacer(Modifier.height(48.dp))
         Text(
             "Customize your experience",
@@ -255,44 +315,40 @@ private fun SetupSlide(
             modifier = Modifier.padding(horizontal = 16.dp)
         )
         Spacer(Modifier.height(40.dp))
-        ToggleRow(
-            title = "Dynamic color",
-            subtitle = "Match your wallpaper colors (Android 12+)",
-            checked = dynamicColor,
-            onToggle = onDynamicColorChange
-        )
-        ToggleRow(
-            title = "Online metadata",
-            subtitle = "Fetch movie posters from TMDB",
-            checked = tmdbEnabled,
-            onToggle = onTmdbChange
-        )
-        ToggleRow(
-            title = "Hardware acceleration",
-            subtitle = "Use hardware video decoding",
-            checked = hwAccel,
-            onToggle = onHwAccelChange
-        )
-        Spacer(Modifier.height(32.dp))
-        Button(
-            onClick = onDone,
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 32.dp)
-                .height(56.dp)
-                .shadow(
-                    elevation = 20.dp,
-                    shape = RoundedCornerShape(percent = 50),
-                    spotColor = LumenAmber.copy(alpha = 0.6f),
-                    ambientColor = LumenAmber.copy(alpha = 0.3f)
-                ),
-            shape = RoundedCornerShape(percent = 50),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = LumenAmber,
-                contentColor = Color.Black
-            )
+        Card(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 32.dp),
+            shape = RoundedCornerShape(20.dp),
+            colors = CardDefaults.cardColors(
+                containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f)
+            ),
+            border = androidx.compose.foundation.BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = 0.12f))
         ) {
-            Text("Done", style = MaterialTheme.typography.labelLarge)
+            Column(Modifier.padding(vertical = 8.dp)) {
+                ToggleRow("Online Metadata", "Fetch movie posters from TMDB", tmdbEnabled, onTmdbChange)
+                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.08f), modifier = Modifier.padding(horizontal = 16.dp))
+                ToggleRow("Hardware Acceleration", "Use hardware video decoding", hwAccel, onHwAccelChange)
+            }
+        }
+        Spacer(Modifier.height(32.dp))
+        Box(
+            modifier = Modifier
+                .clickable(
+                    interactionSource = interactionSource,
+                    indication = null,
+                    onClick = onDone
+                )
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp, vertical = 16.dp)
+                .height(52.dp)
+                .clip(RoundedCornerShape(26.dp))
+                .background(
+                    Brush.verticalGradient(
+                        colors = listOf(Color(0xFFFFD880), Color(0xFFFFC857))
+                    )
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Text("Done", fontWeight = FontWeight.SemiBold, color = Color(0xFF1C1400), fontSize = 16.sp)
         }
     }
 }
@@ -305,15 +361,15 @@ private fun ToggleRow(
     onToggle: (Boolean) -> Unit
 ) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 8.dp),
+        Modifier.fillMaxWidth().padding(horizontal = 32.dp, vertical = 20.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, color = Color.White)
+            Text(title, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.Medium, color = Color.White)
             Text(
                 subtitle,
                 style = MaterialTheme.typography.bodySmall,
-                color = Color.White.copy(alpha = 0.5f)
+                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
             )
         }
         Spacer(Modifier.width(12.dp))
@@ -325,7 +381,6 @@ private fun ToggleRow(
 private fun PageIndicator(
     pageCount: Int,
     currentPage: Int,
-    activeColor: Color,
     modifier: Modifier = Modifier
 ) {
     Row(
@@ -336,14 +391,16 @@ private fun PageIndicator(
         repeat(pageCount) { index ->
             val isActive = index == currentPage
             val color by animateColorAsState(
-                targetValue = if (isActive) activeColor
-                else Color.White.copy(alpha = 0.2f),
-                label = "dot"
+                targetValue = if (isActive) IndicatorAmber
+                else Color.White.copy(alpha = 0.3f),
+                label = "dotColor"
             )
+            val width by animateDpAsState(targetValue = if (isActive) 20.dp else 6.dp, label = "dotWidth")
             Box(
                 Modifier
-                    .size(if (isActive) 12.dp else 8.dp)
-                    .clip(CircleShape)
+                    .width(width)
+                    .height(6.dp)
+                    .clip(RoundedCornerShape(3.dp))
                     .background(color)
             )
         }
