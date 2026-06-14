@@ -82,6 +82,20 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    override fun onStop() {
+        super.onStop()
+        if (playerController.isPlaying) {
+            playerController.pause()
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        if (playerController.currentItemId == null) {
+            playerController.stopAndClear()
+        }
+    }
+
     override fun onDestroy() {
         if (isFinishing) playerController.release()
         super.onDestroy()

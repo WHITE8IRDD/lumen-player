@@ -1,5 +1,6 @@
 package com.lumen.player.ui.home
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
@@ -86,6 +87,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.currentBackStackEntryAsState
@@ -101,6 +103,7 @@ import com.lumen.player.ui.components.NavTab
 import com.lumen.player.ui.components.LumenConfirmationDialog
 import com.lumen.player.ui.components.SectionLabel
 import com.lumen.player.ui.components.MiniPlayer
+import com.lumen.player.ui.components.MiniPlayerState
 import com.lumen.player.ui.components.ShimmerBox
 import com.lumen.player.ui.components.FolderMosaicThumbnail
 import com.lumen.player.core.theme.LumenAmber
@@ -137,21 +140,29 @@ fun HomeScaffold(
     val backStack by rootNav.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
 
+    val miniState = remember(playback) {
+        MiniPlayerState(
+            currentItemId = playback.currentItemId,
+            title = playback.title.ifEmpty { null },
+            subtitle = playback.artist.ifEmpty { null },
+            artworkUri = playback.artworkUri?.toString(),
+            isPlaying = playback.isPlaying,
+            isPaused = playback.playbackState == Player.STATE_READY && !playback.isPlaying && playback.positionMs > 0L,
+            isBuffering = playback.isBuffering,
+            positionMs = playback.positionMs,
+            durationMs = playback.durationMs
+        )
+    }
+
     Scaffold(
         bottomBar = {
             Column(Modifier.navigationBarsPadding()) {
-                AnimatedVisibility(
-                    visible = playback.currentItemId != null,
-                    enter = slideInVertically { it },
-                    exit = slideOutVertically { it }
-                ) {
-                    MiniPlayer(
-                        state = playback,
-                        onPlayPause = onPlayPauseMini,
-                        onClick = onExpandPlayer,
-                        onDismiss = onDismissMini
-                    )
-                }
+                MiniPlayer(
+                    state = miniState,
+                    onTap = onExpandPlayer,
+                    onPlayPauseClick = onPlayPauseMini,
+                    onCloseClick = onDismissMini
+                )
                 GlassNavigationBar(
                     currentRoute = currentRoute,
                     tabs = NAV_TABS,

@@ -1,5 +1,6 @@
 package com.lumen.player.ui.navigation
 
+import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -148,7 +149,10 @@ fun LumenNavHost(
                 ) {
                     FolderDetailScreen(
                         onBack = { rootNav.popBackStack() },
-                        onVideoClick = { videoFullscreen = true },
+                        onVideoClick = {
+                            Log.d("NavPathDiag", "FolderDetail video click fired, setting videoFullscreen=true")
+                            videoFullscreen = true
+                        },
                         isGridView = isGridView,
                         onToggleViewMode = { isGridView = !isGridView }
                     )
@@ -195,6 +199,8 @@ fun LumenNavHost(
         )
     }
 
+    Log.d("NavPathDiag", "videoFullscreen=$videoFullscreen playerExpanded=$playerExpanded")
+
     AnimatedVisibility(
         visible = videoFullscreen,
         enter = fadeIn(),
@@ -203,7 +209,10 @@ fun LumenNavHost(
     ) {
         Box(Modifier.fillMaxSize()) {
             VideoPlayerScreen(
-                onClose = { videoFullscreen = false },
+                onClose = {
+                    Log.d("NavPathDiag", "VideoPlayerScreen onClose called, setting videoFullscreen=false")
+                    videoFullscreen = false
+                },
                 onEnterPip = { activity?.let { enterPip(it, 16, 9) } }
             )
         }

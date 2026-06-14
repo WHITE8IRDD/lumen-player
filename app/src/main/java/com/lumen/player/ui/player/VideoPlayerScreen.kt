@@ -11,6 +11,7 @@ import android.os.Build
 import android.provider.Settings
 import android.util.Rational
 import android.view.WindowManager
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
@@ -116,6 +117,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -123,6 +125,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.C
 import androidx.media3.common.Player
@@ -153,6 +157,20 @@ fun VideoPlayerScreen(
     val activity = context as? Activity
     val haptic = LocalHapticFeedback.current
     val streamsVm: StreamsViewModel = hiltViewModel()
+
+    // ---- Diagnostic: verify VideoPlayerScreen entered composition ----
+    LaunchedEffect(Unit) {
+        Log.d("VideoPlayerDiag", """
+            VideoPlayerScreen entered composition:
+            - player is null: ${player == null}
+            - state title: "${state.title}"
+            - state isVideo: ${state.isVideo}
+            - state currentItemId: ${state.currentItemId}
+            - state isPlaying: ${state.isPlaying}
+            - state durationMs: ${state.durationMs}
+            - tracks: ${tracks?.groups?.size ?: 0} groups
+        """.trimIndent())
+    }
 
     // ---- Player state ----
     var controlsVisible by remember { mutableStateOf(true) }
@@ -219,6 +237,18 @@ fun VideoPlayerScreen(
             activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
         }
         onDispose { activity?.window?.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON) }
+    }
+
+    // ---- Lifecycle observer: persist position on background ----
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE && state.isPlaying) {
+                viewModel.flushResumePosition()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
     // ---- Save / restore rotation ----

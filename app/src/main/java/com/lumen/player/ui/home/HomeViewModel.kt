@@ -65,7 +65,7 @@ class HomeViewModel @Inject constructor(
     }
 
     fun playPause() = controller.playPause()
-    fun stopPlayback() = controller.stop()
+    fun stopPlayback() = controller.stopAndClear()
 
     fun refresh() {
         viewModelScope.launch {

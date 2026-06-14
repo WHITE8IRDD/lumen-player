@@ -3,6 +3,7 @@ package com.lumen.player.player
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
+import android.util.Log
 import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
@@ -31,9 +32,15 @@ class PlayerController @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private var controller: MediaController? = null
+    val isConnected: Boolean get() = controller != null
 
     private val _state = MutableStateFlow(PlaybackState())
     val state: StateFlow<PlaybackState> = _state.asStateFlow()
+
+    val isPlaying: Boolean get() = _state.value.isPlaying
+    val currentPositionMs: Long get() = _state.value.positionMs
+    val currentItemId: String? get() = _state.value.currentItemId
+    val durationMs: Long get() = _state.value.durationMs
 
     private val _lyrics = MutableStateFlow<List<LyricsLine>>(emptyList())
     val lyrics: StateFlow<List<LyricsLine>> = _lyrics.asStateFlow()
@@ -56,10 +63,12 @@ class PlayerController @Inject constructor(
 
     fun initialize() {
         if (controller != null) return
+        Log.d("PlayerCtrl", "initialize() — connecting to PlaybackService")
         val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
         val future = MediaController.Builder(context, token).buildAsync()
         future.addListener({
             controller = future.get().also { c ->
+                Log.d("PlayerCtrl", "initialize() — connected, controller=${System.identityHashCode(c)}")
                 c.addListener(playerListener)
                 pushState()
             }
@@ -87,9 +96,10 @@ class PlayerController @Inject constructor(
         val c = controller ?: return
         val md = c.mediaMetadata
         val item = c.currentMediaItem
-        _state.value = PlaybackState(
+        val newState = PlaybackState(
             isPlaying = c.isPlaying,
             isBuffering = c.playbackState == Player.STATE_BUFFERING,
+            playbackState = c.playbackState,
             currentItemId = item?.mediaId,
             title = md.title?.toString().orEmpty(),
             artist = md.artist?.toString().orEmpty(),
@@ -105,17 +115,21 @@ class PlayerController @Inject constructor(
             hasNext = c.hasNextMediaItem(),
             hasPrevious = c.hasPreviousMediaItem()
         )
+        Log.d("PlayerCtrl", "pushState() → playing=${newState.isPlaying} buff=${newState.isBuffering} id=${newState.currentItemId} title='${newState.title}'")
+        _state.value = newState
     }
 
     fun setQueue(items: List<MediaItem>, startIndex: Int, positionMs: Long = 0L) {
+        Log.d("PlayerCtrl", "setQueue() items=${items.size} start=$startIndex controller=${controller != null}")
         controller?.run {
             setMediaItems(items, startIndex, positionMs)
             prepare()
             playWhenReady = true
         }
         val item = items.getOrNull(startIndex)
-        _state.value = PlaybackState(
+        val newState = PlaybackState(
             isPlaying = true,
+            playbackState = Player.STATE_READY,
             currentItemId = item?.mediaId,
             title = item?.mediaMetadata?.title?.toString().orEmpty(),
             artist = item?.mediaMetadata?.artist?.toString().orEmpty(),
@@ -127,6 +141,8 @@ class PlayerController @Inject constructor(
             hasNext = items.size > startIndex + 1,
             hasPrevious = startIndex > 0
         )
+        Log.d("PlayerCtrl", "setQueue() → playing=${newState.isPlaying} id=${newState.currentItemId} title='${newState.title}'")
+        _state.value = newState
     }
 
     fun addToQueue(item: MediaItem) { controller?.addMediaItem(item) }
@@ -134,6 +150,16 @@ class PlayerController @Inject constructor(
     fun play() { controller?.play() }
     fun pause() { controller?.pause() }
     fun stop() { controller?.stop() }
+    fun stopAndClear() {
+        controller?.run {
+            stop()
+            clearMediaItems()
+        }
+        _state.value = PlaybackState()
+    }
+    fun hasActiveMedia(): Boolean {
+        return currentItemId != null && durationMs > 0
+    }
     fun next() = controller?.seekToNext() ?: Unit
     fun previous() = controller?.seekToPrevious() ?: Unit
     fun seekTo(ms: Long) { controller?.seekTo(ms) }
@@ -208,6 +234,8 @@ class PlayerController @Inject constructor(
     fun setLyrics(lines: List<LyricsLine>) { _lyrics.value = lines }
 
     fun release() {
+        Log.d("PlayerCtrl", "release() — disconnecting, keeping last state")
+        controller?.removeListener(playerListener)
         controller?.release()
         controller = null
     }
