@@ -9,8 +9,10 @@ import androidx.media3.common.util.UnstableApi
 import com.lumen.player.core.util.Constants
 import com.lumen.player.core.util.toMedia3Item
 import com.lumen.player.data.repository.MediaRepositoryImpl
+import com.lumen.player.domain.model.IntroConfig
 import com.lumen.player.domain.model.NetworkStream
 import com.lumen.player.domain.repository.MediaRepository
+import com.lumen.player.domain.repository.SettingsRepository
 import com.lumen.player.player.LyricsLine
 import com.lumen.player.player.PlaybackState
 import com.lumen.player.player.PlayerController
@@ -35,7 +37,8 @@ import javax.inject.Inject
 class PlayerViewModel @Inject constructor(
     application: Application,
     private val controller: PlayerController,
-    private val repository: MediaRepository
+    private val repository: MediaRepository,
+    private val settingsRepository: SettingsRepository
 ) : AndroidViewModel(application) {
 
     val state = controller.state
@@ -49,6 +52,15 @@ class PlayerViewModel @Inject constructor(
 
     val exoPlayer get() = controller.getPlayer()
     val streamContext = controller.streamPlaylistContext
+
+    fun saveSkipIntroConfig(config: IntroConfig) {
+        viewModelScope.launch { settingsRepository.saveSkipIntroConfig(config) }
+    }
+    fun clearSkipIntroConfig(showName: String) {
+        viewModelScope.launch { settingsRepository.clearSkipIntroConfig(showName) }
+    }
+    suspend fun getSkipIntroConfig(showName: String): IntroConfig? =
+        settingsRepository.getSkipIntroConfig(showName)
 
     fun switchToStream(stream: NetworkStream) {
         viewModelScope.launch(Dispatchers.Main) {

@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.lumen.player.core.util.Constants
 import com.lumen.player.domain.model.AudioEffectsState
+import com.lumen.player.domain.model.IntroConfig
 import com.lumen.player.domain.repository.ThemeMode
 import com.lumen.player.domain.repository.UserSettings
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -19,6 +20,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -266,6 +268,30 @@ class SettingsDataStore @Inject constructor(
 
     suspend fun setWeightOffset(v: Int) {
         context.prefsDataStore.edit { it[Keys.TYPOGRAPHY_WEIGHT] = v }
+    }
+
+    private fun introStartKey(show: String) = stringPreferencesKey("intro_start_${show.lowercase().replace(" ","_")}")
+    private fun introEndKey(show: String) = stringPreferencesKey("intro_end_${show.lowercase().replace(" ","_")}")
+
+    suspend fun saveSkipIntroConfig(config: IntroConfig) {
+        context.prefsDataStore.edit { p ->
+            p[introStartKey(config.showName)] = config.introStartMs.toString()
+            p[introEndKey(config.showName)] = config.introEndMs.toString()
+        }
+    }
+
+    suspend fun clearSkipIntroConfig(showName: String) {
+        context.prefsDataStore.edit { p ->
+            p.remove(introStartKey(showName))
+            p.remove(introEndKey(showName))
+        }
+    }
+
+    suspend fun getSkipIntroConfig(showName: String): IntroConfig? {
+        val prefs = context.prefsDataStore.data.first()
+        val start = prefs[introStartKey(showName)]?.toLongOrNull()
+        val end = prefs[introEndKey(showName)]?.toLongOrNull()
+        return if (start != null && end != null) IntroConfig(showName, start, end) else null
     }
 
     suspend fun setSectionExpanded(section: String, expanded: Boolean) {

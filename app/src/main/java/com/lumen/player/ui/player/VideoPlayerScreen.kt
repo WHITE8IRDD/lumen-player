@@ -32,6 +32,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -41,6 +43,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -75,6 +79,15 @@ import androidx.compose.material.icons.rounded.Shuffle
 import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Speed
+import androidx.compose.material.icons.rounded.CameraAlt
+import androidx.compose.material.icons.rounded.PhotoCamera
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Audiotrack
+import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FilledIconButton
 import com.lumen.player.ui.components.LumenPickerDialog
@@ -82,6 +95,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.IconButtonDefaults
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -106,6 +120,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -123,17 +138,20 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.window.PopupProperties
 import androidx.core.view.WindowCompat
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.C
+import androidx.media3.common.Format
 import androidx.media3.common.Player
 import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import androidx.media3.common.TrackSelectionOverride
 import com.lumen.player.core.util.TimeFormatter
 import com.lumen.player.domain.model.NetworkStream
 import com.lumen.player.ui.components.FloatingGlassCard
@@ -141,9 +159,27 @@ import com.lumen.player.ui.components.LumenConfirmationDialog
 import com.lumen.player.ui.library.StreamsViewModel
 import com.lumen.player.ui.subtitles.SubtitlePanelSheet
 import kotlin.math.abs
+import java.io.File
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
+import android.annotation.SuppressLint
+import android.content.ContentValues
+import android.graphics.Bitmap
+import android.view.TextureView
+import android.media.MediaMetadataRetriever
+import android.media.MediaScannerConnection
+import android.os.Environment
+import android.provider.MediaStore
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.unit.DpOffset
 
 @UnstableApi
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun VideoPlayerScreen(
     onClose: () -> Unit,
@@ -182,10 +218,20 @@ fun VideoPlayerScreen(
     var lockRevealToken by remember { mutableStateOf(0) }
     var showSubtitles by remember { mutableStateOf(false) }
     var subtitleDelayUs by remember { mutableStateOf(0L) }
+    var menuExpanded by remember { mutableStateOf(false) }
     var seekDragging by remember { mutableStateOf(false) }
     var seekPreviewMs by remember { mutableStateOf<Float?>(null) }
     var showChannelSwitcher by remember { mutableStateOf(false) }
     var channelSwitcherQuery by remember { mutableStateOf("") }
+    var showAudioSheet by remember { mutableStateOf(false) }
+    var showVideoInfo by remember { mutableStateOf(false) }
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showAspectBadge by remember { mutableStateOf(false) }
+    var currentAspectLabel by remember { mutableStateOf("Fit") }
+    var showSkipMenu by remember { mutableStateOf(false) }
+    var showSpeedMenu by remember { mutableStateOf(false) }
+    val playerViewRef = remember { mutableStateOf<PlayerView?>(null) }
+    val screenshotScope = rememberCoroutineScope()
 
     // ---- Brightness / volume (window + AudioManager) ----
     val audioManager = remember(context) {
@@ -214,6 +260,24 @@ fun VideoPlayerScreen(
     var brightnessHud by remember { mutableStateOf<HudInfo?>(null) }
     var volumeHud by remember { mutableStateOf<HudInfo?>(null) }
     var seekFlash by remember { mutableStateOf<SeekFlash?>(null) }
+
+    // Portrait content detection
+    val isPortraitContent by remember {
+        derivedStateOf {
+            val vs = player?.videoSize
+            vs != null && vs.height > vs.width
+        }
+    }
+    var showPortraitBadge by remember { mutableStateOf(false) }
+    LaunchedEffect(isPortraitContent) {
+        if (isPortraitContent) {
+            showPortraitBadge = true
+            kotlinx.coroutines.delay(4_000)
+            showPortraitBadge = false
+        } else {
+            showPortraitBadge = false
+        }
+    }
 
     // ---- Save / restore system brightness (window-only, never leaks) ----
     DisposableEffect(Unit) {
@@ -321,8 +385,8 @@ fun VideoPlayerScreen(
     }
 
     // ---- 3s auto-hide for controls, 1s auto-hide for HUD ----
-    LaunchedEffect(controlsVisible, locked) {
-        if (controlsVisible && !locked) {
+    LaunchedEffect(controlsVisible, locked, menuExpanded, showSpeedMenu) {
+        if (controlsVisible && !locked && !menuExpanded && !showSpeedMenu) {
             kotlinx.coroutines.delay(3_000)
             controlsVisible = false
         }
@@ -436,7 +500,8 @@ fun VideoPlayerScreen(
                 player = player,
                 zoomProvider = { zoom },
                 resizeMode = resizeMode,
-                onPinch = { newZoom -> zoom = newZoom.coerceIn(0.5f, 4f) }
+                onPinch = { newZoom -> zoom = newZoom.coerceIn(0.5f, 4f) },
+                onPlayerViewCreated = { playerViewRef.value = it }
             )
         }
 
@@ -466,24 +531,163 @@ fun VideoPlayerScreen(
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         IconButton(onClick = onClose) {
-                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Color.White)
+                            Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(22.dp))
                         }
                         Spacer(Modifier.width(4.dp))
-                        Text(
-                            title.ifBlank { "Video" },
-                            color = Color.White,
-                            style = MaterialTheme.typography.titleMedium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f)
-                        )
-                        if (showChannelButton) {
-                            IconButton(onClick = { showChannelSwitcher = true }) {
-                                Icon(Icons.Rounded.LiveTv, "Channels", tint = Color.White)
+                        val filePath = player?.currentMediaItem?.localConfiguration?.uri?.path ?: ""
+                        val displayTitle = remember(filePath) { extractShowName(filePath) }
+                        val fileName = remember(filePath) { File(filePath).nameWithoutExtension }
+                        val (episodeLabel, _) = remember(fileName) { extractEpisodeInfo(fileName) }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                displayTitle.ifBlank { title.ifBlank { "Video" } },
+                                color = Color.White,
+                                style = MaterialTheme.typography.titleMedium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            if (episodeLabel.isNotBlank()) {
+                                Text(
+                                    episodeLabel,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Normal,
+                                    color = Color.White.copy(alpha = 0.60f),
+                                    maxLines = 1
+                                )
                             }
                         }
+                        if (showChannelButton) {
+                            IconButton(onClick = { showChannelSwitcher = true }) {
+                                Icon(Icons.Rounded.LiveTv, "Channels", tint = Color.White, modifier = Modifier.size(22.dp))
+                            }
+                        }
+                        IconButton(onClick = { showSubtitles = true }) {
+                            Icon(Icons.Rounded.ClosedCaption, "Subtitles", tint = Color.White, modifier = Modifier.size(22.dp))
+                        }
+                        IconButton(onClick = {
+                            screenshotScope.launch {
+                                takeScreenshot(context, player)
+                            }
+                        }) {
+                            Icon(Icons.Rounded.PhotoCamera, "Screenshot", tint = Color.White, modifier = Modifier.size(22.dp))
+                        }
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .background(
+                                    if (locked) Color.Black.copy(0.5f) else Color.Transparent,
+                                    CircleShape
+                                )
+                                .combinedClickable(
+                                    interactionSource = remember { MutableInteractionSource() },
+                                    indication = null,
+                                    onClick = {
+                                        if (locked) {
+                                            android.widget.Toast.makeText(context, "Long-press to unlock", android.widget.Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            locked = true
+                                        }
+                                    },
+                                    onLongClick = {
+                                        if (locked) {
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            locked = false
+                                        }
+                                    }
+                                ),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                if (locked) Icons.Rounded.Lock else Icons.Rounded.LockOpen,
+                                "Lock",
+                                tint = if (locked) Color(0xFFFFAB40) else Color.White,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
                         IconButton(onClick = onEnterPip) {
-                            Icon(Icons.Rounded.PictureInPicture, "PiP", tint = Color.White)
+                            Icon(Icons.Rounded.PictureInPicture, "PiP", tint = Color.White, modifier = Modifier.size(22.dp))
+                        }
+                        Box {
+                            IconButton(onClick = { menuExpanded = true }) {
+                                Icon(Icons.Rounded.MoreVert, "More options", tint = Color.White, modifier = Modifier.size(22.dp))
+                            }
+                            DropdownMenu(
+                                expanded = menuExpanded,
+                                onDismissRequest = { menuExpanded = false },
+                                containerColor = Color(0xFF1C1C1C),
+                                shape = RoundedCornerShape(12.dp),
+                                modifier = Modifier.widthIn(min = 240.dp),
+                                properties = PopupProperties(focusable = true)
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text("Audio tracks", color = Color.White, fontSize = 15.sp) },
+                                    leadingIcon = { Icon(Icons.Rounded.Audiotrack, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(22.dp)) },
+                                    onClick = { menuExpanded = false; showAudioSheet = true }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Subtitles", color = Color.White, fontSize = 15.sp) },
+                                    leadingIcon = { Icon(Icons.Rounded.ClosedCaption, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(22.dp)) },
+                                    onClick = { menuExpanded = false; showSubtitles = true }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Video info", color = Color.White, fontSize = 15.sp) },
+                                    leadingIcon = { Icon(Icons.Rounded.Info, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(22.dp)) },
+                                    onClick = { menuExpanded = false; showVideoInfo = true }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Screenshot", color = Color.White, fontSize = 15.sp) },
+                                    leadingIcon = { Icon(Icons.Rounded.CameraAlt, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(22.dp)) },
+                                    onClick = {
+                                        menuExpanded = false
+                                        screenshotScope.launch {
+                                            takeScreenshot(context, player)
+                                        }
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Share", color = Color.White, fontSize = 15.sp) },
+                                    leadingIcon = { Icon(Icons.Rounded.Share, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(22.dp)) },
+                                    onClick = {
+                                        menuExpanded = false
+                                        val uri = player?.currentMediaItem?.localConfiguration?.uri ?: return@DropdownMenuItem
+                                        try {
+                                            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                                                type = "video/*"
+                                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                                            }
+                                            if (uri.scheme == "content") {
+                                                shareIntent.putExtra(Intent.EXTRA_STREAM, uri)
+                                            } else if (uri.scheme == "file") {
+                                                val f = File(uri.path!!)
+                                                if (!f.exists()) {
+                                                    android.widget.Toast.makeText(context, "File not found", android.widget.Toast.LENGTH_SHORT).show()
+                                                    return@DropdownMenuItem
+                                                }
+                                                val fileUri = androidx.core.content.FileProvider.getUriForFile(
+                                                    context, "${context.packageName}.fileprovider", f
+                                                )
+                                                shareIntent.putExtra(Intent.EXTRA_STREAM, fileUri)
+                                            } else {
+                                                android.widget.Toast.makeText(context, "Cannot share this file type", android.widget.Toast.LENGTH_SHORT).show()
+                                                return@DropdownMenuItem
+                                            }
+                                            context.startActivity(Intent.createChooser(shareIntent, "Share video").apply {
+                                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                            })
+                                        } catch (e: Exception) {
+                                            e.printStackTrace()
+                                            android.widget.Toast.makeText(context, "Share failed: ${e.message}", android.widget.Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                                )
+                                HorizontalDivider(color = Color.White.copy(alpha = 0.15f), thickness = 0.5.dp)
+                                DropdownMenuItem(
+                                    text = { Text("Delete file", color = Color(0xFFFF4444), fontSize = 15.sp) },
+                                    leadingIcon = { Icon(Icons.Rounded.Delete, null, tint = Color(0xFFFF4444), modifier = Modifier.size(22.dp)) },
+                                    onClick = { menuExpanded = false; showDeleteConfirm = true }
+                                )
+                            }
                         }
                     }
                 }
@@ -502,9 +706,21 @@ fun VideoPlayerScreen(
                     onPrevious = viewModel::previous,
                     onPlayPause = viewModel::playPause,
                     onNext = viewModel::next,
-                    onOpenSpeed = { uiMode = VideoUiMode.SPEED },
-                    onOpenAspect = { uiMode = VideoUiMode.ASPECT },
+                    onOpenSpeed = { showSpeedMenu = true },
+                    onOpenAspect = {
+                        val modes = listOf(
+                            AspectRatioFrameLayout.RESIZE_MODE_FIT,
+                            AspectRatioFrameLayout.RESIZE_MODE_ZOOM,
+                            AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH,
+                            AspectRatioFrameLayout.RESIZE_MODE_FILL
+                        )
+                        val idx = modes.indexOf(resizeMode)
+                        resizeMode = if (idx >= 0) modes[(idx + 1) % modes.size] else modes[0]
+                        currentAspectLabel = aspectLabel(resizeMode)
+                        showAspectBadge = true
+                    },
                     onOpenSubtitles = { showSubtitles = true },
+                    onRequestSkipMenu = { showSkipMenu = true },
                     onToggleLock = {
                         if (!locked) locked = true
                     },
@@ -526,14 +742,36 @@ fun VideoPlayerScreen(
             stateProvider = { brightnessHud },
             modifier = Modifier
                 .align(Alignment.CenterStart)
-                .padding(start = 28.dp)
+                .padding(start = 12.dp)
         )
         VolumeHudLayer(
             stateProvider = { volumeHud },
             modifier = Modifier
                 .align(Alignment.CenterEnd)
-                .padding(end = 28.dp)
+                .padding(end = 12.dp)
         )
+
+        // === Portrait content badge ===
+        if (showPortraitBadge && isPortraitContent) {
+            AnimatedVisibility(
+                visible = showPortraitBadge,
+                enter = fadeIn(tween(300)),
+                exit = fadeOut(tween(300)),
+                modifier = Modifier
+                    .align(Alignment.BottomStart)
+                    .padding(start = 16.dp, bottom = 130.dp)
+            ) {
+                Text(
+                    "Original format",
+                    color = Color.White.copy(alpha = 0.60f),
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .background(Color.Black.copy(alpha = 0.50f), RoundedCornerShape(4.dp))
+                        .padding(horizontal = 8.dp, vertical = 4.dp)
+                )
+            }
+        }
 
         // === Locked overlay with auto-hide ===
         // State machine:
@@ -603,15 +841,89 @@ fun VideoPlayerScreen(
             }
         }
 
+        // === Aspect badge ===
+        if (showAspectBadge) {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(currentAspectLabel, color = Color.White, fontSize = 24.sp, fontWeight = FontWeight.Bold,
+                    modifier = Modifier.shadow(8.dp, RoundedCornerShape(12.dp))
+                        .background(Color(0xCC000000), RoundedCornerShape(12.dp)).padding(horizontal = 30.dp, vertical = 16.dp))
+            }
+        }
+        LaunchedEffect(showAspectBadge) {
+            if (showAspectBadge) { delay(900); showAspectBadge = false }
+        }
+
+        // === Long-press skip menu (+85s) ===
+        DropdownMenu(
+            expanded = showSkipMenu,
+            onDismissRequest = { showSkipMenu = false },
+            modifier = Modifier.background(Color(0xFF2A2A2A), RoundedCornerShape(12.dp))
+        ) {
+            DropdownMenuItem(text = { Text("Skip +85s", color = Color.White) }, onClick = {
+                showSkipMenu = false
+                player?.seekTo((player?.currentPosition ?: 0L) + 85_000)
+            })
+            DropdownMenuItem(text = { Text("Skip +300s", color = Color.White) }, onClick = {
+                showSkipMenu = false
+                player?.seekTo((player?.currentPosition ?: 0L) + 300_000)
+            })
+        }
+        LaunchedEffect(showSkipMenu) {
+            if (showSkipMenu) { delay(6000); showSkipMenu = false }
+        }
+
         // === Dialogs ===
         when (uiMode) {
-            VideoUiMode.SPEED -> SpeedDialog(playbackSpeed,
-                { spd -> viewModel.setSpeedPitched(spd); uiMode = VideoUiMode.MAIN },
-                { uiMode = VideoUiMode.MAIN })
+            VideoUiMode.SPEED -> Unit
             VideoUiMode.ASPECT -> AspectDialog(resizeMode,
                 { rm -> resizeMode = rm; uiMode = VideoUiMode.MAIN },
                 { uiMode = VideoUiMode.MAIN })
             VideoUiMode.MAIN -> Unit
+        }
+
+        // === Speed dropdown menu ===
+        if (showSpeedMenu) {
+            DropdownMenu(
+                expanded = showSpeedMenu,
+                onDismissRequest = { showSpeedMenu = false },
+                offset = DpOffset(x = 16.dp, y = (-8).dp),
+                modifier = Modifier
+                    .background(Color(0xFF1C1C1C), RoundedCornerShape(12.dp))
+                    .width(140.dp),
+                properties = PopupProperties(focusable = true)
+            ) {
+                listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f).forEach { speed ->
+                    val isSelected = speed == state.playbackSpeed
+                    DropdownMenuItem(
+                        text = {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    "${speed}x",
+                                    color = if (isSelected) Color(0xFFFFAB40) else Color.White,
+                                    fontSize = 14.sp,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                                )
+                                if (isSelected) {
+                                    Icon(
+                                        Icons.Rounded.Check,
+                                        contentDescription = null,
+                                        tint = Color(0xFFFFAB40),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                        },
+                        onClick = {
+                            viewModel.setSpeedPitched(speed)
+                            showSpeedMenu = false
+                        }
+                    )
+                }
+            }
         }
 
         // === Channel switcher (M3U stream context) ===
@@ -769,6 +1081,140 @@ fun VideoPlayerScreen(
                 }
             )
         }
+
+        // === Audio tracks sheet ===
+        if (showAudioSheet) {
+            val groups = player?.currentTracks?.groups?.filter { it.type == C.TRACK_TYPE_AUDIO }.orEmpty()
+            ModalBottomSheet(
+                onDismissRequest = { showAudioSheet = false },
+                containerColor = Color(0xFF1C1C1C),
+                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+            ) {
+                Column(Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
+                    Text("Audio tracks", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(20.dp))
+                    if (groups.isEmpty()) {
+                        Text("No audio tracks available", color = Color.White.copy(alpha = 0.60f), fontSize = 15.sp,
+                            modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp))
+                    } else {
+                        groups.forEachIndexed { gIdx, group ->
+                            for (tIdx in 0 until group.length) {
+                                val fmt = group.getTrackFormat(tIdx)
+                                val isSelected = group.isTrackSelected(tIdx)
+                                val label = buildString {
+                                    append(fmt?.language?.uppercase() ?: "Track ${gIdx + 1}")
+                                    fmt?.label?.let { if (it.isNotBlank()) append(" · $it") }
+                                    fmt?.channelCount?.takeIf { it > 0 }?.let { append(" · ${it}ch") }
+                                }
+                                Row(
+                                    Modifier.fillMaxWidth().clickable {
+                                        player?.let { p ->
+                                            p.trackSelectionParameters = p
+                                                .trackSelectionParameters
+                                                .buildUpon()
+                                                .setOverrideForType(TrackSelectionOverride(group.mediaTrackGroup, tIdx))
+                                                .build()
+                                        }
+                                        showAudioSheet = false
+                                    }.padding(horizontal = 20.dp, vertical = 14.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(label, fontSize = 15.sp,
+                                        color = if (isSelected) Color(0xFFFFAB40) else Color.White)
+                                    if (isSelected) {
+                                        Icon(Icons.Rounded.Check, null, tint = Color(0xFFFFAB40), modifier = Modifier.size(18.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // === Video info sheet ===
+        if (showVideoInfo) {
+            val filePath = player?.currentMediaItem?.localConfiguration?.uri?.path ?: ""
+            val videoFormat = player?.currentTracks?.groups?.flatMap { g ->
+                (0 until g.length).map { g.getTrackFormat(it) }
+            }?.firstOrNull { it?.sampleMimeType?.startsWith("video/") == true }
+            val audioFormat = player?.currentTracks?.groups?.flatMap { g ->
+                (0 until g.length).map { g.getTrackFormat(it) }
+            }?.firstOrNull { it?.sampleMimeType?.startsWith("audio/") == true }
+            val file = remember(filePath) { File(filePath) }
+            val fileSize = remember(file) { formatFileSize(file.length()) }
+            ModalBottomSheet(
+                onDismissRequest = { showVideoInfo = false },
+                containerColor = Color(0xFF1C1C1C),
+                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp)
+            ) {
+                Column(Modifier.fillMaxWidth().padding(bottom = 32.dp)) {
+                    Text("Video info", color = Color.White, fontSize = 17.sp, fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(20.dp))
+                    @Composable
+                    fun InfoRow(label: String, value: String) {
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(label, fontSize = 15.sp, color = Color.White.copy(alpha = 0.60f))
+                            Text(value, fontSize = 15.sp, color = Color.White)
+                        }
+                    }
+                    InfoRow("Title", extractShowName(filePath))
+                    InfoRow("File name", file.name)
+                    InfoRow("File size", fileSize)
+                    InfoRow("Duration", TimeFormatter.msToClock(player?.duration ?: 0L))
+                    videoFormat?.let { f ->
+                        InfoRow("Resolution", "${f.width} × ${f.height}")
+                        f.sampleMimeType?.let { InfoRow("Video codec", it.substringAfter("video/")) }
+                    }
+                    audioFormat?.let { f ->
+                        f.sampleMimeType?.let { InfoRow("Audio codec", it.substringAfter("audio/")) }
+                        if (f.channelCount > 0) InfoRow("Channels", "${f.channelCount}")
+                    }
+                }
+            }
+        }
+        if (showDeleteConfirm) {
+            val filePath = player?.currentMediaItem?.localConfiguration?.uri?.path ?: ""
+            AlertDialog(
+                onDismissRequest = { showDeleteConfirm = false },
+                containerColor = Color(0xFF1C1C1C),
+                shape = RoundedCornerShape(16.dp),
+                title = { Text("Delete video?", color = Color.White, fontWeight = FontWeight.SemiBold) },
+                text = {
+                    Text(
+                        "This will permanently delete\n\"${File(filePath).name}\"",
+                        color = Color.White.copy(alpha = 0.70f)
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        val file = File(filePath)
+                        try {
+                            if (file.delete()) {
+                                android.widget.Toast.makeText(context, "Deleted", android.widget.Toast.LENGTH_SHORT).show()
+                                showDeleteConfirm = false
+                                onClose()
+                            } else {
+                                android.widget.Toast.makeText(context, "Could not delete file", android.widget.Toast.LENGTH_SHORT).show()
+                                showDeleteConfirm = false
+                            }
+                        } catch (e: Exception) {
+                            android.widget.Toast.makeText(context, "Error: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                            showDeleteConfirm = false
+                        }
+                    }) {
+                        Text("Delete", color = Color(0xFFFF4444), fontWeight = FontWeight.Bold)
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { showDeleteConfirm = false }) {
+                        Text("Cancel", color = Color.White.copy(alpha = 0.70f))
+                    }
+                }
+            )
+        }
     }
 }
 
@@ -887,26 +1333,38 @@ private fun VideoSeekBar(
             }
         }
 
-        // Track layers: base, buffered (lighter), played (white)
+        // Track layers: base, buffered (lighter), played (amber)
         Box(
             modifier = Modifier
                 .align(Alignment.Center)
                 .fillMaxWidth()
                 .height(trackHeight)
                 .clip(RoundedCornerShape(trackHeight / 2))
-                .background(Color.White.copy(alpha = 0.22f))
+                .background(Color.White.copy(alpha = 0.12f))
         ) {
             Box(
                 Modifier
                     .fillMaxWidth(bufferedFraction.coerceIn(0f, 1f))
                     .fillMaxHeight()
-                    .background(Color.White.copy(alpha = 0.38f))
+                    .background(Color.White.copy(alpha = 0.30f))
             )
             Box(
                 Modifier
                     .fillMaxWidth(playedFraction.coerceIn(0f, 1f))
                     .fillMaxHeight()
-                    .background(Color.White)
+                    .background(Color(0xFFFFAB40))
+            )
+        }
+
+        // Amber glow behind thumb while dragging
+        if (isActive) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .padding(start = thumbXDp)
+                    .size(thumbSize * 1.8f)
+                    .clip(CircleShape)
+                    .background(Color(0xFFFFAB40).copy(alpha = 0.25f))
             )
         }
 
@@ -943,6 +1401,7 @@ private fun VideoBottomControls(
     onOpenSpeed: () -> Unit,
     onOpenAspect: () -> Unit,
     onOpenSubtitles: () -> Unit,
+    onRequestSkipMenu: () -> Unit,
     onToggleLock: () -> Unit,
     locked: Boolean,
     resizeMode: Int,
@@ -998,10 +1457,7 @@ private fun VideoBottomControls(
 
             Spacer(Modifier.height(6.dp))
 
-            // Transport row — ±10s is gesture-only (double-tap on left/right third).
-            // The numeric overlay buttons were removed; the gesture handler in
-            // VideoPlayerScreen still emits SeekFlash so the on-screen flash
-            // and the −10s / +10s label continue to appear.
+            // Transport row — ±10s is gesture-only
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
@@ -1014,8 +1470,8 @@ private fun VideoBottomControls(
                 ) {
                     Icon(
                         Icons.Rounded.SkipPrevious, "Previous",
-                        tint = if (s.hasPrevious) Color.White else Color.White.copy(alpha = 0.3f),
-                        modifier = Modifier.size(30.dp)
+                        tint = Color.White,
+                        modifier = Modifier.size(26.dp)
                     )
                 }
                 FilledIconButton(
@@ -1040,51 +1496,72 @@ private fun VideoBottomControls(
                 ) {
                     Icon(
                         Icons.Rounded.SkipNext, "Next",
-                        tint = if (s.hasNext) Color.White else Color.White.copy(alpha = 0.3f),
-                        modifier = Modifier.size(30.dp)
+                        tint = Color.White,
+                        modifier = Modifier.size(26.dp)
                     )
                 }
             }
 
             Spacer(Modifier.height(4.dp))
 
-            // Secondary row: speed, aspect, subtitles, lock
-            Row(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
+            // Secondary row: left group / right group using ControlItem
+            @OptIn(ExperimentalFoundationApi::class)
+            @Composable
+            fun ControlItem(
+                icon: ImageVector,
+                label: String,
+                tint: Color = Color.White.copy(alpha = 0.70f),
+                onClick: () -> Unit,
+                onLongClick: (() -> Unit)? = null
             ) {
-                IconButton(onClick = onOpenSpeed) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Rounded.Speed, "Speed", tint = Color.White,
-                            modifier = Modifier.size(22.dp))
-                        Text(formatSpeed(s.playbackSpeed), color = Color.White,
-                            style = MaterialTheme.typography.labelSmall)
-                    }
+                Column(
+                    modifier = Modifier
+                        .widthIn(min = 72.dp)
+                        .combinedClickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = onClick,
+                            onLongClick = onLongClick
+                        )
+                        .padding(vertical = 8.dp, horizontal = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    Icon(icon, label, tint = tint, modifier = Modifier.size(22.dp))
+                    Text(label, fontSize = 11.sp, fontWeight = FontWeight.Medium,
+                        color = tint, maxLines = 1, softWrap = false,
+                        overflow = TextOverflow.Visible)
                 }
-                IconButton(onClick = onOpenAspect) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Rounded.AspectRatio, "Aspect", tint = Color.White,
-                            modifier = Modifier.size(22.dp))
-                        Text(aspectLabel(resizeMode), color = Color.White,
-                            style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-                IconButton(onClick = onOpenSubtitles) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(Icons.Rounded.ClosedCaption, "Subtitles", tint = Color.White,
-                            modifier = Modifier.size(22.dp))
-                        Text("Subs", color = Color.White,
-                            style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-                IconButton(onClick = onToggleLock) {
-                    Icon(
-                        if (locked) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
-                        "Lock", tint = Color.White,
-                        modifier = Modifier.size(22.dp)
+            }
+
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ControlItem(
+                        icon = Icons.Rounded.Speed,
+                        label = formatSpeed(s.playbackSpeed),
+                        onClick = onOpenSpeed
+                    )
+                    ControlItem(
+                        icon = Icons.Rounded.AspectRatio,
+                        label = aspectLabel(resizeMode),
+                        onClick = onOpenAspect
                     )
                 }
+                ControlItem(
+                    icon = Icons.Rounded.SkipNext,
+                    label = "+85s",
+                    tint = Color(0xFFFFAB40),
+                    onClick = {
+                        val target = ((player?.currentPosition ?: 0L) + 85_000L)
+                            .coerceAtMost(player?.duration ?: 0L)
+                        player?.seekTo(target)
+                    },
+                    onLongClick = onRequestSkipMenu
+                )
             }
         }
     }
@@ -1094,20 +1571,20 @@ private fun VideoBottomControls(
 private fun VerticalHud(hud: HudInfo, modifier: Modifier = Modifier) {
     Surface(
         color = Color.Black.copy(alpha = 0.55f),
-        shape = LumenSquircle(20.dp),
+        shape = RoundedCornerShape(50.dp),
         modifier = modifier
     ) {
         Column(
-            Modifier.padding(horizontal = 10.dp, vertical = 14.dp),
+            Modifier.padding(horizontal = 8.dp, vertical = 10.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Icon(hud.icon, null, tint = Color.White, modifier = Modifier.size(28.dp))
-            // Vertical bar: 6dp wide, 160dp tall, filled from the bottom up
+            Icon(hud.icon, null, tint = Color.White, modifier = Modifier.size(16.dp))
+            // Vertical bar: 6dp wide, 90dp tall, filled from the bottom up
             Box(
                 Modifier
                     .width(6.dp)
-                    .height(160.dp)
+                    .height(90.dp)
                     .clip(RoundedCornerShape(3.dp))
                     .background(Color.White.copy(alpha = 0.22f))
             ) {
@@ -1120,12 +1597,6 @@ private fun VerticalHud(hud: HudInfo, modifier: Modifier = Modifier) {
                         .background(Color.White)
                 )
             }
-            Text(
-                hud.label,
-                color = Color.White,
-                fontWeight = FontWeight.SemiBold,
-                style = MaterialTheme.typography.labelSmall
-            )
         }
     }
 }
@@ -1245,7 +1716,7 @@ private fun AspectDialog(current: Int, onPick: (Int) -> Unit, onDismiss: () -> U
 
 private fun aspectLabel(mode: Int): String = when (mode) {
     AspectRatioFrameLayout.RESIZE_MODE_FIT -> "Fit"
-    AspectRatioFrameLayout.RESIZE_MODE_FILL -> "Fill"
+    AspectRatioFrameLayout.RESIZE_MODE_FILL -> "Wide"
     AspectRatioFrameLayout.RESIZE_MODE_ZOOM -> "Crop"
     AspectRatioFrameLayout.RESIZE_MODE_FIXED_WIDTH -> "Stretch"
     else -> "Fit"
@@ -1257,7 +1728,8 @@ private fun VideoSurface(
     player: Player,
     zoomProvider: () -> Float,
     resizeMode: Int,
-    onPinch: (zoom: Float) -> Unit
+    onPinch: (zoom: Float) -> Unit,
+    onPlayerViewCreated: (PlayerView) -> Unit = {}
 ) {
     AndroidView(
         modifier = Modifier
@@ -1273,7 +1745,7 @@ private fun VideoSurface(
                 this.resizeMode = resizeMode
                 setShutterBackgroundColor(android.graphics.Color.BLACK)
                 this.player = player
-            }
+            }.also { onPlayerViewCreated(it) }
         },
         update = { view ->
             view.player = player
@@ -1283,6 +1755,69 @@ private fun VideoSurface(
             view.scaleY = z
         }
     )
+}
+
+@SuppressLint("SimpleDateFormat")
+private suspend fun takeScreenshot(context: Context, player: Player?) {
+    val uri = player?.currentMediaItem?.localConfiguration?.uri ?: return
+    val positionMs = player.currentPosition
+    withContext(Dispatchers.IO) {
+        try {
+            val retriever = MediaMetadataRetriever()
+            retriever.setDataSource(context, uri)
+            val bmp = retriever.getFrameAtTime(positionMs * 1000, MediaMetadataRetriever.OPTION_CLOSEST)
+            retriever.release()
+            if (bmp == null) {
+                withContext(Dispatchers.Main) {
+                    android.widget.Toast.makeText(context, "Could not capture frame", android.widget.Toast.LENGTH_SHORT).show()
+                }
+                return@withContext
+            }
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.US).format(Date())
+            val fileName = "Lumen_$timestamp.jpg"
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val values = ContentValues().apply {
+                    put(MediaStore.Images.Media.DISPLAY_NAME, fileName)
+                    put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
+                    put(MediaStore.Images.Media.RELATIVE_PATH, "Pictures/Lumen")
+                    put(MediaStore.Images.Media.IS_PENDING, 1)
+                }
+                val resolver = context.contentResolver
+                val outUri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                if (outUri == null) {
+                    withContext(Dispatchers.Main) {
+                        android.widget.Toast.makeText(context, "Screenshot failed (no URI)", android.widget.Toast.LENGTH_SHORT).show()
+                    }
+                    return@withContext
+                }
+                resolver.openOutputStream(outUri)?.use { out ->
+                    bmp.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                }
+                values.clear()
+                values.put(MediaStore.Images.Media.IS_PENDING, 0)
+                resolver.update(outUri, values, null, null)
+                withContext(Dispatchers.Main) {
+                    android.widget.Toast.makeText(context, "Screenshot saved to Pictures/Lumen", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            } else {
+                val picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                val lumenDir = java.io.File(picturesDir, "Lumen").apply { mkdirs() }
+                val file = java.io.File(lumenDir, fileName)
+                file.outputStream().use { out ->
+                    bmp.compress(Bitmap.CompressFormat.JPEG, 95, out)
+                }
+                MediaScannerConnection.scanFile(context, arrayOf(file.absolutePath), arrayOf("image/jpeg"), null)
+                withContext(Dispatchers.Main) {
+                    android.widget.Toast.makeText(context, "Screenshot saved", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            withContext(Dispatchers.Main) {
+                android.widget.Toast.makeText(context, "Screenshot failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+            }
+        }
+    }
 }
 
 /**
@@ -1345,4 +1880,37 @@ private fun getParentUri(context: Context, uri: Uri): Uri? {
     } catch (_: Exception) {
         null
     }
+}
+
+// ══════════════════════════════════════════
+// HELPERS
+// ══════════════════════════════════════════
+
+private fun extractShowName(filePath: String): String {
+    val file = File(filePath)
+    val parent = file.parentFile?.name ?: ""
+    val blacklist = setOf("download", "downloads", "movies", "videos", "anime", "media")
+    if (parent.isNotBlank() && parent.lowercase() !in blacklist) return parent
+    return file.nameWithoutExtension
+        .replace(Regex("\\[.*?\\]"), "")
+        .replace(Regex("(?i)(S\\d+E\\d+|E\\d+|EP\\d+|Episode\\s*\\d+).*"), "")
+        .replace(Regex("[._-]+"), " ")
+        .trim()
+}
+
+private fun extractEpisodeInfo(fileName: String): Pair<String, Int?> {
+    val regex = Regex("""(?i)(?:S(\d+))?\s*E(\d+)|EP\s*(\d+)|Episode\s*(\d+)""")
+    val match = regex.find(fileName)
+    if (match != null) {
+        val groups = match.groupValues.drop(1).filter { it.isNotBlank() }
+        if (groups.isNotEmpty()) return "Episode ${groups.last()}" to groups.last().toIntOrNull()
+    }
+    return "" to null
+}
+
+private fun formatFileSize(bytes: Long): String = when {
+    bytes >= 1_073_741_824L -> "%.2f GB".format(bytes / 1_073_741_824.0)
+    bytes >= 1_048_576L -> "%.0f MB".format(bytes / 1_048_576.0)
+    bytes >= 1024L -> "%.0f KB".format(bytes / 1024.0)
+    else -> "$bytes B"
 }

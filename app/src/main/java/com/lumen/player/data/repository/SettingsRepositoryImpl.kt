@@ -2,6 +2,7 @@ package com.lumen.player.data.repository
 
 import com.lumen.player.data.prefs.SettingsDataStore
 import com.lumen.player.domain.model.AudioEffectsState
+import com.lumen.player.domain.model.IntroConfig
 import com.lumen.player.domain.repository.SettingsRepository
 import com.lumen.player.domain.repository.ThemeMode
 import com.lumen.player.domain.repository.UserSettings
@@ -44,4 +45,7 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setFontFamilyChoice(value: String) = store.setFontFamilyChoice(value)
     override suspend fun setTextCaseChoice(value: String) = store.setTextCaseChoice(value)
     override suspend fun setWeightOffset(value: Int) = store.setWeightOffset(value)
+    override suspend fun saveSkipIntroConfig(config: IntroConfig) = store.saveSkipIntroConfig(config)
+    override suspend fun clearSkipIntroConfig(showName: String) = store.clearSkipIntroConfig(showName)
+    override suspend fun getSkipIntroConfig(showName: String): IntroConfig? = store.getSkipIntroConfig(showName)
 }

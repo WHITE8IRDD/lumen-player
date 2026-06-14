@@ -1,6 +1,7 @@
 package com.lumen.player.domain.repository
 
 import com.lumen.player.domain.model.AudioEffectsState
+import com.lumen.player.domain.model.IntroConfig
 import kotlinx.coroutines.flow.StateFlow
 
 enum class ThemeMode { SYSTEM, LIGHT, DARK }
@@ -74,4 +75,7 @@ interface SettingsRepository {
     suspend fun setFontFamilyChoice(value: String)
     suspend fun setTextCaseChoice(value: String)
     suspend fun setWeightOffset(value: Int)
+    suspend fun saveSkipIntroConfig(config: IntroConfig)
+    suspend fun clearSkipIntroConfig(showName: String)
+    suspend fun getSkipIntroConfig(showName: String): IntroConfig?
 }
