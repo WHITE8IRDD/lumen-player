@@ -1,5 +1,6 @@
 package com.lumen.player
 
+import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 
@@ -34,6 +35,36 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+
+        // ───────────────────────────────────────────────────────
+        // ADAPTIVE REFRESH RATE — auto-detects device capability
+        // Picks the highest refresh rate the device supports
+        // Falls back gracefully on any device
+        // ───────────────────────────────────────────────────────
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val display = display
+                val supportedModes = display?.supportedModes ?: emptyArray()
+                val bestMode = supportedModes.maxByOrNull { it.refreshRate }
+                if (bestMode != null) {
+                    window.attributes = window.attributes.apply {
+                        preferredDisplayModeId = bestMode.modeId
+                    }
+                }
+            } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                @Suppress("DEPRECATION")
+                val display = windowManager.defaultDisplay
+                val supportedRates = display.supportedRefreshRates
+                val maxRate = supportedRates.maxOrNull() ?: 60f
+                window.attributes = window.attributes.apply {
+                    @Suppress("DEPRECATION")
+                    preferredRefreshRate = maxRate
+                }
+            }
+        } catch (_: Exception) {
+            // App continues at default refresh rate
+        }
+
         playerController.initialize()
 
         setContent {

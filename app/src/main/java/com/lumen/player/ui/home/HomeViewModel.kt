@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import androidx.media3.common.util.UnstableApi
 import com.lumen.player.core.util.Constants
 import com.lumen.player.core.util.toMedia3Item
+import com.lumen.player.data.prefs.HomePreferences
 import com.lumen.player.domain.model.Folder
 import com.lumen.player.domain.model.MediaItem
 import com.lumen.player.domain.repository.MediaRepository
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -26,7 +28,8 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val controller: PlayerController,
     private val repository: MediaRepository,
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val homePreferences: HomePreferences
 ) : ViewModel() {
 
     val playbackState = controller.state
@@ -50,6 +53,9 @@ class HomeViewModel @Inject constructor(
         repository.observeRecentAudio()
             .distinctUntilChanged()
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+    val recentlyAddedVisible = homePreferences.recentlyAddedVisible
+    val yourFoldersVisible = homePreferences.yourFoldersVisible
 
     private val _isRefreshing = MutableStateFlow(false)
     val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
@@ -94,6 +100,20 @@ class HomeViewModel @Inject constructor(
     fun unhideFromHome(item: MediaItem) {
         viewModelScope.launch {
             repository.setHiddenFromHome(item.id, false)
+        }
+    }
+
+    fun toggleRecentlyAdded() {
+        viewModelScope.launch {
+            val current = homePreferences.recentlyAddedVisible.first()
+            homePreferences.setRecentlyAddedVisible(!current)
+        }
+    }
+
+    fun toggleYourFolders() {
+        viewModelScope.launch {
+            val current = homePreferences.yourFoldersVisible.first()
+            homePreferences.setYourFoldersVisible(!current)
         }
     }
 }

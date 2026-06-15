@@ -2,6 +2,11 @@ package com.lumen.player.ui.home
 
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -48,6 +53,7 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.SkipNext
+import androidx.compose.material.icons.rounded.Visibility
 import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -58,6 +64,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Text
@@ -198,6 +205,8 @@ fun HomeScreen(
     val folders by viewModel.topFolders.collectAsStateWithLifecycle()
     val audio by viewModel.recentAudio.collectAsStateWithLifecycle()
     val refreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val isRecentlyAddedVisible by viewModel.recentlyAddedVisible.collectAsStateWithLifecycle(true)
+    val isYourFoldersVisible by viewModel.yourFoldersVisible.collectAsStateWithLifecycle(true)
 
     val homeVideosByFolder = remember(cw, recent) {
         (cw + recent).groupBy { it.folderPath }
@@ -217,7 +226,8 @@ fun HomeScreen(
                 scope.launch {
                     val result = snackbarHostState.showSnackbar(
                         message = "hidden from home",
-                        actionLabel = "undo"
+                        actionLabel = "undo",
+                        duration = SnackbarDuration.Short
                     )
                     if (result == androidx.compose.material3.SnackbarResult.ActionPerformed) {
                         viewModel.unhideFromHome(item)
@@ -266,24 +276,52 @@ fun HomeScreen(
                 }
 
                 if (recent.isNotEmpty()) {
-                    item { SectionHeader("Recently added", color = MaterialTheme.colorScheme.secondary, onSeeAll = { onSeeAll("recently_added") }) }
                     item {
-                        RecentlyAddedRow(
-                            items = recent,
-                            onClick = onItemClick,
-                            onLongClick = { contextMenuItem = it }
+                        SectionHeader(
+                            title = "Recently added",
+                            color = MaterialTheme.colorScheme.secondary,
+                            onSeeAll = { onSeeAll("recently_added") },
+                            isVisible = isRecentlyAddedVisible,
+                            onToggleVisibility = { viewModel.toggleRecentlyAdded() }
                         )
+                    }
+                    item {
+                        AnimatedVisibility(
+                            visible = isRecentlyAddedVisible,
+                            enter = expandVertically(animationSpec = tween(300)) + fadeIn(animationSpec = tween(300)),
+                            exit = shrinkVertically(animationSpec = tween(300)) + fadeOut(animationSpec = tween(300))
+                        ) {
+                            RecentlyAddedRow(
+                                items = recent,
+                                onClick = onItemClick,
+                                onLongClick = { contextMenuItem = it }
+                            )
+                        }
                     }
                 }
 
                 if (folders.isNotEmpty()) {
-                    item { SectionHeader("Your folders", color = MaterialTheme.colorScheme.secondary, onSeeAll = { onSeeAll("folders") }) }
                     item {
-                        HomeFolderRow(
-                            folders = folders,
-                            videosByFolder = homeVideosByFolder,
-                            onClick = onFolderClick
+                        SectionHeader(
+                            title = "Your folders",
+                            color = MaterialTheme.colorScheme.secondary,
+                            onSeeAll = { onSeeAll("folders") },
+                            isVisible = isYourFoldersVisible,
+                            onToggleVisibility = { viewModel.toggleYourFolders() }
                         )
+                    }
+                    item {
+                        AnimatedVisibility(
+                            visible = isYourFoldersVisible,
+                            enter = expandVertically(animationSpec = tween(300)) + fadeIn(animationSpec = tween(300)),
+                            exit = shrinkVertically(animationSpec = tween(300)) + fadeOut(animationSpec = tween(300))
+                        ) {
+                            HomeFolderRow(
+                                folders = folders,
+                                videosByFolder = homeVideosByFolder,
+                                onClick = onFolderClick
+                            )
+                        }
                     }
                 }
 
@@ -540,7 +578,13 @@ private fun SearchBar(onClick: () -> Unit) {
 }
 
 @Composable
-private fun SectionHeader(title: String, color: Color, onSeeAll: () -> Unit) {
+private fun SectionHeader(
+    title: String,
+    color: Color,
+    onSeeAll: () -> Unit,
+    isVisible: Boolean? = null,
+    onToggleVisibility: (() -> Unit)? = null
+) {
     Row(
         Modifier
             .fillMaxWidth()
@@ -553,6 +597,17 @@ private fun SectionHeader(title: String, color: Color, onSeeAll: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurface,
             modifier = Modifier.weight(1f)
         )
+        if (isVisible != null && onToggleVisibility != null) {
+            IconButton(onClick = onToggleVisibility) {
+                Icon(
+                    imageVector = if (isVisible) Icons.Rounded.Visibility else Icons.Rounded.VisibilityOff,
+                    contentDescription = if (isVisible) "Hide section" else "Show section",
+                    tint = color
+                )
+            }
+        } else {
+            Spacer(Modifier.size(48.dp))
+        }
         TextButton(onClick = onSeeAll) {
             Text("See all", color = color, style = MaterialTheme.typography.labelLarge)
         }

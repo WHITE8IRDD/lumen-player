@@ -1170,7 +1170,7 @@ private fun StreamsTabContent(
                                 onClick = { selectedCategory = null }
                             )
                         }
-                        items(categories) { category ->
+                        items(categories, key = { it }) { category ->
                             CategoryChip(
                                 label = category,
                                 selected = category == selectedCategory,

@@ -213,6 +213,8 @@ fun VideoPlayerScreen(
     var resizeMode by remember { mutableStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
     var uiMode by remember { mutableStateOf(VideoUiMode.MAIN) }
     var locked by remember { mutableStateOf(false) }
+    var isUnlocking by remember { mutableStateOf(false) }
+    var isLockIconVisible by remember { mutableStateOf(true) }
     var lockHintShown by remember { mutableStateOf(false) }
     var showSubtitles by remember { mutableStateOf(false) }
     var subtitleDelayUs by remember { mutableStateOf(0L) }
@@ -376,10 +378,24 @@ fun VideoPlayerScreen(
     LaunchedEffect(locked) {
         if (locked && !lockHintShown) {
             lockHintShown = true
-            android.widget.Toast.makeText(context, "Long-press anywhere to unlock", android.widget.Toast.LENGTH_LONG).show()
+            android.widget.Toast.makeText(context, "Long-press anywhere to unlock", android.widget.Toast.LENGTH_SHORT).show()
         }
         if (!locked) {
             lockHintShown = false
+        }
+    }
+
+    // ---- Auto-hide lock icon after 1s when locked ----
+    LaunchedEffect(locked) {
+        if (!locked) {
+            isLockIconVisible = true
+            isUnlocking = false
+        }
+    }
+    LaunchedEffect(locked, isLockIconVisible) {
+        if (locked && isLockIconVisible) {
+            delay(1_000)
+            isLockIconVisible = false
         }
     }
 
@@ -811,32 +827,93 @@ fun VideoPlayerScreen(
 
         // === Locked overlay ===
         if (locked) {
+            val lockScope = rememberCoroutineScope()
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.6f))
-                    .pointerInput(Unit) {
+                    .pointerInput(isLockIconVisible, isUnlocking) {
                         detectTapGestures(
+                            onTap = {
+                                if (!isLockIconVisible) {
+                                    isLockIconVisible = true
+                                }
+                            },
                             onLongPress = {
-                                locked = false
-                                controlsVisible = true
+                                if (!isUnlocking) {
+                                    isUnlocking = true
+                                    lockScope.launch {
+                                        delay(400)
+                                        locked = false
+                                        controlsVisible = true
+                                        isUnlocking = false
+                                    }
+                                }
                             }
                         )
                     },
                 contentAlignment = Alignment.Center
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Rounded.Lock,
-                        contentDescription = "Unlock Player",
-                        tint = Color.White,
-                        modifier = Modifier.size(64.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = "Long press to unlock",
-                        color = Color.White
-                    )
+                AnimatedVisibility(
+                    visible = isLockIconVisible && !isUnlocking,
+                    enter = fadeIn(animationSpec = tween(250)),
+                    exit = fadeOut(animationSpec = tween(400))
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .background(
+                                color = Color.Black.copy(alpha = 0.5f),
+                                shape = CircleShape
+                            )
+                            .padding(24.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Lock,
+                            contentDescription = "Locked",
+                            tint = Color.White,
+                            modifier = Modifier.size(48.dp)
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Long press to unlock",
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
+                AnimatedVisibility(
+                    visible = isUnlocking,
+                    enter = fadeIn(animationSpec = tween(200)),
+                    exit = fadeOut(animationSpec = tween(200))
+                ) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier
+                            .background(
+                                color = Color.Black.copy(alpha = 0.5f),
+                                shape = CircleShape
+                            )
+                            .padding(24.dp)
+                    ) {
+                        Crossfade(
+                            targetState = isUnlocking,
+                            animationSpec = tween(300),
+                            label = "lock_animation"
+                        ) { unlocking ->
+                            Icon(
+                                imageVector = if (unlocking) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
+                                contentDescription = if (unlocking) "Unlocking" else "Locked",
+                                tint = Color.White,
+                                modifier = Modifier.size(48.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Unlocking...",
+                            color = Color.White,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
                 }
             }
         }

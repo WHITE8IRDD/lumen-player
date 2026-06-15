@@ -7,6 +7,8 @@
 -keep class javax.inject.** { *; }
 -keepclasseswithmembers class * { @dagger.* <fields>; }
 -keepclasseswithmembers class * { @javax.inject.* <fields>; }
+-keep class * extends dagger.hilt.android.lifecycle.HiltViewModel
+-keep @dagger.hilt.android.HiltAndroidApp class *
 
 # Room
 -keep class androidx.room.** { *; }
@@ -14,6 +16,9 @@
 
 # Coil
 -keep class coil.** { *; }
+
+# DataStore
+-keep class androidx.datastore.** { *; }
 
 # OkHttp / OkIO
 -dontwarn okhttp3.**
@@ -30,6 +35,10 @@
 -keep class com.lumen.player.domain.model.** { *; }
 -keep class com.lumen.player.data.local.entity.** { *; }
 -keep class com.lumen.player.data.local.dao.** { *; }
+-keep class com.lumen.player.data.prefs.** { *; }
+
+# Lumen Application class
+-keep class com.lumen.player.LumenApp { *; }
 
 # Android
 -keepattributes Signature, SourceFile, LineNumberTable

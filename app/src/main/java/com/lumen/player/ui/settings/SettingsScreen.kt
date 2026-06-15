@@ -906,7 +906,7 @@ private fun TypographySection(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
-        items(LumenFontChoice.entries) { choice ->
+        items(LumenFontChoice.entries, key = { it.name }) { choice ->
             val isSelected = choice == currentFontChoice
             Surface(
                 onClick = { onFontChoice(choice) },
