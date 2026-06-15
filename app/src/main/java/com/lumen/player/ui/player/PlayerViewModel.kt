@@ -1,7 +1,9 @@
 package com.lumen.player.ui.player
 
 import android.app.Application
+import android.content.Context
 import android.net.Uri
+import android.provider.MediaStore
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.MediaItem
@@ -67,10 +69,15 @@ class PlayerViewModel @Inject constructor(
             if (stream.url.isBlank()) return@launch
             val uri = android.net.Uri.parse(stream.url)
             if (uri == null) return@launch
+            val resolvedTitle = if (stream.title.isBlank() || Regex("^\\d+$").matches(stream.title)) {
+                resolveTitleFromUri(getApplication(), uri)
+            } else {
+                stream.title
+            }
             val item = com.lumen.player.domain.model.MediaItem(
                 id = stream.id,
                 uri = uri,
-                title = stream.title,
+                title = resolvedTitle,
                 artist = null, album = null, albumArtUri = null,
                 durationMs = 0L,
                 mimeType = "video/unknown",
@@ -372,6 +379,23 @@ class PlayerViewModel @Inject constructor(
             }
         }
         return out.sortedBy { it.timeMs }.ifEmpty { null }
+    }
+
+    private fun resolveTitleFromUri(context: Context, uri: Uri): String {
+        context.contentResolver.query(
+            uri,
+            arrayOf(MediaStore.Video.Media.DISPLAY_NAME),
+            null, null, null
+        )?.use { cursor ->
+            if (cursor.moveToFirst()) {
+                val name = cursor.getString(0)
+                if (!name.isNullOrBlank()) return name.substringBeforeLast(".")
+            }
+        }
+        return uri.lastPathSegment
+            ?.substringAfterLast("/")
+            ?.substringBeforeLast(".")
+            ?: "Video"
     }
 
     override fun onCleared() {

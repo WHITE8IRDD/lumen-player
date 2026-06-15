@@ -1,7 +1,6 @@
 package com.lumen.player
 
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 
 import androidx.activity.compose.setContent
@@ -59,8 +58,6 @@ class MainActivity : ComponentActivity() {
                 try { LumenTextCase.valueOf(settings.textCaseChoice) }
                 catch (_: Exception) { LumenTextCase.LOWERCASE }
             }
-
-            Log.d("LumenTheme", "Rendering with fontFamilyChoice=${settings.fontFamilyChoice} textCaseChoice=${settings.textCaseChoice} weightOffset=${settings.weightOffset}")
 
             LumenTheme(
                 accentColor = accentColor,

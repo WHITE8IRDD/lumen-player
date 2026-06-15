@@ -11,12 +11,10 @@ import android.os.Build
 import android.provider.Settings
 import android.util.Rational
 import android.view.WindowManager
-import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
@@ -89,6 +87,7 @@ import androidx.compose.material.icons.rounded.Delete
 import androidx.compose.material.icons.rounded.Equalizer
 import androidx.compose.material.icons.rounded.GraphicEq
 import androidx.compose.material.icons.rounded.Audiotrack
+
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -136,7 +135,7 @@ import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
-import androidx.compose.ui.platform.LocalConfiguration
+
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -207,20 +206,6 @@ fun VideoPlayerScreen(
     val activity = context as? Activity
     val haptic = LocalHapticFeedback.current
     val streamsVm: StreamsViewModel = hiltViewModel()
-
-    // ---- Diagnostic: verify VideoPlayerScreen entered composition ----
-    LaunchedEffect(Unit) {
-        Log.d("VideoPlayerDiag", """
-            VideoPlayerScreen entered composition:
-            - player is null: ${player == null}
-            - state title: "${state.title}"
-            - state isVideo: ${state.isVideo}
-            - state currentItemId: ${state.currentItemId}
-            - state isPlaying: ${state.isPlaying}
-            - state durationMs: ${state.durationMs}
-            - tracks: ${tracks?.groups?.size ?: 0} groups
-        """.trimIndent())
-    }
 
     // ---- Player state ----
     var controlsVisible by remember { mutableStateOf(true) }
@@ -418,7 +403,18 @@ fun VideoPlayerScreen(
     // when play/pause or track metadata changes — NOT on every 200ms tick.
     // Fields that change on every tick (positionMs, bufferedMs) are read
     // only inside sub-composables that receive state by lambda provider.
-    val title by remember { derivedStateOf { state.title } }
+    val title by remember {
+        derivedStateOf {
+            val raw = state.title
+            if (raw.isBlank() || raw.matches(Regex("^\\d+$"))) {
+                player?.currentMediaItem?.localConfiguration?.uri
+                    ?.lastPathSegment
+                    ?.substringAfterLast("/")
+                    ?.substringBeforeLast(".")
+                    ?: "Video"
+            } else raw
+        }
+    }
     val artist by remember { derivedStateOf { state.artist } }
     val hasPrevious by remember { derivedStateOf { state.hasPrevious } }
     val hasNext by remember { derivedStateOf { state.hasNext } }
@@ -436,8 +432,8 @@ fun VideoPlayerScreen(
             // a vertical brightness/volume drag that pauses mid-stroke would
             // trigger the long-press timer, jump to 2x, then restore to a
             // stale baseSpeed when the finger lifts. Speed adjustment is
-            // exclusively available through the SpeedDialog (tap the speed
-            // button in the control bar). This eliminates an entire class
+            // exclusively available through the speed dropdown in the control
+            // bar. This eliminates an entire class
             // of playback-speed corruption bugs.
             .pointerInput(locked) {
                 if (locked) return@pointerInput
@@ -505,6 +501,16 @@ fun VideoPlayerScreen(
                                 volumeHud = HudInfo(Icons.AutoMirrored.Rounded.VolumeUp,
                                     "${(newFrac * 100).toInt()}%", newFrac)
                             }
+                        } else if (abs(dx) > 24f && abs(dx) > abs(dy)) {
+                            sawDrag = true
+                            val duration = player?.duration ?: 0L
+                            if (duration > 0L) {
+                                val seekDeltaFraction = dx / size.width.toFloat()
+                                val seekDeltaMs = (seekDeltaFraction * 90_000L).toLong()
+                                val currentPos = player?.currentPosition ?: 0L
+                                val targetMs = (currentPos + seekDeltaMs).coerceIn(0L, duration)
+                                player?.seekTo(targetMs)
+                            }
                         }
                     }
                 }
@@ -540,7 +546,7 @@ fun VideoPlayerScreen(
                                 1f to Color.Transparent
                             )
                         )
-                        .padding(top = 32.dp, bottom = 16.dp, start = 4.dp, end = 4.dp)
+                        .padding(top = 28.dp, bottom = 12.dp, start = 8.dp, end = 8.dp)
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -549,14 +555,14 @@ fun VideoPlayerScreen(
                         IconButton(onClick = onClose) {
                             Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Back", tint = Color.White, modifier = Modifier.size(22.dp))
                         }
-                        Spacer(Modifier.width(4.dp))
+                        Spacer(Modifier.width(8.dp))
                         val filePath = player?.currentMediaItem?.localConfiguration?.uri?.path ?: ""
-                        val displayTitle = remember(filePath) { extractShowName(filePath) }
+                        val showName = remember(filePath) { extractShowName(filePath) }
                         val fileName = remember(filePath) { File(filePath).nameWithoutExtension }
                         val (episodeLabel, _) = remember(fileName) { extractEpisodeInfo(fileName) }
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                displayTitle.ifBlank { title.ifBlank { "Video" } },
+                                title.ifBlank { "Video" },
                                 color = Color.White,
                                 style = MaterialTheme.typography.titleMedium,
                                 maxLines = 1,
@@ -590,6 +596,7 @@ fun VideoPlayerScreen(
                         }) {
                             Icon(Icons.Rounded.PhotoCamera, "Screenshot", tint = Color.White, modifier = Modifier.size(22.dp))
                         }
+                        Spacer(Modifier.width(4.dp))
                         Box(
                             modifier = Modifier
                                 .size(44.dp)
@@ -624,6 +631,7 @@ fun VideoPlayerScreen(
                                 modifier = Modifier.size(22.dp)
                             )
                         }
+                        Spacer(Modifier.width(4.dp))
                         IconButton(onClick = onEnterPip) {
                             Icon(Icons.Rounded.PictureInPicture, "PiP", tint = Color.White, modifier = Modifier.size(22.dp))
                         }
@@ -747,11 +755,10 @@ fun VideoPlayerScreen(
                         showAspectBadge = true
                     },
                     onOpenSubtitles = { showSubtitles = true },
-                    onOpenEqPanel = { showEqPanel = true },
-                    onRequestSkipMenu = { showSkipMenu = true },
                     onToggleLock = {
                         if (!locked) locked = true
                     },
+                    onOpenEqPanel = { showEqPanel = true },
                     locked = locked,
                     resizeMode = resizeMode,
                     modifier = Modifier.align(Alignment.BottomCenter)
@@ -837,49 +844,48 @@ fun VideoPlayerScreen(
             }
         }
         if (locked) {
-            Box(
-                Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.15f))
-                    .pointerInput(Unit) {
-                        detectTapGestures(
-                            onTap = {
-                                lockRevealToken++
-                                android.widget.Toast.makeText(context, "Long-press anywhere to unlock", android.widget.Toast.LENGTH_SHORT).show()
-                            },
-                            onLongPress = {
-                                haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                locked = false
-                                controlsVisible = true
-                                lockOverlayVisible = false
-                            }
-                        )
-                    }
+            var unlockingAnim by remember { mutableStateOf(false) }
+            AnimatedVisibility(
+                visible = lockOverlayVisible,
+                enter = fadeIn(animationSpec = tween(150)),
+                exit = fadeOut(animationSpec = tween(300)),
+                modifier = Modifier.fillMaxSize()
             ) {
-                AnimatedVisibility(
-                    visible = lockOverlayVisible,
-                    enter = fadeIn(animationSpec = tween(150)),
-                    exit = fadeOut(animationSpec = tween(300)),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    Box(Modifier.fillMaxSize().padding(16.dp)) {
-                        Icon(
-                            Icons.Rounded.Lock,
-                            "Locked",
-                            tint = Color.White.copy(alpha = 0.5f),
-                            modifier = Modifier
-                                .align(Alignment.TopEnd)
-                                .size(28.dp)
-                        )
-                        Text(
-                            "Long-press to unlock",
-                            color = Color.White.copy(alpha = 0.7f),
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(bottom = 48.dp),
-                            style = MaterialTheme.typography.bodySmall
-                        )
+                Box(Modifier.fillMaxSize().padding(16.dp)) {
+                    IconButton(
+                        onClick = { unlockingAnim = true },
+                        modifier = Modifier.align(Alignment.TopEnd)
+                    ) {
+                        Crossfade(
+                            targetState = unlockingAnim,
+                            animationSpec = tween(300),
+                            label = "lockAnim"
+                        ) { isUnlocking ->
+                            Icon(
+                                if (isUnlocking) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
+                                "Unlock",
+                                tint = Color.White,
+                                modifier = Modifier.size(28.dp)
+                            )
+                        }
                     }
+                    Text(
+                        "Tap to unlock",
+                        color = Color.White.copy(alpha = 0.7f),
+                        modifier = Modifier
+                            .align(Alignment.BottomCenter)
+                            .padding(bottom = 48.dp),
+                        style = MaterialTheme.typography.bodySmall
+                    )
+                }
+            }
+            LaunchedEffect(unlockingAnim) {
+                if (unlockingAnim) {
+                    kotlinx.coroutines.delay(400)
+                    locked = false
+                    controlsVisible = true
+                    lockOverlayVisible = false
+                    unlockingAnim = false
                 }
             }
         }
@@ -1431,6 +1437,7 @@ private fun VideoSeekBar(
  * recomposition on every 200ms position tick.
  */
 @Composable
+@OptIn(ExperimentalFoundationApi::class)
 private fun VideoBottomControls(
     player: Player?,
     stateProvider: () -> com.lumen.player.player.PlaybackState,
@@ -1447,15 +1454,15 @@ private fun VideoBottomControls(
     onOpenSpeed: () -> Unit,
     onOpenAspect: () -> Unit,
     onOpenSubtitles: () -> Unit,
-    onOpenEqPanel: () -> Unit,
-    onRequestSkipMenu: () -> Unit,
     onToggleLock: () -> Unit,
+    onOpenEqPanel: () -> Unit,
     locked: Boolean,
     resizeMode: Int,
     modifier: Modifier = Modifier
 ) {
     val s = stateProvider()
     val duration = s.durationMs.coerceAtLeast(0L)
+    val context = LocalContext.current
 
     Box(
         modifier
@@ -1463,13 +1470,14 @@ private fun VideoBottomControls(
             .background(
                 Brush.verticalGradient(
                     0f to Color.Transparent,
-                    1f to Color.Black.copy(alpha = 0.88f)
+                    1f to Color.Black.copy(alpha = 0.92f)
                 )
             )
-            .padding(top = 12.dp, bottom = 24.dp, start = 12.dp, end = 12.dp)
+            .padding(top = 8.dp, bottom = 24.dp, start = 12.dp, end = 12.dp)
     ) {
         Column(Modifier.fillMaxWidth()) {
-            // === Seek bar at the very top of the bottom controls (above timestamps) ===
+
+            // Seek bar
             VideoSeekBar(
                 positionProvider = { s.positionMs },
                 bufferedProvider = { s.bufferedMs },
@@ -1479,141 +1487,130 @@ private fun VideoBottomControls(
                 onDraggingChange = onSeekDraggingChange,
                 onPreviewChange = onSeekPreviewChange,
                 onSeekCommit = onSeekCommit,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 6.dp)
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 6.dp)
             )
 
-            // Timestamps — left = current, right = total
+            // Timestamps
             Row(Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 2.dp)) {
-                val displayMs = if (seekPreviewFraction != null) {
-                    (seekPreviewFraction * duration).toLong()
-                } else s.positionMs
-                Text(
-                    TimeFormatter.msToClock(displayMs),
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelSmall
-                )
+                val displayMs = if (seekPreviewFraction != null)
+                    (seekPreviewFraction * duration).toLong() else s.positionMs
+                Text(TimeFormatter.msToClock(displayMs), color = Color.White,
+                    style = MaterialTheme.typography.labelSmall)
                 Spacer(Modifier.weight(1f))
-                Text(
-                    TimeFormatter.msToClock(duration),
-                    color = Color.White,
-                    style = MaterialTheme.typography.labelSmall
-                )
+                Text(TimeFormatter.msToClock(duration), color = Color.White,
+                    style = MaterialTheme.typography.labelSmall)
             }
 
-            Spacer(Modifier.height(6.dp))
+            Spacer(Modifier.height(8.dp))
 
-            // Transport row — ±10s is gesture-only
+            // Transport row
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                IconButton(
-                    onClick = onPrevious,
-                    enabled = s.hasPrevious,
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(
-                        Icons.Rounded.SkipPrevious, "Previous",
-                        tint = Color.White,
-                        modifier = Modifier.size(26.dp)
-                    )
+                IconButton(onClick = onPrevious, enabled = s.hasPrevious, modifier = Modifier.size(48.dp)) {
+                    Icon(Icons.Rounded.SkipPrevious, "Previous",
+                        tint = if (s.hasPrevious) Color.White else Color.White.copy(alpha = 0.3f),
+                        modifier = Modifier.size(30.dp))
                 }
                 FilledIconButton(
                     onClick = onPlayPause,
-                    modifier = Modifier.size(64.dp),
+                    modifier = Modifier.size(60.dp),
                     shape = CircleShape,
                     colors = IconButtonDefaults.filledIconButtonColors(
-                        containerColor = Color.White, contentColor = Color.Black
-                    )
+                        containerColor = Color.White, contentColor = Color.Black)
                 ) {
                     Crossfade(s.isPlaying, animationSpec = tween(150), label = "pp") { playing ->
-                        Icon(
-                            if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                            "Play/Pause", modifier = Modifier.size(36.dp)
-                        )
+                        Icon(if (playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
+                            "Play/Pause", modifier = Modifier.size(34.dp))
                     }
                 }
-                IconButton(
-                    onClick = onNext,
-                    enabled = s.hasNext,
-                    modifier = Modifier.size(48.dp)
-                ) {
-                    Icon(
-                        Icons.Rounded.SkipNext, "Next",
-                        tint = Color.White,
-                        modifier = Modifier.size(26.dp)
-                    )
+                IconButton(onClick = onNext, enabled = s.hasNext, modifier = Modifier.size(48.dp)) {
+                    Icon(Icons.Rounded.SkipNext, "Next",
+                        tint = if (s.hasNext) Color.White else Color.White.copy(alpha = 0.3f),
+                        modifier = Modifier.size(30.dp))
                 }
             }
 
-            Spacer(Modifier.height(4.dp))
+            Spacer(Modifier.height(12.dp))
 
-            // Secondary row: left group / right group using ControlItem
-            @OptIn(ExperimentalFoundationApi::class)
-            @Composable
-            fun ControlItem(
-                icon: ImageVector,
-                label: String,
-                tint: Color = Color.White.copy(alpha = 0.70f),
-                onClick: () -> Unit,
-                onLongClick: (() -> Unit)? = null
-            ) {
-                Column(
-                    modifier = Modifier
-                        .widthIn(min = 72.dp)
-                        .combinedClickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null,
-                            onClick = onClick,
-                            onLongClick = onLongClick
-                        )
-                        .padding(vertical = 8.dp, horizontal = 4.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(4.dp)
-                ) {
-                    Icon(icon, label, tint = tint, modifier = Modifier.size(22.dp))
-                    Text(label, fontSize = 11.sp, fontWeight = FontWeight.Medium,
-                        color = tint, maxLines = 1, softWrap = false,
-                        overflow = TextOverflow.Visible)
-                }
-            }
-
+            // Bottom row: left icons + right skip intro
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ControlItem(
-                        icon = Icons.Rounded.Speed,
-                        label = formatSpeed(s.playbackSpeed),
-                        onClick = onOpenSpeed
-                    )
-                    ControlItem(
-                        icon = Icons.Rounded.AspectRatio,
-                        label = aspectLabel(resizeMode),
-                        onClick = onOpenAspect
-                    )
-                    ControlItem(
-                        icon = Icons.Rounded.GraphicEq,
-                        label = "EQ",
-                        onClick = onOpenEqPanel
+                // LEFT SIDE: 1x, Fit, EQ
+                Row(
+                    modifier = Modifier.weight(1f),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    SmallControlButton(Icons.Rounded.Speed, formatSpeed(s.playbackSpeed), onOpenSpeed)
+                    SmallControlButton(Icons.Rounded.AspectRatio, aspectLabel(resizeMode), onOpenAspect)
+                    SmallControlButton(Icons.Rounded.GraphicEq, "EQ", onOpenEqPanel)
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .combinedClickable(
+                                onClick = {},
+                                onLongClick = {
+                                    val activity = context as? Activity
+                                    activity?.let {
+                                        it.requestedOrientation = if (
+                                            it.requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE ||
+                                            it.requestedOrientation == ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                                        ) ActivityInfo.SCREEN_ORIENTATION_PORTRAIT
+                                        else ActivityInfo.SCREEN_ORIENTATION_SENSOR_LANDSCAPE
+                                    }
+                                }
+                            )
                     )
                 }
-                ControlItem(
-                    icon = Icons.Rounded.SkipNext,
-                    label = "+85s",
-                    tint = LocalAccentColor.current,
-                    onClick = {
-                        val target = ((player?.currentPosition ?: 0L) + 85_000L)
-                            .coerceAtMost(player?.duration ?: 0L)
-                        player?.seekTo(target)
-                    },
-                    onLongClick = onRequestSkipMenu
-                )
+
+                // RIGHT SIDE: +85s skip intro button (click skip, long-pick duration)
+                var showSkipPicker by remember { mutableStateOf(false) }
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier
+                        .combinedClickable(
+                            onClick = { onSeekBy(85_000L) },
+                            onLongClick = { showSkipPicker = true }
+                        )
+                        .padding(horizontal = 8.dp)
+                ) {
+                    Icon(Icons.Rounded.SkipNext, "Skip Intro",
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(22.dp))
+                    Text("+85s", color = MaterialTheme.colorScheme.primary,
+                        fontSize = 10.sp,
+                        style = MaterialTheme.typography.labelSmall)
+                }
+                if (showSkipPicker) {
+                    DropdownMenu(
+                        expanded = showSkipPicker,
+                        onDismissRequest = { showSkipPicker = false },
+                        modifier = Modifier
+                            .background(Color(0xFF1E1E1E))
+                            .width(120.dp)
+                    ) {
+                        listOf(30, 60, 85, 90, 120, 180, 300).forEach { seconds ->
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        "+${seconds}s",
+                                        color = if (seconds == 85) MaterialTheme.colorScheme.primary else Color.White,
+                                        style = MaterialTheme.typography.bodyMedium
+                                    )
+                                },
+                                onClick = {
+                                    onSeekBy(seconds * 1000L)
+                                    showSkipPicker = false
+                                }
+                            )
+                        }
+                    }
+                }
             }
         }
     }
@@ -1733,19 +1730,6 @@ private fun SeekFlashLayer(
 private fun formatSpeed(s: Float): String {
     val v = if (s == s.toInt().toFloat()) s.toInt().toFloat() else s
     return if (v == v.toInt().toFloat()) "${v.toInt()}x" else String.format("%.2fx", v)
-}
-
-@Composable
-private fun SpeedDialog(current: Float, onPick: (Float) -> Unit, onDismiss: () -> Unit) {
-    val speeds = listOf(0.25f, 0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f, 2.5f, 3f, 4f)
-    LumenPickerDialog(
-        onDismiss = onDismiss,
-        title = "Playback speed",
-        options = speeds,
-        selectedValue = current,
-        optionLabel = { formatSpeed(it) },
-        onPick = { onPick(it) }
-    )
 }
 
 @Composable
@@ -2108,4 +2092,26 @@ private fun formatFileSize(bytes: Long): String = when {
     bytes >= 1_048_576L -> "%.0f MB".format(bytes / 1_048_576.0)
     bytes >= 1024L -> "%.0f KB".format(bytes / 1024.0)
     else -> "$bytes B"
+}
+
+@Composable
+private fun SmallControlButton(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    onClick: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .clickable(onClick = onClick)
+            .padding(horizontal = 6.dp, vertical = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Icon(icon, contentDescription = label, tint = Color.White,
+            modifier = Modifier.size(20.dp))
+        Spacer(Modifier.height(2.dp))
+        Text(label, color = Color.White, fontSize = 9.sp,
+            maxLines = 1, overflow = TextOverflow.Clip,
+            style = MaterialTheme.typography.labelSmall)
+    }
 }
