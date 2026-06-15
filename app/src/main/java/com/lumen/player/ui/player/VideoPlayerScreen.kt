@@ -213,8 +213,6 @@ fun VideoPlayerScreen(
     var resizeMode by remember { mutableStateOf(AspectRatioFrameLayout.RESIZE_MODE_FIT) }
     var uiMode by remember { mutableStateOf(VideoUiMode.MAIN) }
     var locked by remember { mutableStateOf(false) }
-    var lockOverlayVisible by remember { mutableStateOf(false) }
-    var lockRevealToken by remember { mutableStateOf(0) }
     var lockHintShown by remember { mutableStateOf(false) }
     var showSubtitles by remember { mutableStateOf(false) }
     var subtitleDelayUs by remember { mutableStateOf(0L) }
@@ -374,14 +372,14 @@ fun VideoPlayerScreen(
         }
     }
 
-    // ---- Lock overlay auto-hide after 1.5s, show for 2s on tap ----
+    // ---- Show hint toast on first lock ----
     LaunchedEffect(locked) {
-        if (locked) {
-            lockOverlayVisible = true
-            kotlinx.coroutines.delay(1_500)
-            lockOverlayVisible = false
-        } else {
-            lockOverlayVisible = false
+        if (locked && !lockHintShown) {
+            lockHintShown = true
+            android.widget.Toast.makeText(context, "Long-press anywhere to unlock", android.widget.Toast.LENGTH_LONG).show()
+        }
+        if (!locked) {
+            lockHintShown = false
         }
     }
 
@@ -435,86 +433,89 @@ fun VideoPlayerScreen(
             // exclusively available through the speed dropdown in the control
             // bar. This eliminates an entire class
             // of playback-speed corruption bugs.
-            .pointerInput(locked) {
-                if (locked) return@pointerInput
-                var lastTapTime = 0L
-                var lastTapX = -1f
-                awaitEachGesture {
-                    val down = awaitFirstDown(requireUnconsumed = false)
-                    val downX = down.position.x
-                    val downY = down.position.y
-                    val width = size.width.toFloat()
-                    val leftThird = width / 3f
-                    val rightThird = width * 2f / 3f
-                    val isLeftHalf = downX < width / 2f
+            .then(
+                if (!locked) {
+                    Modifier.pointerInput(Unit) {
+                        var lastTapTime = 0L
+                        var lastTapX = -1f
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            val downX = down.position.x
+                            val downY = down.position.y
+                            val width = size.width.toFloat()
+                            val leftThird = width / 3f
+                            val rightThird = width * 2f / 3f
+                            val isLeftHalf = downX < width / 2f
 
-                    var sawDrag = false
-                    val startVolume = volumeFraction
-                    val startBrightness = windowBrightness
+                            var sawDrag = false
+                            val startVolume = volumeFraction
+                            val startBrightness = windowBrightness
 
-                    while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Main)
-                        val change = event.changes.firstOrNull() ?: break
-                        if (!change.pressed) {
-                            val duration = change.uptimeMillis - down.uptimeMillis
-                            if (!sawDrag && duration < 300) {
-                                // === TAP: single or double ===
-                                val now = System.currentTimeMillis()
-                                if (now - lastTapTime < 300 && abs(downX - lastTapX) < 100f) {
-                                    // Double tap — seek ±10s or center = play/pause
-                                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
-                                    when {
-                                        downX < leftThird -> {
-                                            viewModel.seekBy(-10_000)
-                                            seekFlash = SeekFlash.Back
+                            while (true) {
+                                val event = awaitPointerEvent(PointerEventPass.Main)
+                                val change = event.changes.firstOrNull() ?: break
+                                if (!change.pressed) {
+                                    val duration = change.uptimeMillis - down.uptimeMillis
+                                    if (!sawDrag && duration < 300) {
+                                        // === TAP: single or double ===
+                                        val now = System.currentTimeMillis()
+                                        if (now - lastTapTime < 300 && abs(downX - lastTapX) < 100f) {
+                                            // Double tap — seek ±10s or center = play/pause
+                                            haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                                            when {
+                                                downX < leftThird -> {
+                                                    viewModel.seekBy(-10_000)
+                                                    seekFlash = SeekFlash.Back
+                                                }
+                                                downX > rightThird -> {
+                                                    viewModel.seekBy(10_000)
+                                                    seekFlash = SeekFlash.Forward
+                                                }
+                                                else -> viewModel.playPause()
+                                            }
+                                            lastTapTime = 0L
+                                        } else {
+                                            // Single tap — toggle controls
+                                            controlsVisible = !controlsVisible
+                                            lastTapTime = now
+                                            lastTapX = downX
                                         }
-                                        downX > rightThird -> {
-                                            viewModel.seekBy(10_000)
-                                            seekFlash = SeekFlash.Forward
-                                        }
-                                        else -> viewModel.playPause()
                                     }
-                                    lastTapTime = 0L
-                                } else {
-                                    // Single tap — toggle controls
-                                    controlsVisible = !controlsVisible
-                                    lastTapTime = now
-                                    lastTapX = downX
+                                    break
                                 }
-                            }
-                            break
-                        }
 
-                        val dx = change.position.x - downX
-                        val dy = change.position.y - downY
-                        if (abs(dy) > 24f && abs(dy) > abs(dx)) {
-                            sawDrag = true
-                            if (isLeftHalf) {
-                                windowBrightness = (startBrightness - dy / 400f).coerceIn(0.05f, 1f)
-                                brightnessHud = HudInfo(Icons.Rounded.Brightness6,
-                                    "${(windowBrightness * 100).toInt()}%", windowBrightness)
-                            } else {
-                                val newFrac = (startVolume - dy / 400f).coerceIn(0f, 1f)
-                                val newVol = (newFrac * maxVolume).toInt().coerceIn(0, maxVolume)
-                                audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
-                                volumeFraction = newFrac
-                                volumeHud = HudInfo(Icons.AutoMirrored.Rounded.VolumeUp,
-                                    "${(newFrac * 100).toInt()}%", newFrac)
-                            }
-                        } else if (abs(dx) > 24f && abs(dx) > abs(dy)) {
-                            sawDrag = true
-                            val duration = player?.duration ?: 0L
-                            if (duration > 0L) {
-                                val seekDeltaFraction = dx / size.width.toFloat()
-                                val seekDeltaMs = (seekDeltaFraction * 90_000L).toLong()
-                                val currentPos = player?.currentPosition ?: 0L
-                                val targetMs = (currentPos + seekDeltaMs).coerceIn(0L, duration)
-                                player?.seekTo(targetMs)
+                                val dx = change.position.x - downX
+                                val dy = change.position.y - downY
+                                if (abs(dy) > 24f && abs(dy) > abs(dx)) {
+                                    sawDrag = true
+                                    if (isLeftHalf) {
+                                        windowBrightness = (startBrightness - dy / 400f).coerceIn(0.05f, 1f)
+                                        brightnessHud = HudInfo(Icons.Rounded.Brightness6,
+                                            "${(windowBrightness * 100).toInt()}%", windowBrightness)
+                                    } else {
+                                        val newFrac = (startVolume - dy / 400f).coerceIn(0f, 1f)
+                                        val newVol = (newFrac * maxVolume).toInt().coerceIn(0, maxVolume)
+                                        audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
+                                        volumeFraction = newFrac
+                                        volumeHud = HudInfo(Icons.AutoMirrored.Rounded.VolumeUp,
+                                            "${(newFrac * 100).toInt()}%", newFrac)
+                                    }
+                                } else if (abs(dx) > 24f && abs(dx) > abs(dy)) {
+                                    sawDrag = true
+                                    val duration = player?.duration ?: 0L
+                                    if (duration > 0L) {
+                                        val seekDeltaFraction = dx / size.width.toFloat()
+                                        val seekDeltaMs = (seekDeltaFraction * 90_000L).toLong()
+                                        val currentPos = player?.currentPosition ?: 0L
+                                        val targetMs = (currentPos + seekDeltaMs).coerceIn(0L, duration)
+                                        player?.seekTo(targetMs)
+                                    }
+                                }
                             }
                         }
                     }
-                }
-            }
+                } else Modifier
+            )
     ) {
         // === Video surface ===
         if (player != null) {
@@ -808,84 +809,34 @@ fun VideoPlayerScreen(
             }
         }
 
-        // === Locked overlay with auto-hide ===
-        // State machine:
-        //   LOCKED + HIDDEN (default after 1.5s)
-        //     → tap screen → LOCKED + VISIBLE
-        //     → 2s timer → LOCKED + HIDDEN
-        //     → tap unlock → UNLOCKED
-        LaunchedEffect(locked) {
-            if (locked) {
-                lockOverlayVisible = true
-                lockRevealToken = 0
-                kotlinx.coroutines.delay(1_500)
-                if (lockRevealToken == 0) lockOverlayVisible = false
-            } else {
-                lockOverlayVisible = false
-            }
-        }
-        // When lockRevealToken changes (user tapped screen), show for 2s then hide
-        LaunchedEffect(lockRevealToken) {
-            if (lockRevealToken > 0 && locked) {
-                val myToken = lockRevealToken
-                lockOverlayVisible = true
-                kotlinx.coroutines.delay(2_000)
-                if (lockRevealToken == myToken) lockOverlayVisible = false
-            }
-        }
-        // Show hint toast on first lock
-        LaunchedEffect(locked) {
-            if (locked && !lockHintShown) {
-                lockHintShown = true
-                android.widget.Toast.makeText(context, "Long-press anywhere to unlock", android.widget.Toast.LENGTH_LONG).show()
-            }
-            if (!locked) {
-                lockHintShown = false
-            }
-        }
+        // === Locked overlay ===
         if (locked) {
-            var unlockingAnim by remember { mutableStateOf(false) }
-            AnimatedVisibility(
-                visible = lockOverlayVisible,
-                enter = fadeIn(animationSpec = tween(150)),
-                exit = fadeOut(animationSpec = tween(300)),
-                modifier = Modifier.fillMaxSize()
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.6f))
+                    .pointerInput(Unit) {
+                        detectTapGestures(
+                            onLongPress = {
+                                locked = false
+                                controlsVisible = true
+                            }
+                        )
+                    },
+                contentAlignment = Alignment.Center
             ) {
-                Box(Modifier.fillMaxSize().padding(16.dp)) {
-                    IconButton(
-                        onClick = { unlockingAnim = true },
-                        modifier = Modifier.align(Alignment.TopEnd)
-                    ) {
-                        Crossfade(
-                            targetState = unlockingAnim,
-                            animationSpec = tween(300),
-                            label = "lockAnim"
-                        ) { isUnlocking ->
-                            Icon(
-                                if (isUnlocking) Icons.Rounded.LockOpen else Icons.Rounded.Lock,
-                                "Unlock",
-                                tint = Color.White,
-                                modifier = Modifier.size(28.dp)
-                            )
-                        }
-                    }
-                    Text(
-                        "Tap to unlock",
-                        color = Color.White.copy(alpha = 0.7f),
-                        modifier = Modifier
-                            .align(Alignment.BottomCenter)
-                            .padding(bottom = 48.dp),
-                        style = MaterialTheme.typography.bodySmall
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Icon(
+                        imageVector = Icons.Rounded.Lock,
+                        contentDescription = "Unlock Player",
+                        tint = Color.White,
+                        modifier = Modifier.size(64.dp)
                     )
-                }
-            }
-            LaunchedEffect(unlockingAnim) {
-                if (unlockingAnim) {
-                    kotlinx.coroutines.delay(400)
-                    locked = false
-                    controlsVisible = true
-                    lockOverlayVisible = false
-                    unlockingAnim = false
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Text(
+                        text = "Long press to unlock",
+                        color = Color.White
+                    )
                 }
             }
         }
