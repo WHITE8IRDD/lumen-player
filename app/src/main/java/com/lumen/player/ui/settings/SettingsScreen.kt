@@ -31,6 +31,7 @@ import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.ui.draw.rotate
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -84,6 +85,7 @@ import com.lumen.player.ui.theme.applyLumenCase
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Slider
+import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import kotlin.math.roundToInt
 import androidx.compose.material3.SliderDefaults
@@ -296,10 +298,8 @@ fun SettingsScreen(
                 SettingsDivider()
                 TypographySection(
                     currentFontChoice = try { LumenFontChoice.valueOf(s.fontFamilyChoice) } catch (_: Exception) { LumenFontChoice.SERIF_DISPLAY },
-                    currentTextCase = try { LumenTextCase.valueOf(s.textCaseChoice) } catch (_: Exception) { LumenTextCase.LOWERCASE },
                     currentWeightOffset = s.weightOffset,
                     onFontChoice = { viewModel.setFontFamilyChoice(it.name) },
-                    onTextCase = { viewModel.setTextCaseChoice(it.name) },
                     onWeightOffset = { viewModel.setWeightOffset(it) }
                 )
             }
@@ -329,7 +329,7 @@ fun SettingsScreen(
 
         SettingsSectionHeader(
             title =             "About",
-            subtitle = "Version, licenses, source code",
+            subtitle = "Version, social links",
             expanded = s.sectionAbout,
             onToggle = { viewModel.setSectionExpanded("about", !s.sectionAbout) }
         )
@@ -354,7 +354,7 @@ fun SettingsScreen(
                         color = MaterialTheme.colorScheme.onSurface
                     )
                     Text(
-                        "A premium local-first media player",
+                        "Your media. Your rules.",
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center
@@ -364,24 +364,55 @@ fun SettingsScreen(
                 AboutRow(title = "Version", value = "${BuildConfig.VERSION_NAME} (Build ${BuildConfig.VERSION_CODE})")
                 SettingsDivider()
                 val ctx = LocalContext.current
-                SettingsClickableRow(title = "Open source licenses", subtitle = "View third-party licenses", onClick = {
-                    try {
-                        val intent = Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                            data = Uri.fromParts("package", ctx.packageName, null)
-                        }
-                        ctx.startActivity(intent)
-                    } catch (_: Exception) { }
-                })
-                SettingsDivider()
-                SettingsClickableRow(title = "GitHub", subtitle = "View source code", onClick = {
-                    try {
-                        ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/anomalco/lumen")))
-                    } catch (_: Exception) { }
-                }, chevronIcon = Icons.AutoMirrored.Rounded.OpenInNew)
-                if (BuildConfig.DEBUG) {
-                    SettingsDivider()
-                    SettingsClickableRow(title = "LumenBlob Debug", subtitle = "Preview animated blob moods", onClick = onDebugBlob)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 24.dp),
+                    horizontalArrangement = Arrangement.Center,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(
+                        onClick = {
+                            ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.instagram.com/acee.visuals/")))
+                        },
+                        modifier = Modifier
+                            .size(56.dp)
+                            .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_instagram),
+                            contentDescription = "Instagram",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
+                    Spacer(Modifier.width(24.dp))
+                    IconButton(
+                        onClick = {
+                            ctx.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/WHITE8IRDD/lumen-player.git")))
+                        },
+                        modifier = Modifier
+                            .size(56.dp)
+                            .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape)
+                    ) {
+                        Icon(
+                            painter = painterResource(R.drawable.ic_github),
+                            contentDescription = "GitHub",
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(28.dp)
+                        )
+                    }
                 }
+                Text(
+                    text = "Powered by 𝘈𝘝® engine",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    fontStyle = FontStyle.Italic,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 24.dp, bottom = 16.dp),
+                    textAlign = TextAlign.Center
+                )
             }
         }
     }
@@ -856,10 +887,8 @@ private val weightNames = listOf("Light", "Normal", "Medium", "SemiBold", "Bold"
 @Composable
 private fun TypographySection(
     currentFontChoice: LumenFontChoice,
-    currentTextCase: LumenTextCase,
     currentWeightOffset: Int,
     onFontChoice: (LumenFontChoice) -> Unit,
-    onTextCase: (LumenTextCase) -> Unit,
     onWeightOffset: (Int) -> Unit
 ) {
     SettingsDivider()
@@ -889,22 +918,22 @@ private fun TypographySection(
                 ),
                 color = if (isSelected) MaterialTheme.colorScheme.primary.copy(alpha = 0.1f)
                 else Color.Transparent,
-                modifier = Modifier.width(112.dp).height(96.dp)
+                modifier = Modifier.width(96.dp).height(80.dp)
             ) {
                 Column(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center,
-                    modifier = Modifier.padding(8.dp)
+                    modifier = Modifier.padding(6.dp)
                 ) {
                     Text(
                         "Aa",
                         fontFamily = choice.family,
-                        fontSize = 32.sp,
+                        fontSize = 28.sp,
                         color = if (isSelected) MaterialTheme.colorScheme.primary
                         else MaterialTheme.colorScheme.onSurface,
                         maxLines = 1
                     )
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(2.dp))
                     Text(
                         choice.displayName,
                         style = MaterialTheme.typography.bodySmall,
@@ -918,48 +947,11 @@ private fun TypographySection(
         }
     }
 
-    Spacer(Modifier.height(24.dp))
-
-    LumenText(
-        value = "case",
-        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 2.sp),
-        color = MaterialTheme.colorScheme.secondary,
-        modifier = Modifier.padding(start = 16.dp, bottom = 10.dp)
-    )
-
-    FlowRow(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        LumenTextCase.entries.forEach { case ->
-            val isSelected = case == currentTextCase
-            Surface(
-                onClick = { onTextCase(case) },
-                shape = LumenSquircle(20.dp),
-                color = if (isSelected) MaterialTheme.colorScheme.primary
-                else MaterialTheme.colorScheme.surfaceVariant
-            ) {
-                Text(
-                    case.displayName,
-                    style = MaterialTheme.typography.labelMedium,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp),
-                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary
-                    else MaterialTheme.colorScheme.onSurface,
-                    softWrap = false,
-                    overflow = TextOverflow.Visible
-                )
-            }
-        }
-    }
-
-    Spacer(Modifier.height(24.dp))
+    Spacer(Modifier.height(20.dp))
 
     LumenText(
         value = "${weightNames[currentWeightOffset.coerceIn(0, 4)]}",
-        style = MaterialTheme.typography.titleMedium,
+        style = MaterialTheme.typography.labelSmall.copy(letterSpacing = 2.sp),
         color = MaterialTheme.colorScheme.secondary,
         modifier = Modifier.padding(start = 16.dp, bottom = 4.dp)
     )
@@ -994,7 +986,7 @@ private fun TypographySection(
         }
     }
 
-    Spacer(Modifier.height(24.dp))
+    Spacer(Modifier.height(20.dp))
 
     Surface(
         shape = LumenSquircle(12.dp),

@@ -22,8 +22,8 @@ android {
         applicationId = "com.lumen.player"
         minSdk = 23
         targetSdk = 35
-        versionCode = 6
-        versionName = "1.2.3"
+        versionCode = 7
+        versionName = "1.2.4"
         vectorDrawables { useSupportLibrary = true }
         ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86_64") }
         buildConfigField("String", "TMDB_API_KEY", "\"$tmdbKey\"")
