@@ -1367,22 +1367,22 @@ fun VideoPlayerScreen(
                 val wasPlaying = p.isPlaying
                 android.util.Log.d("SubFix", "9. pos=$currentPosition playing=$wasPlaying")
 
-                val newItem = currentItem.buildUpon().setSubtitleConfigurations(listOf(subtitleConfig)).build()
-                val subCount = newItem.localConfiguration?.subtitleConfigurations?.size
-                android.util.Log.d("SubFix", "10. newItem built, subs: $subCount")
-
-                p.setMediaItem(newItem, currentPosition)
-                android.util.Log.d("SubFix", "11. setMediaItem done")
-
-                p.prepare()
-                android.util.Log.d("SubFix", "12. prepare done")
-
                 p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
                     .setPreferredTextLanguage(language)
                     .setSelectUndeterminedTextLanguage(true)
                     .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, false)
                     .build()
-                android.util.Log.d("SubFix", "13. track params set after prepare")
+                android.util.Log.d("SubFix", "10. track params set before prepare")
+
+                val newItem = currentItem.buildUpon().setSubtitleConfigurations(listOf(subtitleConfig)).build()
+                val subCount = newItem.localConfiguration?.subtitleConfigurations?.size
+                android.util.Log.d("SubFix", "11. newItem built, subs: $subCount")
+
+                p.setMediaItem(newItem, currentPosition)
+                android.util.Log.d("SubFix", "12. setMediaItem done")
+
+                p.prepare()
+                android.util.Log.d("SubFix", "13. prepare done")
 
                 if (wasPlaying) p.play()
                 appliedSubtitleName = safeFile.name

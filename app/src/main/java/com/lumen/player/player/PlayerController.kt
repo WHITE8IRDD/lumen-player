@@ -20,9 +20,12 @@ import com.google.common.util.concurrent.MoreExecutors
 import com.lumen.player.core.util.Constants
 import com.lumen.player.domain.model.NetworkStream
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.runBlocking
+import java.io.RandomAccessFile
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -137,6 +140,32 @@ class PlayerController @Inject constructor(
             else -> "Unknown: $uri"
         }
         com.lumen.player.core.util.PerfTimer.mark("STORAGE: $storageHint mime=${current.localConfiguration?.mimeType}")
+
+        val filePath = current.localConfiguration?.uri?.path ?: ""
+        val uriStr = current.localConfiguration?.uri?.toString() ?: ""
+        val mime = current.localConfiguration?.mimeType ?: ""
+
+        // Warm MKV Cues into OS page cache before playback so MatroskaExtractor
+        // reads the index from cache (~30ms) instead of seeking the disk (~30s).
+        val isMkv = filePath.endsWith(".mkv", ignoreCase = true) ||
+            uriStr.lowercase().contains(".mkv") || mime == "video/x-matroska"
+        if (isMkv) {
+            Log.d("LumenPlayer", "Warming MKV Cues: $filePath")
+            runBlocking(Dispatchers.IO) {
+                try {
+                    val file = RandomAccessFile(filePath, "r")
+                    val warmSize = 2L * 1024 * 1024
+                    val startOffset = maxOf(0L, file.length() - warmSize)
+                    file.seek(startOffset)
+                    val buffer = ByteArray(warmSize.toInt())
+                    file.read(buffer)
+                    file.close()
+                    Log.d("LumenPlayer", "MKV warm complete")
+                } catch (e: Exception) {
+                    Log.w("LumenPlayer", "MKV warm failed: ${e.message}")
+                }
+            }
+        }
 
         val player = directPlayer ?: controller
         player?.run {

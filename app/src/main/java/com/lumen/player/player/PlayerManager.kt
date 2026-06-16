@@ -25,7 +25,6 @@ import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.extractor.DefaultExtractorsFactory
-import androidx.media3.extractor.mkv.MatroskaExtractor
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -107,17 +106,13 @@ class PlayerManager @Inject constructor(
 
         // Custom extractors: skip heavy MKV cue reading at startup.
         // Cues index is at the end of the file — seeking to read it on a
-        // 1.7GB file adds 25-30s delay over content://. FLAG_DISABLE_SEEK_FOR_CUES
-        // skips this entirely. Seeking uses the file's own keyframe index
-        // built from SegmentInfo (duration) + Cluster headers, which works
-        // correctly for EXACT seeking on well-formed MKVs.
+        // 1.7GB file adds 25-30s delay over content://. Instead, we warm
+        // the last 2MB into OS page cache before playback (see PlayerController).
         // Do NOT set SubtitleParser.Factory.UNSUPPORTED — embedded subtitle
         // tracks must be fully parsed so the SeekMap includes their structure.
         // Text tracks are disabled at TrackSelector level and re-enabled when
         // user opens the subtitle panel (see selectTrack).
-        val extractorsFactory = DefaultExtractorsFactory().apply {
-            setMatroskaExtractorFlags(MatroskaExtractor.FLAG_DISABLE_SEEK_FOR_CUES)
-        }
+        val extractorsFactory = DefaultExtractorsFactory()
 
         val progressiveFactory = ProgressiveMediaSource.Factory(data, extractorsFactory)
             .setLoadErrorHandlingPolicy(mediaSourceLoadErrorHandlingPolicy)
@@ -128,7 +123,8 @@ class PlayerManager @Inject constructor(
         val mediaSourceFactory = object : MediaSource.Factory {
             override fun createMediaSource(mediaItem: MediaItem): MediaSource {
                 val mime = mediaItem.localConfiguration?.mimeType
-                return if (mime != null && (mime.startsWith("video/") || mime.startsWith("audio/"))) {
+                val hasSubs = mediaItem.localConfiguration?.subtitleConfigurations?.isNotEmpty() == true
+                return if (mime != null && (mime.startsWith("video/") || mime.startsWith("audio/")) && !hasSubs) {
                     progressiveFactory.createMediaSource(mediaItem)
                 } else {
                     streamingFactory.createMediaSource(mediaItem)
