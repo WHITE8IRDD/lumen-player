@@ -10,9 +10,6 @@ object Constants {
     /** Default seek nudge in milliseconds. */
     const val SEEK_INCREMENT_MS = 10_000L
 
-    /** OpenSubtitles.com API key – replace with your own from https://opensubtitles.com */
-    const val OPENSUBTITLES_API_KEY = ""
-
     val AVAILABLE_PLAYBACK_SPEEDS = floatArrayOf(
         0.25f, 0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f, 2.5f, 3f, 4f
     )

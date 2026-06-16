@@ -68,15 +68,13 @@ class LumenRenderersFactory(context: Context) : DefaultRenderersFactory(context)
         allowedVideoJoiningTimeMs: Long,
         out: ArrayList<Renderer>
     ) {
-        // Inject FFmpeg first (PREFER position) so it beats MediaCodec.
-        // If the AAR isn't on the classpath this is a silent no-op.
-        tryInjectFfmpegVideoRenderer(eventHandler, eventListener, allowedVideoJoiningTimeMs, out)
-        // Call parent with OFF so it NEVER duplicates our injection.
-        // The parent only adds MediaCodec renderers in OFF mode.
+        // MediaCodec first — hardware acceleration for H.264 / H.265 / VP9.
         super.buildVideoRenderers(
             context, EXTENSION_RENDERER_MODE_OFF, mediaCodecSelector, enableDecoderFallback,
             eventHandler, eventListener, allowedVideoJoiningTimeMs, out
         )
+        // FFmpeg last — fallback for codecs that lack a hardware decoder.
+        tryInjectFfmpegVideoRenderer(eventHandler, eventListener, allowedVideoJoiningTimeMs, out)
     }
 
     override fun buildAudioRenderers(
@@ -89,13 +87,13 @@ class LumenRenderersFactory(context: Context) : DefaultRenderersFactory(context)
         eventListener: AudioRendererEventListener,
         out: ArrayList<Renderer>
     ) {
-        // Inject FFmpeg first (PREFER position).
-        tryInjectFfmpegAudioRenderer(eventHandler, eventListener, audioSink, out)
-        // Parent adds MediaCodec-only when told OFF.
+        // MediaCodec first — hardware AAC / MP3 / FLAC / OPUS.
         super.buildAudioRenderers(
             context, EXTENSION_RENDERER_MODE_OFF, mediaCodecSelector, enableDecoderFallback,
             audioSink, eventHandler, eventListener, out
         )
+        // FFmpeg last — fallback for AC3 / EAC3 / DTS / TrueHD.
+        tryInjectFfmpegAudioRenderer(eventHandler, eventListener, audioSink, out)
     }
 
     private fun tryInjectFfmpegVideoRenderer(

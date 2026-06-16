@@ -67,7 +67,6 @@ class SettingsDataStore @Inject constructor(
         val BRIGHTNESS_MODE  = stringPreferencesKey("brightness_mode")
         val SUBTITLE_COLOR   = stringPreferencesKey("subtitle_color")
         val SUBTITLE_LANG    = stringPreferencesKey("subtitle_language")
-        val OPENSUBTITLES_KEY = stringPreferencesKey("opensubtitles_api_key")
         val AUTO_SCAN        = booleanPreferencesKey("auto_scan_on_startup")
         val SHOW_AUDIO       = booleanPreferencesKey("show_audio")
         val REPLAY_GAIN      = booleanPreferencesKey("replay_gain")
@@ -118,7 +117,6 @@ class SettingsDataStore @Inject constructor(
             brightnessMode = p[Keys.BRIGHTNESS_MODE] ?: "SYSTEM",
             subtitleColor = p[Keys.SUBTITLE_COLOR] ?: "WHITE",
             subtitleLanguage = p[Keys.SUBTITLE_LANG] ?: "English",
-            opensubtitlesApiKey = p[Keys.OPENSUBTITLES_KEY] ?: "",
             autoScanOnStartup = p[Keys.AUTO_SCAN] ?: true,
             showAudio = p[Keys.SHOW_AUDIO] ?: true,
             replayGain = p[Keys.REPLAY_GAIN] ?: false,
@@ -235,10 +233,6 @@ class SettingsDataStore @Inject constructor(
 
     suspend fun setSubtitleLanguage(v: String) {
         context.prefsDataStore.edit { it[Keys.SUBTITLE_LANG] = v }
-    }
-
-    suspend fun setOpensubtitlesApiKey(v: String) {
-        context.prefsDataStore.edit { it[Keys.OPENSUBTITLES_KEY] = v }
     }
 
     suspend fun setAutoScanOnStartup(v: Boolean) {

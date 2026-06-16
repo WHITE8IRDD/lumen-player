@@ -8,7 +8,10 @@ import android.provider.MediaStore
 import androidx.activity.result.IntentSenderRequest
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import androidx.media3.common.util.UnstableApi
+import com.lumen.player.core.util.PerfTimer
 import com.lumen.player.core.util.toMedia3Item
 import com.lumen.player.core.util.toMedia3Items
 import com.lumen.player.data.local.dao.MediaDao
@@ -33,6 +36,7 @@ import javax.inject.Inject
 @UnstableApi
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
+    @ApplicationContext private val appContext: Context,
     private val scanMedia: ScanMediaUseCase,
     private val controller: PlayerController,
     private val repository: MediaRepository,
@@ -46,6 +50,7 @@ class LibraryViewModel @Inject constructor(
 
     init {
         rescan()
+        controller.initialize()
     }
 
     val videoItems = repository.observeVideo()
@@ -74,7 +79,7 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun rescan() {
-        viewModelScope.launch {
+        viewModelScope.launch(Dispatchers.IO) {
             _isScanning.value = true
             runCatching { scanMedia().collect { } }
             _isScanning.value = false
@@ -83,16 +88,18 @@ class LibraryViewModel @Inject constructor(
 
     fun play(items: List<MediaItem>, startIndex: Int) {
         if (items.isEmpty()) return
-        controller.setQueue(items.toMedia3Items(), startIndex)
+        controller.setQueue(items.toMedia3Items(appContext), startIndex)
     }
 
     fun playAtIndex(items: List<MediaItem>, index: Int) {
         if (items.isEmpty() || index !in items.indices) return
         val item = items[index]
+        PerfTimer.start("USER_TAP")
+        PerfTimer.mark("1. User tapped: ${item.title}")
         viewModelScope.launch {
             val saved = runCatching { mediaDao.get(item.id)?.lastPositionMs ?: 0L }.getOrDefault(0L)
             val pos = if (saved > 5_000L) saved else 0L
-            controller.setQueue(items.toMedia3Items(), index, pos)
+            controller.setQueue(items.toMedia3Items(appContext), index, pos)
             runCatching { repository.incrementPlayCount(item.id) }
         }
     }
@@ -107,7 +114,7 @@ class LibraryViewModel @Inject constructor(
         if (selected.isEmpty()) return
         android.util.Log.d("ACTION", "playNext: ${selected.size} items")
         val idx = controller.currentQueueIndex()
-        val items = selected.toMedia3Items()
+        val items = selected.toMedia3Items(appContext)
         if (idx < 0) {
             controller.setQueue(items, 0)
         } else {
@@ -116,7 +123,7 @@ class LibraryViewModel @Inject constructor(
     }
 
     fun addToQueue(selected: List<MediaItem>) {
-        selected.forEach { controller.addToQueue(it.toMedia3Item()) }
+        selected.forEach { controller.addToQueue(it.toMedia3Item(appContext)) }
     }
 
     fun share(context: Context, selected: List<MediaItem>) {

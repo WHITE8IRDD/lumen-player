@@ -86,11 +86,12 @@ class PlayerViewModel @Inject constructor(
                 dateAdded = stream.dateAdded,
                 isVideo = true, lastPositionMs = 0L
             )
-            controller.setQueue(listOf(item.toMedia3Item()), 0, 0L)
+            controller.setQueue(listOf(item.toMedia3Item(getApplication())), 0, 0L)
         }
     }
 
     init {
+        com.lumen.player.core.util.PerfTimer.mark("3. PlayerViewModel init started")
         // Tick position every 200ms for smooth scrub bar.
         viewModelScope.launch {
             while (true) {
@@ -110,6 +111,7 @@ class PlayerViewModel @Inject constructor(
                 runCatching { repository.updateResumePosition(id, pos) }
             }
         }
+        com.lumen.player.core.util.PerfTimer.mark("3b. PlayerViewModel init done")
     }
 
     /** Called when the user navigates away from the player; persist last position. */

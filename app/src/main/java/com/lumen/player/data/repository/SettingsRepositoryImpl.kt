@@ -36,7 +36,6 @@ class SettingsRepositoryImpl @Inject constructor(
     override suspend fun setBrightnessMode(value: String) = store.setBrightnessMode(value)
     override suspend fun setSubtitleColor(value: String) = store.setSubtitleColor(value)
     override suspend fun setSubtitleLanguage(value: String) = store.setSubtitleLanguage(value)
-    override suspend fun setOpensubtitlesApiKey(value: String) = store.setOpensubtitlesApiKey(value)
     override suspend fun setAutoScanOnStartup(enabled: Boolean) = store.setAutoScanOnStartup(enabled)
     override suspend fun setShowAudio(enabled: Boolean) = store.setShowAudio(enabled)
     override suspend fun setReplayGain(enabled: Boolean) = store.setReplayGain(enabled)

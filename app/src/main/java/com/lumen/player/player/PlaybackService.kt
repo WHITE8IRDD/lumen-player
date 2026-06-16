@@ -39,6 +39,7 @@ class PlaybackService : MediaSessionService() {
     @Inject lateinit var playerManager: PlayerManager
     @Inject lateinit var equalizerController: EqualizerController
     @Inject lateinit var mediaRepository: MediaRepository
+    @Inject lateinit var controller: PlayerController
 
     private var mediaSession: MediaSession? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -46,6 +47,7 @@ class PlaybackService : MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
         val player: ExoPlayer = playerManager.build()
+        controller.directPlayer = player
         equalizerController.attach(player.audioSessionId)
 
         val sessionActivityPendingIntent = PendingIntent.getActivity(

@@ -1,20 +1,31 @@
 package com.lumen.player.player
 
 import android.content.Context
-import androidx.annotation.OptIn
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
+import androidx.media3.common.PlaybackException
 import androidx.media3.common.PlaybackParameters
+import androidx.media3.common.Player
+import androidx.media3.common.Tracks
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.common.MediaItem
+import androidx.media3.common.MimeTypes
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.exoplayer.DefaultLoadControl
-import androidx.media3.exoplayer.DefaultRenderersFactory
 import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.drm.DrmSessionManagerProvider
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.MediaSource
+import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
+import androidx.media3.extractor.DefaultExtractorsFactory
+import androidx.media3.extractor.mkv.MatroskaExtractor
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -44,28 +55,37 @@ class PlayerManager @Inject constructor(
     val trackSelector = DefaultTrackSelector(context).apply {
         setParameters(
             buildUponParameters()
-                .setPreferredAudioLanguage(null)
-                .setTunnelingEnabled(true)
+                .setPreferredAudioLanguage("en")
                 .setForceLowestBitrate(false)
                 .setForceHighestSupportedBitrate(false)
                 .setAllowVideoMixedMimeTypeAdaptiveness(true)
                 .setAllowVideoNonSeamlessAdaptiveness(true)
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
+                .setTrackTypeDisabled(C.TRACK_TYPE_METADATA, true)
         )
     }
 
     private val loadControl = DefaultLoadControl.Builder()
         .setBufferDurationsMs(
-            /* minBufferMs                 = */ 30_000,
-            /* maxBufferMs                 = */ 120_000,
-            /* bufferForPlaybackMs         = */ 1_500,
-            /* bufferForPlaybackAfterRebufferMs = */ 3_000
+            /* minBufferMs                 = */ 5_000,
+            /* maxBufferMs                 = */ 15_000,
+            /* bufferForPlaybackMs         = */ 500,
+            /* bufferForPlaybackAfterRebufferMs = */ 1_000
         )
         .setPrioritizeTimeOverSizeThresholds(true)
-        .setBackBuffer(
-            /* backBufferDurationMs          = */ 30_000,
-            /* retainBackBufferFromKeyframe  = */ true
-        )
+        .setTargetBufferBytes(C.LENGTH_UNSET)
         .build()
+
+    private var preWarmedPlayer: ExoPlayer? = null
+
+    fun preWarmPlayer() {
+        if (preWarmedPlayer != null) return
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            preWarmedPlayer = build()
+        } else {
+            Handler(Looper.getMainLooper()).post { preWarmedPlayer = build() }
+        }
+    }
 
     private val mediaSourceLoadErrorHandlingPolicy: LoadErrorHandlingPolicy =
         DefaultLoadErrorHandlingPolicy(/* minimumLoadableRetryCount = */ 5)
@@ -77,26 +97,60 @@ class PlayerManager @Inject constructor(
 
     @OptIn(UnstableApi::class)
     fun build(): ExoPlayer {
+        com.lumen.player.core.util.PerfTimer.mark("4a. build() called")
         val http = DefaultHttpDataSource.Factory()
             .setUserAgent("Lumen/1.0")
             .setAllowCrossProtocolRedirects(true)
             .setConnectTimeoutMs(15_000)
             .setReadTimeoutMs(30_000)
         val data = DefaultDataSource.Factory(context, http)
-        val mediaSourceFactory = DefaultMediaSourceFactory(data)
-            .setLoadErrorHandlingPolicy(mediaSourceLoadErrorHandlingPolicy)
 
-        // The renderers factory enables FFmpeg in PREFER mode and falls back
-        // to software decoders if hardware MediaCodec fails.
-        val renderers = LumenRenderersFactory(context).apply {
-            // Ensure the surface uses SurfaceView (lowest-latency hardware
-            // compositing path) — PlayerView defaults to SurfaceView; we
-            // only need to prevent the factory from forcing a TextureView.
-            setExtensionRendererMode(DefaultRenderersFactory.EXTENSION_RENDERER_MODE_PREFER)
+        // Custom extractors: skip heavy MKV cue reading at startup.
+        // Cues index is at the end of the file — seeking to read it on a
+        // 1.7GB file adds 25-30s delay over content://. FLAG_DISABLE_SEEK_FOR_CUES
+        // skips this entirely. Seeking uses the file's own keyframe index
+        // built from SegmentInfo (duration) + Cluster headers, which works
+        // correctly for EXACT seeking on well-formed MKVs.
+        // Do NOT set SubtitleParser.Factory.UNSUPPORTED — embedded subtitle
+        // tracks must be fully parsed so the SeekMap includes their structure.
+        // Text tracks are disabled at TrackSelector level and re-enabled when
+        // user opens the subtitle panel (see selectTrack).
+        val extractorsFactory = DefaultExtractorsFactory().apply {
+            setMatroskaExtractorFlags(MatroskaExtractor.FLAG_DISABLE_SEEK_FOR_CUES)
         }
 
-        return ExoPlayer.Builder(context)
-            .setRenderersFactory(renderers)
+        val progressiveFactory = ProgressiveMediaSource.Factory(data, extractorsFactory)
+            .setLoadErrorHandlingPolicy(mediaSourceLoadErrorHandlingPolicy)
+        // Fallback factory handles DASH/HLS/RTSP/SS streams.
+        val streamingFactory = DefaultMediaSourceFactory(data)
+            .setLoadErrorHandlingPolicy(mediaSourceLoadErrorHandlingPolicy)
+
+        val mediaSourceFactory = object : MediaSource.Factory {
+            override fun createMediaSource(mediaItem: MediaItem): MediaSource {
+                val mime = mediaItem.localConfiguration?.mimeType
+                return if (mime != null && (mime.startsWith("video/") || mime.startsWith("audio/"))) {
+                    progressiveFactory.createMediaSource(mediaItem)
+                } else {
+                    streamingFactory.createMediaSource(mediaItem)
+                }
+            }
+            override fun getSupportedTypes() = intArrayOf(C.TYPE_OTHER)
+            override fun setLoadErrorHandlingPolicy(policy: LoadErrorHandlingPolicy): MediaSource.Factory {
+                progressiveFactory.setLoadErrorHandlingPolicy(policy)
+                streamingFactory.setLoadErrorHandlingPolicy(policy)
+                return this
+            }
+            override fun setDrmSessionManagerProvider(provider: DrmSessionManagerProvider): MediaSource.Factory {
+                streamingFactory.setDrmSessionManagerProvider(provider)
+                return this
+            }
+        }
+
+        val renderersFactory = LumenRenderersFactory(context)
+
+        com.lumen.player.core.util.PerfTimer.mark("4b. Factories ready")
+
+        val player = (preWarmedPlayer ?: ExoPlayer.Builder(context, renderersFactory)
             .setTrackSelector(trackSelector)
             .setLoadControl(loadControl)
             .setMediaSourceFactory(mediaSourceFactory)
@@ -104,21 +158,51 @@ class PlayerManager @Inject constructor(
             .setWakeMode(C.WAKE_MODE_NETWORK)
             .setSeekBackIncrementMs(10_000)
             .setSeekForwardIncrementMs(10_000)
-            .build()
-            .apply {
-                setAudioAttributes(audioAttributes, /* handleAudioFocus = */ true)
-                // Explicitly set default playback parameters to 1x speed
-                // and 1x pitch. Without this the player inherits whatever
-                // parameters the previous session left behind.
-                playbackParameters = PlaybackParameters(/* speed = */ 1f, /* pitch = */ 1f)
-                // Pre-buffer the next queue item (Media3 1.5+; silently
-                // no-op on 1.4.x via reflection).
-                runCatching {
-                    val m = ExoPlayer::class.java.getMethod(
-                        "setNextMediaItemPreloadEnabled", Boolean::class.javaPrimitiveType
-                    )
-                    m.invoke(this, true)
+            .build()).also { preWarmedPlayer = null }
+
+        com.lumen.player.core.util.PerfTimer.mark("4c. ExoPlayer built")
+
+        player.apply {
+            setAudioAttributes(audioAttributes, /* handleAudioFocus = */ true)
+            playbackParameters = PlaybackParameters(/* speed = */ 1f, /* pitch = */ 1f)
+            trackSelectionParameters = trackSelectionParameters
+                .buildUpon()
+                .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
+                .clearOverridesOfType(C.TRACK_TYPE_AUDIO)
+                .build()
+            setVideoChangeFrameRateStrategy(
+                C.VIDEO_CHANGE_FRAME_RATE_STRATEGY_ONLY_IF_SEAMLESS
+            )
+            addListener(object : Player.Listener {
+                override fun onPlaybackStateChanged(state: Int) {
+                    val name = when (state) {
+                        Player.STATE_IDLE -> "IDLE"
+                        Player.STATE_BUFFERING -> "BUFFERING"
+                        Player.STATE_READY -> "READY"
+                        Player.STATE_ENDED -> "ENDED"
+                        else -> "UNKNOWN"
+                    }
+                    com.lumen.player.core.util.PerfTimer.mark("6. Player state → $name")
                 }
-            }
+                override fun onIsPlayingChanged(isPlaying: Boolean) {
+                    com.lumen.player.core.util.PerfTimer.mark("7. isPlaying → $isPlaying")
+                }
+                override fun onTracksChanged(tracks: Tracks) {
+                    com.lumen.player.core.util.PerfTimer.mark("8. onTracksChanged: ${tracks.groups.size} groups")
+                    tracks.groups.forEach { group ->
+                        val track = group.getTrackFormat(0)
+                        Log.d("LumenAudio",
+                            "type=${group.type} mime=${track.sampleMimeType} " +
+                            "sel=${group.isTrackSelected(0)}")
+                    }
+                }
+                override fun onPlayerError(error: PlaybackException) {
+                    Log.e("LumenAudio", "Player error: ${error.errorCodeName}", error)
+                    com.lumen.player.core.util.PerfTimer.mark("ERROR: ${error.errorCodeName}")
+                }
+            })
+        }
+
+        return player
     }
 }

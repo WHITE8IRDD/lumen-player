@@ -108,7 +108,6 @@ fun SettingsScreen(
     var showLanguagePicker by remember { mutableStateOf(false) }
     var showSubtitleDelayDialog by remember { mutableStateOf(false) }
     var showSubtitleTextSizeDialog by remember { mutableStateOf(false) }
-    var showOpenSubsKeyDialog by remember { mutableStateOf(false) }
     var showClearCacheDialog by remember { mutableStateOf(false) }
     var showResetSettingsDialog by remember { mutableStateOf(false) }
     var showResetOnboardingDialog by remember { mutableStateOf(false) }
@@ -196,8 +195,6 @@ fun SettingsScreen(
                 SettingsClickableRow(title = "Default delay", subtitle = "${s.subtitleDelayUs / 1000}ms", onClick = { showSubtitleDelayDialog = true })
                 SettingsDivider()
                 SettingsClickableRow(title = "Default language", subtitle = s.subtitleLanguage, onClick = { showLanguagePicker = true })
-                SettingsDivider()
-                SettingsClickableRow(title = "Opensubtitles API key", subtitle = if (s.opensubtitlesApiKey.isNotEmpty()) "********" else "Not set", onClick = { showOpenSubsKeyDialog = true })
             }
         }
         SettingsDivider()
@@ -490,15 +487,6 @@ fun SettingsScreen(
             currentDelayUs = s.subtitleDelayUs,
             onDismiss = { showSubtitleDelayDialog = false },
             onConfirm = { viewModel.setSubtitleDelayUs(it); showSubtitleDelayDialog = false }
-        )
-    }
-    if (showOpenSubsKeyDialog) {
-        LumenInputDialog(
-            onDismiss = { showOpenSubsKeyDialog = false },
-            onConfirm = { viewModel.setOpensubtitlesApiKey(it); showOpenSubsKeyDialog = false },
-            title = "Opensubtitles API key",
-            initialValue = s.opensubtitlesApiKey,
-            label = "api key"
         )
     }
     if (showClearCacheDialog) {

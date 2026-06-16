@@ -4,9 +4,11 @@ import com.lumen.player.data.metadata.MediaTitleParser
 import com.lumen.player.data.remote.tmdb.CompositeMetadataResolver
 import com.lumen.player.data.repository.MediaRepositoryImpl
 import com.lumen.player.data.repository.SettingsRepositoryImpl
+import com.lumen.player.data.repository.SubtitleRepositoryImpl
 import com.lumen.player.domain.repository.MediaRepository
 import com.lumen.player.domain.repository.MetadataResolver
 import com.lumen.player.domain.repository.SettingsRepository
+import com.lumen.player.domain.repository.SubtitleRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn
@@ -25,4 +27,7 @@ abstract class RepositoryModule {
 
     @Binds @Singleton
     abstract fun bindMetadataResolver(impl: CompositeMetadataResolver): MetadataResolver
+
+    @Binds @Singleton
+    abstract fun bindSubtitleRepository(impl: SubtitleRepositoryImpl): SubtitleRepository
 }

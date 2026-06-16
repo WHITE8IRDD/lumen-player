@@ -13,6 +13,7 @@ import androidx.media3.common.TrackGroup
 import androidx.media3.common.TrackSelectionOverride
 import androidx.media3.common.TrackSelectionParameters
 import androidx.media3.common.Tracks
+import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
@@ -32,6 +33,7 @@ class PlayerController @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     private var controller: MediaController? = null
+    var directPlayer: ExoPlayer? = null
     val isConnected: Boolean get() = controller != null
 
     private val _state = MutableStateFlow(PlaybackState())
@@ -63,12 +65,14 @@ class PlayerController @Inject constructor(
 
     fun initialize() {
         if (controller != null) return
+        com.lumen.player.core.util.PerfTimer.mark("4d. initialize() connecting to PlaybackService")
         Log.d("PlayerCtrl", "initialize() — connecting to PlaybackService")
         val token = SessionToken(context, ComponentName(context, PlaybackService::class.java))
         val future = MediaController.Builder(context, token).buildAsync()
         future.addListener({
             controller = future.get().also { c ->
                 Log.d("PlayerCtrl", "initialize() — connected, controller=${System.identityHashCode(c)}")
+                com.lumen.player.core.util.PerfTimer.mark("4e. MediaController connected")
                 c.addListener(playerListener)
                 pushState()
             }
@@ -120,24 +124,45 @@ class PlayerController @Inject constructor(
     }
 
     fun setQueue(items: List<MediaItem>, startIndex: Int, positionMs: Long = 0L) {
+        com.lumen.player.core.util.PerfTimer.mark("5a. setQueue items=${items.size} start=$startIndex")
         Log.d("PlayerCtrl", "setQueue() items=${items.size} start=$startIndex controller=${controller != null}")
-        controller?.run {
-            setMediaItems(items, startIndex, positionMs)
-            prepare()
-            playWhenReady = true
+        val current = items.getOrNull(startIndex) ?: return
+
+        // Storage location check
+        val uri = current.localConfiguration?.uri?.toString() ?: ""
+        val storageHint = when {
+            uri.contains("/storage/emulated/0/") -> "Internal"
+            uri.contains("/storage/") -> "SD/USB (could be slow)"
+            uri.startsWith("http") -> "Network"
+            else -> "Unknown: $uri"
         }
-        val item = items.getOrNull(startIndex)
+        com.lumen.player.core.util.PerfTimer.mark("STORAGE: $storageHint mime=${current.localConfiguration?.mimeType}")
+
+        val player = directPlayer ?: controller
+        player?.run {
+            com.lumen.player.core.util.PerfTimer.mark("5b. calling setMediaItem")
+            setMediaItem(current, positionMs)
+            com.lumen.player.core.util.PerfTimer.mark("5c. setMediaItem done, calling prepare()")
+            prepare()
+            com.lumen.player.core.util.PerfTimer.mark("5d. prepare() returned")
+            playWhenReady = true
+            com.lumen.player.core.util.PerfTimer.mark("5e. playWhenReady=true")
+            val after = items.subList(startIndex + 1, items.size)
+            val before = items.subList(0, startIndex)
+            addMediaItems(1, after)
+            addMediaItems(0, before)
+        }
         val newState = PlaybackState(
             isPlaying = true,
             playbackState = Player.STATE_READY,
-            currentItemId = item?.mediaId,
-            title = item?.mediaMetadata?.title?.toString().orEmpty(),
-            artist = item?.mediaMetadata?.artist?.toString().orEmpty(),
-            album = item?.mediaMetadata?.albumTitle?.toString().orEmpty(),
-            artworkUri = item?.mediaMetadata?.artworkUri,
-            durationMs = (item?.mediaMetadata?.durationMs ?: 0L).coerceAtLeast(0L),
+            currentItemId = current.mediaId,
+            title = current.mediaMetadata?.title?.toString().orEmpty(),
+            artist = current.mediaMetadata?.artist?.toString().orEmpty(),
+            album = current.mediaMetadata?.albumTitle?.toString().orEmpty(),
+            artworkUri = current.mediaMetadata?.artworkUri,
+            durationMs = (current.mediaMetadata?.durationMs ?: 0L).coerceAtLeast(0L),
             positionMs = positionMs,
-            isVideo = item?.mediaMetadata?.mediaType == MediaMetadata.MEDIA_TYPE_VIDEO,
+            isVideo = current.mediaMetadata?.mediaType == MediaMetadata.MEDIA_TYPE_VIDEO,
             hasNext = items.size > startIndex + 1,
             hasPrevious = startIndex > 0
         )
@@ -177,7 +202,7 @@ class PlayerController @Inject constructor(
         // Persist preference in DataStore and re-apply on next service start.
     }
 
-    fun getPlayer(): Player? = controller
+    fun getPlayer(): Player? = directPlayer ?: controller
 
     fun setVolume(v: Float) { controller?.volume = v.coerceIn(0f, 1f) }
 
@@ -191,19 +216,25 @@ class PlayerController @Inject constructor(
 
     fun selectTrack(groupId: String?, trackIndex: Int) {
         val c = controller ?: return
-        val params = c.trackSelectionParameters.buildUpon().build()
         if (groupId == null) {
             c.trackSelectionParameters = TrackSelectionParameters.Builder(context)
                 .setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, false)
+                .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
                 .clearOverridesOfType(C.TRACK_TYPE_AUDIO)
+                .clearOverridesOfType(C.TRACK_TYPE_TEXT)
                 .build()
             return
         }
         val tg = c.currentTracks.groups.firstOrNull { it.mediaTrackGroup.id == groupId }?.mediaTrackGroup
         if (tg == null) return
-        c.trackSelectionParameters = c.trackSelectionParameters.buildUpon()
+        val params = c.trackSelectionParameters.buildUpon()
             .setOverrideForType(TrackSelectionOverride(tg, trackIndex))
-            .build()
+        // Re-enable text tracks when user selects a subtitle — they're suppressed
+        // at startup for faster preparation.
+        if (tg.type == C.TRACK_TYPE_TEXT) {
+            params.setTrackTypeDisabled(C.TRACK_TYPE_TEXT, false)
+        }
+        c.trackSelectionParameters = params.build()
     }
 
     /**

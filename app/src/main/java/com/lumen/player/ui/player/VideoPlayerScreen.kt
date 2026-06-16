@@ -2,6 +2,7 @@ package com.lumen.player.ui.player
 
 import android.app.Activity
 import android.app.PictureInPictureParams
+import android.content.res.Configuration
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ActivityInfo
@@ -12,6 +13,8 @@ import android.provider.Settings
 import android.util.Rational
 import android.view.WindowManager
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.core.animateFloat
@@ -80,6 +83,7 @@ import androidx.compose.material.icons.rounded.SkipNext
 import androidx.compose.material.icons.rounded.SkipPrevious
 import androidx.compose.material.icons.rounded.Speed
 import androidx.compose.material.icons.rounded.CameraAlt
+import androidx.compose.material.icons.rounded.Description
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Info
@@ -136,6 +140,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -164,7 +169,12 @@ import com.lumen.player.ui.components.FloatingGlassCard
 import com.lumen.player.ui.components.LumenConfirmationDialog
 import com.lumen.player.ui.library.StreamsViewModel
 import com.lumen.player.ui.equalizer.EqualizerViewModel
-import com.lumen.player.ui.subtitles.SubtitlePanelSheet
+import com.lumen.player.ui.subtitles.SubtitleMenu
+import com.lumen.player.ui.subtitles.SubtitleDelayDialog
+import com.lumen.player.ui.subtitles.SubtitlePanelContent
+import com.lumen.player.ui.subtitles.SubtitleSearchForm
+import com.lumen.player.ui.subtitles.EmbeddedTrack
+import com.lumen.player.ui.subtitles.SubtitleHash
 import kotlin.math.abs
 import java.io.File
 import kotlinx.coroutines.delay
@@ -177,6 +187,8 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import android.annotation.SuppressLint
+import java.nio.ByteBuffer
+import java.nio.charset.CodingErrorAction
 import android.content.ContentValues
 import android.graphics.Bitmap
 import android.view.TextureView
@@ -199,6 +211,7 @@ fun VideoPlayerScreen(
     onEnterPip: () -> Unit = {},
     viewModel: PlayerViewModel = hiltViewModel()
 ) {
+    LaunchedEffect(Unit) { com.lumen.player.core.util.PerfTimer.mark("2. VideoPlayerScreen entered") }
     val context = LocalContext.current
     val player = viewModel.exoPlayer
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -216,7 +229,11 @@ fun VideoPlayerScreen(
     var isUnlocking by remember { mutableStateOf(false) }
     var isLockIconVisible by remember { mutableStateOf(true) }
     var lockHintShown by remember { mutableStateOf(false) }
-    var showSubtitles by remember { mutableStateOf(false) }
+    var showSubMenu by remember { mutableStateOf(false) }
+    var showDelayDialog by remember { mutableStateOf(false) }
+    var showDownloadScreen by remember { mutableStateOf(false) }
+    var showSearchForm by remember { mutableStateOf(false) }
+    var subtitleDelayMs by remember { mutableStateOf(0) }
     var subtitleDelayUs by remember { mutableStateOf(0L) }
     var menuExpanded by remember { mutableStateOf(false) }
     var seekDragging by remember { mutableStateOf(false) }
@@ -231,6 +248,9 @@ fun VideoPlayerScreen(
     var showSkipMenu by remember { mutableStateOf(false) }
     var showSpeedMenu by remember { mutableStateOf(false) }
     var showEqPanel by remember { mutableStateOf(false) }
+    var showLocalSubsSheet by remember { mutableStateOf(false) }
+    var appliedSubtitleName by remember { mutableStateOf<String?>(null) }
+    var downloadPanelLanguage by remember { mutableStateOf("en") }
     val playerViewRef = remember { mutableStateOf<PlayerView?>(null) }
     val screenshotScope = rememberCoroutineScope()
 
@@ -383,6 +403,32 @@ fun VideoPlayerScreen(
         if (!locked) {
             lockHintShown = false
         }
+    }
+
+    // ---- Player error listener: recover from subtitle crashes ----
+    DisposableEffect(player) {
+        val listener = object : androidx.media3.common.Player.Listener {
+            override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
+                android.util.Log.e("SubFix", "Player error: ${error.errorCodeName}", error)
+                if (error.errorCodeName.contains("SUBTITLE") || error.message?.contains("subtitle", ignoreCase = true) == true) {
+                    android.util.Log.d("SubFix", "Subtitle error detected — disabling text track")
+                    player?.let { p ->
+                        p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+                            .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, true)
+                            .build()
+                    }
+                    val item = player?.currentMediaItem ?: return@onPlayerError
+                    val pos = player?.currentPosition ?: return@onPlayerError
+                    val cleanItem = item.buildUpon().setSubtitleConfigurations(emptyList()).build()
+                    player?.setMediaItem(cleanItem, pos)
+                    player?.prepare()
+                    player?.play()
+                    android.widget.Toast.makeText(context, "Subtitle caused error, removed", android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+        player?.addListener(listener)
+        onDispose { player?.removeListener(listener) }
     }
 
     // ---- Auto-hide lock icon after 1s when locked ----
@@ -600,7 +646,7 @@ fun VideoPlayerScreen(
                                 Icon(Icons.Rounded.LiveTv, "Channels", tint = Color.White, modifier = Modifier.size(22.dp))
                             }
                         }
-                        IconButton(onClick = { showSubtitles = true }) {
+                        IconButton(onClick = { showSubMenu = true }) {
                             Icon(Icons.Rounded.ClosedCaption, "Subtitles", tint = Color.White, modifier = Modifier.size(22.dp))
                         }
                         IconButton(onClick = {
@@ -672,7 +718,7 @@ fun VideoPlayerScreen(
                                 DropdownMenuItem(
                                     text = { Text("Subtitles", color = Color.White, fontSize = 15.sp) },
                                     leadingIcon = { Icon(Icons.Rounded.ClosedCaption, null, tint = Color.White.copy(alpha = 0.85f), modifier = Modifier.size(22.dp)) },
-                                    onClick = { menuExpanded = false; showSubtitles = true }
+                                    onClick = { menuExpanded = false; showSubMenu = true }
                                 )
                                 DropdownMenuItem(
                                     text = { Text("Equalizer", color = Color.White, fontSize = 15.sp) },
@@ -771,7 +817,7 @@ fun VideoPlayerScreen(
                         currentAspectLabel = aspectLabel(resizeMode)
                         showAspectBadge = true
                     },
-                    onOpenSubtitles = { showSubtitles = true },
+                    onOpenSubtitles = { showSubMenu = true },
                     onToggleLock = {
                         if (!locked) locked = true
                     },
@@ -1110,51 +1156,468 @@ fun VideoPlayerScreen(
             }
         }
 
-        // === Subtitle panel (3 sections: embedded, local files, OpenSubtitles download) ===
-        if (showSubtitles) {
-            val currentUri = player?.currentMediaItem?.localConfiguration?.uri
-            val activeUri = resolveActiveExternalSubtitleUri(player)
-                ?: currentSubtitleFilePath(context)
-            val initialQuery = remember(currentUri) {
-                if (currentUri != null) {
-                    val name = com.lumen.player.ui.subtitles.SubtitleHash.getFileName(context, currentUri)
-                        ?: currentUri.lastPathSegment?.substringAfterLast('/')
-                        ?: ""
-                    name.substringBeforeLast('.').trim()
-                } else ""
+        // === VLC-style subtitle system ===
+        val scope = rememberCoroutineScope()
+        val currentUri = player?.currentMediaItem?.localConfiguration?.uri
+        val subtitleViewModel: com.lumen.player.ui.subtitles.SubtitleViewModel = hiltViewModel()
+        val downloadState by subtitleViewModel.downloadState.collectAsStateWithLifecycle()
+
+        val embeddedTracks = remember(tracks) {
+            buildEmbeddedTrackList(tracks)
+        }
+
+        val activeTrackId = remember(tracks) {
+            tracks?.groups?.firstOrNull { g -> g.type == C.TRACK_TYPE_TEXT }
+                ?.let { group ->
+                    for (i in 0 until group.length) {
+                        if (group.isTrackSelected(i)) return@let "${group.mediaTrackGroup.id}.$i"
+                    }
+                    null
+                }
+        }
+
+        val currentFilePath = remember(currentUri) {
+            currentUri?.let { uri ->
+                if (uri.scheme == "file") uri.path
+                else try {
+                    var p: String? = null
+                    context.contentResolver.query(uri, arrayOf(android.provider.MediaStore.Video.VideoColumns.DATA), null, null, null)?.use {
+                        if (it.moveToFirst()) p = it.getString(0)
+                    }
+                    p
+                } catch (_: Exception) { null }
             }
-            SubtitlePanelSheet(
-                tracks = tracks,
-                videoUri = currentUri,
-                activeSubtitleUri = activeUri,
-                subtitleDelayUs = subtitleDelayUs,
-                initialSearchQuery = initialQuery,
-                onDismiss = { showSubtitles = false },
-                onPickEmbedded = { gid, idx ->
-                    viewModel.selectTrack(gid, idx)
-                    showSubtitles = false
-                },
-                onDisableEmbedded = {
+        }
+
+        val initialQuery = remember(currentUri, currentFilePath) {
+            val raw = if (currentUri != null) {
+                SubtitleHash.getFileName(context, currentUri)
+                    ?: currentUri.lastPathSegment?.substringAfterLast('/')
+                    ?: ""
+            } else ""
+            com.lumen.player.ui.subtitles.cleanTitleForSearch(raw)
+        }
+
+        val localSubs = remember(currentFilePath) {
+            com.lumen.player.ui.subtitles.detectLocalSubtitles(currentFilePath)
+        }
+
+        fun detectLanguageFromFilename(name: String): String {
+            val lower = name.lowercase()
+            return when {
+                lower.contains(".eng.") || lower.contains("english") || lower.contains("_en") || lower.startsWith("eng") -> "en"
+                lower.contains(".ara.") || lower.contains("arabic") || lower.contains("_ar") -> "ar"
+                lower.contains(".spa.") || lower.contains("spanish") || lower.contains(".lat.") || lower.contains("_es") -> "es"
+                lower.contains(".fre.") || lower.contains(".fra.") || lower.contains("french") || lower.contains("_fr") -> "fr"
+                lower.contains(".ger.") || lower.contains(".deu.") || lower.contains("german") || lower.contains("_de") -> "de"
+                lower.contains(".ita.") || lower.contains("italian") || lower.contains("_it") -> "it"
+                lower.contains(".kor.") || lower.contains("korean") || lower.contains("_ko") -> "ko"
+                lower.contains(".chi.") || lower.contains(".zho.") || lower.contains("chinese") -> "zh"
+                lower.contains(".jpn.") || lower.contains("japanese") -> "ja"
+                else -> "en"
+            }
+        }
+
+        fun scoreContent(content: String, expectArabic: Boolean, expectLatin: Boolean): Int {
+            if (content.isBlank()) return 0
+            var score = 0; var arabicCount = 0; var latinCount = 0; var asciiCount = 0; var replacementCount = 0; var weirdCount = 0
+            for (c in content) {
+                when {
+                    c == '\uFFFD' -> replacementCount++
+                    c.code in 0x0600..0x06FF -> arabicCount++
+                    c.code in 0x00C0..0x017F -> latinCount++
+                    c.code in 0x0020..0x007E -> asciiCount++
+                    c.code in 0x0080..0x00BF -> weirdCount++
+                    c == '\n' || c == '\r' || c == '\t' -> asciiCount++
+                    c.code < 0x20 -> weirdCount++
+                }
+            }
+            score += asciiCount
+            if (expectArabic && arabicCount > 0) score += arabicCount * 3
+            if (expectLatin && latinCount > 0) score += latinCount * 3
+            score -= replacementCount * 10
+            score -= weirdCount * 2
+            if (expectLatin && arabicCount > asciiCount / 10) score -= arabicCount * 5
+            if (expectArabic && latinCount > arabicCount / 2 && arabicCount > 0) score -= latinCount * 2
+            return score.coerceAtLeast(0)
+        }
+
+        fun tryDecodeStrict(bytes: ByteArray, charset: java.nio.charset.Charset): String? {
+            return try {
+                val result = charset.newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString()
+                if (result.contains('\uFFFD')) null else result
+            } catch (e: Exception) { null }
+        }
+
+        fun convertToUtf8IfNeeded(file: java.io.File): java.io.File {
+            return try {
+                val bytes = file.readBytes()
+                val filename = file.name.lowercase()
+                android.util.Log.d("SubFix", "═══ Encoding detection ═══")
+                android.util.Log.d("SubFix", "File: ${file.name}, size: ${bytes.size}")
+                val utf8Result = tryDecodeStrict(bytes, Charsets.UTF_8)
+                if (utf8Result != null) {
+                    android.util.Log.d("SubFix", "Valid UTF-8 — using original file")
+                    return file
+                }
+                android.util.Log.d("SubFix", "Not valid UTF-8, scoring alternatives...")
+                val isArabicHint = filename.contains(".ara") || filename.contains("arabic") || filename.contains(".ar.") || filename.startsWith("ar")
+                val isFrenchHint = filename.contains(".fre") || filename.contains(".fra") || filename.contains("french") || filename.contains(".fr.") || filename.startsWith("fr")
+                val isSpanishHint = filename.contains(".spa") || filename.contains("spanish") || filename.contains(".es.") || filename.contains(".lat") || filename.startsWith("es")
+                val isGermanHint = filename.contains(".ger") || filename.contains(".deu") || filename.contains("german") || filename.contains(".de.")
+                val isLatinHint = isFrenchHint || isSpanishHint || isGermanHint
+                android.util.Log.d("SubFix", "Hints: AR=$isArabicHint FR=$isFrenchHint ES=$isSpanishHint DE=$isGermanHint")
+                val encodings = when {
+                    isArabicHint -> listOf("Windows-1256", "ISO-8859-6", "UTF-8", "Windows-1252")
+                    isLatinHint -> listOf("Windows-1252", "ISO-8859-1", "ISO-8859-15", "UTF-8")
+                    else -> listOf("Windows-1252", "Windows-1256", "ISO-8859-1", "ISO-8859-6")
+                }
+                data class Score(val encoding: String, val content: String, val score: Int)
+                val candidates = mutableListOf<Score>()
+                for (encoding in encodings) {
+                    try {
+                        val charset = java.nio.charset.Charset.forName(encoding)
+                        val decoder = charset.newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT)
+                        val content = try { decoder.decode(ByteBuffer.wrap(bytes)).toString() } catch (e: Exception) { String(bytes, charset) }
+                        val score = scoreContent(content, isArabicHint, isLatinHint)
+                        android.util.Log.d("SubFix", "$encoding score: $score")
+                        candidates.add(Score(encoding, content, score))
+                    } catch (e: Exception) { android.util.Log.w("SubFix", "$encoding decode failed") }
+                }
+                val best = candidates.maxByOrNull { it.score }
+                if (best == null || best.score < 10) {
+                    android.util.Log.w("SubFix", "No good encoding found, using original")
+                    return file
+                }
+                android.util.Log.d("SubFix", "WINNER: ${best.encoding} (score=${best.score})")
+                val outFile = java.io.File(file.parent, "utf8_${file.name}")
+                outFile.writeText(best.content, Charsets.UTF_8)
+                android.util.Log.d("SubFix", "Saved UTF-8 to: ${outFile.absolutePath}")
+                outFile
+            } catch (e: Exception) { android.util.Log.e("SubFix", "Encoding detection exception", e); file }
+        }
+
+        fun isValidSubtitleFile(file: java.io.File): Boolean {
+            return try {
+                if (!file.exists()) return false
+                if (file.length() == 0L) return false
+                if (file.length() > 2_000_000L) { android.util.Log.w("SubFix", "File too large: ${file.length()}"); return false }
+                val sample = file.readBytes().take(500).toByteArray()
+                val text = String(sample, Charsets.UTF_8)
+                when (file.extension.lowercase()) {
+                    "srt" -> {
+                        val hasNumber = text.lines().any { it.trim().matches(Regex("^\\d+$")) }
+                        val hasTimestamp = text.contains(" --> ")
+                        if (!hasNumber || !hasTimestamp) { android.util.Log.w("SubFix", "Invalid SRT format"); return false }
+                    }
+                    "vtt" -> { if (!text.startsWith("WEBVTT")) { android.util.Log.w("SubFix", "Invalid VTT format"); return false } }
+                }
+                true
+            } catch (e: Exception) { android.util.Log.e("SubFix", "Validation failed", e); false }
+        }
+
+        fun showErrorToast(msg: String) {
+            android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+        }
+
+        fun applySubtitleFile(file: java.io.File) {
+            android.util.Log.d("SubFix", "═══ applySubtitleFile START ═══")
+
+            if (!isValidSubtitleFile(file)) {
+                android.util.Log.e("SubFix", "FAIL: invalid subtitle file")
+                showErrorToast("Invalid subtitle file")
+                return
+            }
+
+            try {
+                val safeFile = convertToUtf8IfNeeded(file)
+                android.util.Log.d("SubFix", "Using file: ${safeFile.absolutePath}")
+
+                val p = player
+                android.util.Log.d("SubFix", "4. player: $p")
+                if (p == null) { android.util.Log.e("SubFix", "FAIL at step 4: player null"); return }
+
+                if (!safeFile.exists()) { android.util.Log.e("SubFix", "FAIL at step 5: file not found"); return }
+                if (safeFile.length() == 0L) { android.util.Log.e("SubFix", "FAIL at step 5: file empty"); return }
+                android.util.Log.d("SubFix", "5. file exists and non-empty")
+
+                val mimeType = when (safeFile.extension.lowercase()) {
+                    "srt" -> androidx.media3.common.MimeTypes.APPLICATION_SUBRIP
+                    "vtt" -> androidx.media3.common.MimeTypes.TEXT_VTT
+                    "ass", "ssa" -> androidx.media3.common.MimeTypes.TEXT_SSA
+                    else -> androidx.media3.common.MimeTypes.APPLICATION_SUBRIP
+                }
+                val language = detectLanguageFromFilename(safeFile.name)
+                val fileUri = android.net.Uri.fromFile(safeFile)
+                android.util.Log.d("SubFix", "6. fileUri: $fileUri MimeType: $mimeType Language: $language")
+
+                val subtitleConfig = androidx.media3.common.MediaItem.SubtitleConfiguration.Builder(fileUri)
+                    .setMimeType(mimeType)
+                    .setLanguage(language)
+                    .setSelectionFlags(androidx.media3.common.C.SELECTION_FLAG_DEFAULT)
+                    .setRoleFlags(androidx.media3.common.C.ROLE_FLAG_SUBTITLE)
+                    .build()
+                android.util.Log.d("SubFix", "7. subtitleConfig built")
+
+                val currentItem = p.currentMediaItem
+                android.util.Log.d("SubFix", "8. currentItem: $currentItem")
+                if (currentItem == null) { android.util.Log.e("SubFix", "FAIL at step 8: no media item"); return }
+
+                val currentPosition = p.currentPosition
+                val wasPlaying = p.isPlaying
+                android.util.Log.d("SubFix", "9. pos=$currentPosition playing=$wasPlaying")
+
+                val newItem = currentItem.buildUpon().setSubtitleConfigurations(listOf(subtitleConfig)).build()
+                val subCount = newItem.localConfiguration?.subtitleConfigurations?.size
+                android.util.Log.d("SubFix", "10. newItem built, subs: $subCount")
+
+                p.setMediaItem(newItem, currentPosition)
+                android.util.Log.d("SubFix", "11. setMediaItem done")
+
+                p.prepare()
+                android.util.Log.d("SubFix", "12. prepare done")
+
+                p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+                    .setPreferredTextLanguage(language)
+                    .setSelectUndeterminedTextLanguage(true)
+                    .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, false)
+                    .build()
+                android.util.Log.d("SubFix", "13. track params set after prepare")
+
+                if (wasPlaying) p.play()
+                appliedSubtitleName = safeFile.name
+                android.util.Log.d("SubFix", "14. apply complete, applied: $appliedSubtitleName")
+
+            } catch (e: Exception) {
+                android.util.Log.e("SubFix", "Apply crashed", e)
+                showErrorToast("Subtitle file is corrupted")
+                player?.let { p ->
+                    p.trackSelectionParameters = p.trackSelectionParameters.buildUpon()
+                        .setTrackTypeDisabled(androidx.media3.common.C.TRACK_TYPE_TEXT, true)
+                        .build()
+                }
+            }
+        }
+
+        LaunchedEffect(Unit) {
+            subtitleViewModel.onApplySubtitle = { file ->
+                android.util.Log.d("SubFix", "Callback fired with: ${file.name}")
+                applySubtitleFile(file)
+            }
+        }
+
+        DisposableEffect(Unit) {
+            onDispose { subtitleViewModel.onApplySubtitle = null }
+        }
+
+        val subtitleFilePicker = rememberLauncherForActivityResult(
+            contract = ActivityResultContracts.OpenDocument(),
+            onResult = { uri ->
+                if (uri == null) return@rememberLauncherForActivityResult
+                scope.launch(Dispatchers.IO) {
+                    try {
+                        val fileName = SubtitleHash.getFileName(context, uri)
+                            ?: "subtitle_${System.currentTimeMillis()}.srt"
+                        val destDir = java.io.File(context.getExternalFilesDir(null), "subtitles")
+                        destDir.mkdirs()
+                        val destFile = java.io.File(destDir, fileName)
+                        context.contentResolver.openInputStream(uri)?.use { input ->
+                            destFile.outputStream().use { output -> input.copyTo(output) }
+                        }
+                        withContext(Dispatchers.Main) {
+                            val mime = detectMime(destFile.name)
+                            viewModel.addSubtitle(android.net.Uri.fromFile(destFile), mime)
+                            android.widget.Toast.makeText(context, "Subtitle applied", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    } catch (e: Exception) {
+                        withContext(Dispatchers.Main) {
+                            android.widget.Toast.makeText(context, "Failed: ${e.message}", android.widget.Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                }
+            }
+        )
+
+        LaunchedEffect(showDownloadScreen) {
+            if (showDownloadScreen && initialQuery.isNotBlank()) {
+                val file = currentFilePath?.let { java.io.File(it) }
+                subtitleViewModel.searchByFile(file, initialQuery, "en")
+            }
+        }
+
+        fun applyLocalSubtitleFile(file: java.io.File) {
+            android.util.Log.d("SubFix", "=== applyLocalSubtitle called ===")
+            android.util.Log.d("SubFix", "1. File: ${file.absolutePath}")
+            android.util.Log.d("SubFix", "2. File exists: ${file.exists()}")
+            android.util.Log.d("SubFix", "3. File size: ${file.length()}")
+            android.util.Log.d("SubFix", "4. Player state: ${player?.playbackState}")
+            applySubtitleFile(file)
+        }
+
+        if (showSubMenu) {
+            SubtitleMenu(
+                visible = showSubMenu,
+                embeddedTracks = embeddedTracks,
+                activeTrackId = activeTrackId,
+                onDismiss = { showSubMenu = false },
+                onDisable = {
                     player?.trackSelectionParameters?.let { p ->
                         player.trackSelectionParameters = p.buildUpon()
                             .setTrackTypeDisabled(C.TRACK_TYPE_TEXT, true)
                             .build()
                     }
-                    showSubtitles = false
                 },
-                onPickLocal = { sub ->
-                    viewModel.addSubtitle(sub.uri, sub.mimeType)
-                    showSubtitles = false
+                onSelectTrack = { track ->
+                    viewModel.selectTrack(track.groupId, track.trackIndex)
                 },
-                onPickDownloaded = { path, mime ->
-                    viewModel.addSubtitle(Uri.fromFile(java.io.File(path)), mime)
-                    showSubtitles = false
+                onShowDelayDialog = { showDelayDialog = true },
+                onPickFile = {
+                    subtitleFilePicker.launch(arrayOf("*/*"))
                 },
-                onSubtitleDelayChange = { delay ->
-                    subtitleDelayUs = delay
-                    viewModel.setSubtitleOffset(delay)
-                }
+                onShowLocalSubs = { showLocalSubsSheet = true },
+                onShowDownload = { showDownloadScreen = true }
             )
+        }
+
+        SubtitleDelayDialog(
+            visible = showDelayDialog,
+            delayMs = subtitleDelayMs,
+            onDelayChange = { subtitleDelayMs = it; subtitleDelayUs = it * 1000L; viewModel.setSubtitleOffset(subtitleDelayUs) },
+            onReset = { subtitleDelayMs = 0; subtitleDelayUs = 0L; viewModel.setSubtitleOffset(0L) },
+            onDismiss = { showDelayDialog = false }
+        )
+
+        // Orientation-aware subtitle panel
+        val isLandscape = LocalConfiguration.current.orientation == Configuration.ORIENTATION_LANDSCAPE
+        if (showDownloadScreen) {
+            if (isLandscape) {
+                Box(Modifier.fillMaxWidth(0.40f).fillMaxHeight().align(Alignment.CenterEnd).background(Color(0xFF0E0E12))) {
+                    SubtitlePanelContent(
+                        localSubs = localSubs,
+                        onlineSubs = downloadState.results,
+                        appliedSubtitleName = appliedSubtitleName,
+                        currentLanguage = downloadPanelLanguage,
+                        onLanguageChange = { lang ->
+                            downloadPanelLanguage = lang
+                            subtitleViewModel.searchByFile(currentFilePath?.let { java.io.File(it) }, initialQuery, lang)
+                        },
+                        isLoading = downloadState.isLoading,
+                        onLocalApply = { applyLocalSubtitleFile(it) },
+                        onOnlineDownload = { result ->
+                            android.util.Log.d("SubFix", "═══ Online result tapped ═══")
+                            android.util.Log.d("SubFix", "URL: ${result.downloadUrl}")
+                            android.util.Log.d("SubFix", "Language: ${result.language} Name: ${result.releaseName}")
+                            subtitleViewModel.downloadAndApply(context, result)
+                        },
+                        onSearchTap = { showSearchForm = true },
+                        onDismiss = { showDownloadScreen = false; subtitleViewModel.resetDownload() }
+                    )
+                }
+            } else {
+                ModalBottomSheet(
+                    onDismissRequest = { showDownloadScreen = false; subtitleViewModel.resetDownload() },
+                    containerColor = Color(0xFF0E0E12),
+                    shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                    sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                    modifier = Modifier.fillMaxHeight(0.6f)
+                ) {
+                    SubtitlePanelContent(
+                        localSubs = localSubs,
+                        onlineSubs = downloadState.results,
+                        appliedSubtitleName = appliedSubtitleName,
+                        currentLanguage = downloadPanelLanguage,
+                        onLanguageChange = { lang ->
+                            downloadPanelLanguage = lang
+                            subtitleViewModel.searchByFile(currentFilePath?.let { java.io.File(it) }, initialQuery, lang)
+                        },
+                        isLoading = downloadState.isLoading,
+                        onLocalApply = { applyLocalSubtitleFile(it) },
+                        onOnlineDownload = { result ->
+                            android.util.Log.d("SubFix", "═══ Online result tapped ═══")
+                            android.util.Log.d("SubFix", "URL: ${result.downloadUrl}")
+                            android.util.Log.d("SubFix", "Language: ${result.language} Name: ${result.releaseName}")
+                            subtitleViewModel.downloadAndApply(context, result)
+                        },
+                        onSearchTap = { showSearchForm = true },
+                        onDismiss = { showDownloadScreen = false; subtitleViewModel.resetDownload() }
+                    )
+                }
+            }
+        }
+
+        SubtitleSearchForm(
+            visible = showSearchForm,
+            initialName = initialQuery,
+            initialSeason = "",
+            initialEpisode = "",
+            initialLanguage = "en",
+            onDismiss = { showSearchForm = false },
+            onSearch = { name, season, episode, lang, _ ->
+                val q = buildString {
+                    append(name.trim())
+                    if (!season.isNullOrBlank()) append(" S${season.padStart(2, '0')}")
+                    if (!episode.isNullOrBlank()) append("E${episode.padStart(2, '0')}")
+                }
+                subtitleViewModel.searchByFile(null, q, lang)
+                showSearchForm = false
+            }
+        )
+
+        if (showLocalSubsSheet) {
+            val subExtensions = setOf("srt", "vtt", "ass", "ssa", "sub")
+            val localSubFiles = remember(showLocalSubsSheet) {
+                listOfNotNull(
+                    currentFilePath?.let { java.io.File(it).parentFile },
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
+                    context.getExternalFilesDir(null)
+                ).flatMap { dir ->
+                    if (dir == null || !dir.exists()) emptyList()
+                    else dir.walkTopDown().maxDepth(3).filter { it.isFile && it.extension.lowercase() in subExtensions }.toList()
+                }.distinctBy { it.absolutePath }.sortedByDescending { it.lastModified() }
+            }
+
+            ModalBottomSheet(
+                onDismissRequest = { showLocalSubsSheet = false },
+                containerColor = Color(0xFF1C1C1C),
+                shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+                sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+                modifier = Modifier.fillMaxHeight(0.55f)
+            ) {
+                Column(Modifier.fillMaxWidth().padding(bottom = 24.dp)) {
+                    Text(
+                        "LOCAL SUBTITLES",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 1.2.sp,
+                        color = Color(0xFFFFAB40),
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+                    )
+                    if (localSubFiles.isEmpty()) {
+                        Box(Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                            Text("No subtitle files found nearby", fontSize = 13.sp, color = Color.White.copy(0.5f))
+                        }
+                    } else {
+                        LazyColumn(Modifier.fillMaxWidth()) {
+                            items(localSubFiles) { file ->
+                                Row(
+                                    modifier = Modifier.fillMaxWidth().height(48.dp)
+                                        .clickable { applyLocalSubtitleFile(file); showLocalSubsSheet = false }
+                                        .padding(horizontal = 16.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Rounded.Description, null, tint = Color(0xFFFFAB40), modifier = Modifier.size(18.dp))
+                                    Spacer(Modifier.width(12.dp))
+                                    Text(file.name, fontSize = 13.sp, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                                    Text("${file.length() / 1024}KB", fontSize = 10.sp, color = Color.White.copy(0.4f))
+                                    Spacer(Modifier.width(10.dp))
+                                    Icon(Icons.Rounded.PlayArrow, null, tint = Color(0xFFFFAB40), modifier = Modifier.size(16.dp))
+                                }
+                                HorizontalDivider(thickness = 0.5.dp, color = Color.White.copy(0.06f), modifier = Modifier.padding(horizontal = 16.dp))
+                            }
+                        }
+                    }
+                }
+            }
         }
 
         // === Inline equalizer panel (bottom sheet) ===
@@ -2120,6 +2583,37 @@ private fun formatFileSize(bytes: Long): String = when {
     bytes >= 1_048_576L -> "%.0f MB".format(bytes / 1_048_576.0)
     bytes >= 1024L -> "%.0f KB".format(bytes / 1024.0)
     else -> "$bytes B"
+}
+
+private fun buildEmbeddedTrackList(tracks: Tracks?): List<EmbeddedTrack> {
+    if (tracks == null) return emptyList()
+    val out = mutableListOf<EmbeddedTrack>()
+    tracks.groups.forEach { group ->
+        val tg = group.mediaTrackGroup
+        if (tg.type != C.TRACK_TYPE_TEXT) return@forEach
+        for (i in 0 until tg.length) {
+            val f = tg.getFormat(i)
+            val label = f.label?.toString() ?: "Track ${i + 1}"
+            val lang = f.language?.uppercase() ?: "UND"
+            out += EmbeddedTrack(
+                id = "${tg.id}.$i",
+                groupId = tg.id,
+                trackIndex = i,
+                language = lang,
+                label = label,
+                index = i,
+                isActive = group.isTrackSelected(i)
+            )
+        }
+    }
+    return out
+}
+
+private fun detectMime(path: String): String = when {
+    path.endsWith(".srt", true) -> "application/x-subrip"
+    path.endsWith(".vtt", true) -> "text/vtt"
+    path.endsWith(".ass", true) || path.endsWith(".ssa", true) -> "text/x-ssa"
+    else -> "application/x-subrip"
 }
 
 @Composable

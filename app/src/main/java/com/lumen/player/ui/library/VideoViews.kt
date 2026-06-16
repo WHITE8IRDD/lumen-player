@@ -201,8 +201,13 @@ fun VideoGridCard(
                     .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 14.dp))
                     .background(MaterialTheme.colorScheme.surfaceVariant)
             ) {
+                val ctx = LocalContext.current
                 SubcomposeAsyncImage(
-                    model = item.posterUrl ?: VideoThumbnail(item.id, item.uri),
+                    model = ImageRequest.Builder(ctx)
+                        .data(item.posterUrl ?: VideoThumbnail(item.id, item.uri))
+                        .crossfade(true)
+                        .size(240, 165)
+                        .build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),

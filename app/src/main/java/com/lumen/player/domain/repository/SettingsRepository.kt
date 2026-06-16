@@ -26,7 +26,6 @@ data class UserSettings(
     val brightnessMode: String = "SYSTEM",
     val subtitleColor: String = "WHITE",
     val subtitleLanguage: String = "English",
-    val opensubtitlesApiKey: String = "",
     val autoScanOnStartup: Boolean = true,
     val showAudio: Boolean = true,
     val replayGain: Boolean = false,
@@ -65,7 +64,6 @@ interface SettingsRepository {
     suspend fun setBrightnessMode(value: String)
     suspend fun setSubtitleColor(value: String)
     suspend fun setSubtitleLanguage(value: String)
-    suspend fun setOpensubtitlesApiKey(value: String)
     suspend fun setAutoScanOnStartup(enabled: Boolean)
     suspend fun setShowAudio(enabled: Boolean)
     suspend fun setReplayGain(enabled: Boolean)

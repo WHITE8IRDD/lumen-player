@@ -63,7 +63,6 @@ class SettingsViewModel @Inject constructor(
     fun setSubtitleTextSize(v: Float) = viewModelScope.launch { repository.setSubtitleTextSize(v) }
     fun setSubtitleDelayUs(v: Long) = viewModelScope.launch { repository.setSubtitleDelayUs(v) }
     fun setSubtitleLanguage(v: String) = viewModelScope.launch { repository.setSubtitleLanguage(v) }
-    fun setOpensubtitlesApiKey(v: String) = viewModelScope.launch { repository.setOpensubtitlesApiKey(v) }
     fun setFontFamilyChoice(v: String) = viewModelScope.launch { repository.setFontFamilyChoice(v) }
     fun setTextCaseChoice(v: String) = viewModelScope.launch { repository.setTextCaseChoice(v) }
     fun setWeightOffset(v: Int) = viewModelScope.launch { repository.setWeightOffset(v) }
@@ -89,7 +88,6 @@ class SettingsViewModel @Inject constructor(
         repository.setBrightnessMode("SYSTEM")
         repository.setSubtitleColor("WHITE")
         repository.setSubtitleLanguage("English")
-        repository.setOpensubtitlesApiKey("")
         repository.setAutoScanOnStartup(true)
         repository.setShowAudio(true)
         repository.setReplayGain(false)
