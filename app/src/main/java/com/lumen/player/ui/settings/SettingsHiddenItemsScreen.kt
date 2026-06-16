@@ -130,7 +130,7 @@ fun SettingsHiddenItemsScreen(
                 }
             } else {
                 LazyColumn(contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())) {
-                    items(items, key = { it.id }) { item ->
+                    items(items, key = { it.id }, contentType = { "hidden_item" }) { item ->
                         HiddenItemRow(
                             item = item,
                             onUnhide = { viewModel.unhideItem(item.id) }

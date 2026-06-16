@@ -26,7 +26,8 @@ object DatabaseModule {
                 LumenDatabase.MIGRATION_5_6,
                 LumenDatabase.MIGRATION_6_7,
                 LumenDatabase.MIGRATION_7_8,
-                LumenDatabase.MIGRATION_8_9
+                LumenDatabase.MIGRATION_8_9,
+                LumenDatabase.MIGRATION_9_10
             )
             .fallbackToDestructiveMigration()
             .build()

@@ -75,6 +75,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import kotlinx.coroutines.launch
@@ -243,7 +244,7 @@ fun HomeScreen(
     }
 
     Box {
-        val allEmpty = cw.isEmpty() && recent.isEmpty() && folders.isEmpty() && audio.isEmpty()
+        val allEmpty by remember { derivedStateOf { cw.isEmpty() && recent.isEmpty() && folders.isEmpty() && audio.isEmpty() } }
 
         LazyColumn(
             modifier = Modifier
@@ -625,7 +626,7 @@ private fun ContinueWatchingRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(items, key = { it.id }) { item ->
+        items(items, key = { it.id }, contentType = { "video" }) { item ->
             ContinueWatchingCard(item = item, onClick = { onClick(item) }, onLongClick = { onLongClick(item) })
         }
     }
@@ -735,7 +736,7 @@ private fun RecentlyAddedRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(items, key = { it.id }) { item ->
+        items(items, key = { it.id }, contentType = { "video" }) { item ->
             RecentlyAddedCard(item = item, onClick = { onClick(item) }, onLongClick = { onLongClick(item) })
         }
     }
@@ -851,7 +852,7 @@ private fun HomeFolderRow(
         contentPadding = PaddingValues(horizontal = 16.dp),
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
-        items(folders, key = { it.path }) { folder ->
+        items(folders, key = { it.path }, contentType = { "folder" }) { folder ->
             HomeFolderCard(
                 folder = folder,
                 videos = videosByFolder[folder.path].orEmpty(),
@@ -948,7 +949,8 @@ private fun RecentAudioColumn(
         Modifier.padding(horizontal = 16.dp),
         verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
-        items.take(5).forEach { item ->
+        val topItems = remember(items) { items.take(5) }
+        topItems.forEach { item ->
             RecentAudioRow(item = item, onClick = { onClick(item) })
         }
     }

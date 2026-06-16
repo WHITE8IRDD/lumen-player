@@ -10,7 +10,11 @@ import androidx.room.PrimaryKey
         Index("type"),
         Index("isVideo"),
         Index("folderPath"),
-        Index("isFavorite")
+        Index("isFavorite"),
+        Index(value = ["folderPath", "title"]),
+        Index(value = ["type", "folderPath", "title"]),
+        Index(value = ["isVideo", "dateAdded"]),
+        Index(value = ["isVideo", "lastPlayedAt"])
     ]
 )
 data class MediaEntity(

@@ -25,7 +25,7 @@ import com.lumen.player.data.local.entity.TmdbCacheEntity
         TmdbCacheEntity::class,
         StreamEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 abstract class LumenDatabase : RoomDatabase() {
@@ -71,6 +71,13 @@ abstract class LumenDatabase : RoomDatabase() {
             db.execSQL("ALTER TABLE streams ADD COLUMN isFavorite INTEGER NOT NULL DEFAULT 0")
             db.execSQL("ALTER TABLE streams ADD COLUMN category TEXT DEFAULT NULL")
             db.execSQL("ALTER TABLE streams ADD COLUMN logoUrl TEXT DEFAULT NULL")
+        }
+
+        val MIGRATION_9_10 = Migration(9, 10) { db ->
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_media_folderPath_title ON media(folderPath, title)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_media_type_folderPath_title ON media(type, folderPath, title)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_media_isVideo_dateAdded ON media(isVideo, dateAdded)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS idx_media_isVideo_lastPlayedAt ON media(isVideo, lastPlayedAt)")
         }
     }
 }

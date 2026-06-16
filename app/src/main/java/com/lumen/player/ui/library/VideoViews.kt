@@ -131,21 +131,23 @@ fun VideoGrid(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxSize()
     ) {
-        items(items, key = { it.id }) { item ->
-            VideoGridCard(
-                item = item,
-                onClick = { onClick(item) },
-                isSelected = item.id in selectedIds,
-                onLongClick = { onLongClick?.invoke(item) },
-                onAddToQueue = { onAddToQueue?.invoke(item) },
-                onAddToPlaylist = { onAddToPlaylist?.invoke(item) },
-                onShare = { onShare?.invoke(item) },
-                onDelete = { onDelete?.invoke(item) },
-                onPlayNext = { onPlayNext?.invoke(item) },
-                onOpenFileLocation = { onOpenFileLocation?.invoke(item) },
-                onProperties = { onProperties?.invoke(item) },
-                onHideFromHome = { onHideFromHome?.invoke(item) }
-            )
+        items(items, key = { it.id }, contentType = { "video" }) { item ->
+            Box(Modifier.animateItem()) {
+                VideoGridCard(
+                    item = item,
+                    onClick = { onClick(item) },
+                    isSelected = item.id in selectedIds,
+                    onLongClick = { onLongClick?.invoke(item) },
+                    onAddToQueue = { onAddToQueue?.invoke(item) },
+                    onAddToPlaylist = { onAddToPlaylist?.invoke(item) },
+                    onShare = { onShare?.invoke(item) },
+                    onDelete = { onDelete?.invoke(item) },
+                    onPlayNext = { onPlayNext?.invoke(item) },
+                    onOpenFileLocation = { onOpenFileLocation?.invoke(item) },
+                    onProperties = { onProperties?.invoke(item) },
+                    onHideFromHome = { onHideFromHome?.invoke(item) }
+                )
+            }
         }
     }
 }
@@ -207,11 +209,14 @@ fun VideoGridCard(
                         .data(item.posterUrl ?: VideoThumbnail(item.id, item.uri))
                         .crossfade(true)
                         .size(240, 165)
+                        .memoryCacheKey(item.id.toString())
+                        .diskCacheKey(item.id.toString())
                         .build(),
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),
-                    loading = { ShimmerBox(modifier = Modifier.fillMaxSize()) }
+                    loading = { ShimmerBox(modifier = Modifier.fillMaxSize()) },
+                    error = { ThumbnailErrorPlaceholder() }
                 )
                 Box(
                     Modifier
@@ -453,21 +458,23 @@ fun VideoList(
         verticalArrangement = Arrangement.spacedBy(4.dp),
         modifier = Modifier.fillMaxSize()
     ) {
-        items(items, key = { it.id }) { item ->
-            VideoListRow(
-                item = item,
-                onClick = { onClick(item) },
-                isSelected = item.id in selectedIds,
-                onLongClick = { onLongClick?.invoke(item) },
-                onAddToQueue = { onAddToQueue?.invoke(item) },
-                onAddToPlaylist = { onAddToPlaylist?.invoke(item) },
-                onShare = { onShare?.invoke(item) },
-                onDelete = { onDelete?.invoke(item) },
-                onPlayNext = { onPlayNext?.invoke(item) },
-                onOpenFileLocation = { onOpenFileLocation?.invoke(item) },
-                onProperties = { onProperties?.invoke(item) },
-                onHideFromHome = { onHideFromHome?.invoke(item) }
-            )
+        items(items, key = { it.id }, contentType = { "video" }) { item ->
+            Box(Modifier.animateItem()) {
+                VideoListRow(
+                    item = item,
+                    onClick = { onClick(item) },
+                    isSelected = item.id in selectedIds,
+                    onLongClick = { onLongClick?.invoke(item) },
+                    onAddToQueue = { onAddToQueue?.invoke(item) },
+                    onAddToPlaylist = { onAddToPlaylist?.invoke(item) },
+                    onShare = { onShare?.invoke(item) },
+                    onDelete = { onDelete?.invoke(item) },
+                    onPlayNext = { onPlayNext?.invoke(item) },
+                    onOpenFileLocation = { onOpenFileLocation?.invoke(item) },
+                    onProperties = { onProperties?.invoke(item) },
+                    onHideFromHome = { onHideFromHome?.invoke(item) }
+                )
+            }
         }
     }
 }
@@ -534,6 +541,8 @@ fun VideoListRow(
                         .data(data)
                         .size(thumbPxW, thumbPxH)
                         .crossfade(true)
+                        .memoryCacheKey(item.id.toString())
+                        .diskCacheKey(item.id.toString())
                         .build()
                 }
                 SubcomposeAsyncImage(
@@ -541,7 +550,8 @@ fun VideoListRow(
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize(),
-                    loading = { ShimmerBox(modifier = Modifier.fillMaxSize()) }
+                    loading = { ShimmerBox(modifier = Modifier.fillMaxSize()) },
+                    error = { ThumbnailErrorPlaceholder() }
                 )
                 Box(
                     Modifier
@@ -798,30 +808,34 @@ fun FolderGrid(
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         modifier = Modifier.fillMaxSize()
     ) {
-        items(singleFolders, key = { it.path }) { folder ->
-            val item = folder.toSingleVideo()
-            VideoGridCard(
-                item = item,
-                onClick = { onSingleVideoClick(item) },
-                isSelected = item.id in selectedIds,
-                onLongClick = { onVideoLongClick?.invoke(item) },
-                onAddToQueue = { onAddToQueue?.invoke(item) },
-                onAddToPlaylist = { onAddToPlaylist?.invoke(item) },
-                onShare = { onShare?.invoke(item) },
-                onDelete = { onDelete?.invoke(item) },
-                onPlayNext = { onPlayNext?.invoke(item) },
-                onOpenFileLocation = { onOpenFileLocation?.invoke(item) },
-                onProperties = { onProperties?.invoke(item) },
-                onHideFromHome = { onHideFromHome?.invoke(item) }
-            )
+        items(singleFolders, key = { it.path }, contentType = { "folder" }) { folder ->
+            Box(Modifier.animateItem()) {
+                val item = folder.toSingleVideo()
+                VideoGridCard(
+                    item = item,
+                    onClick = { onSingleVideoClick(item) },
+                    isSelected = item.id in selectedIds,
+                    onLongClick = { onVideoLongClick?.invoke(item) },
+                    onAddToQueue = { onAddToQueue?.invoke(item) },
+                    onAddToPlaylist = { onAddToPlaylist?.invoke(item) },
+                    onShare = { onShare?.invoke(item) },
+                    onDelete = { onDelete?.invoke(item) },
+                    onPlayNext = { onPlayNext?.invoke(item) },
+                    onOpenFileLocation = { onOpenFileLocation?.invoke(item) },
+                    onProperties = { onProperties?.invoke(item) },
+                    onHideFromHome = { onHideFromHome?.invoke(item) }
+                )
+            }
         }
-        items(multiFolders, key = { it.path }) { folder ->
-            val folderVideos = videosByFolder[folder.path].orEmpty()
-            FolderCard(
-                folder = folder,
-                videos = folderVideos,
-                onClick = { onFolderClick(folder) }
-            )
+        items(multiFolders, key = { it.path }, contentType = { "folder" }) { folder ->
+            Box(Modifier.animateItem()) {
+                val folderVideos = videosByFolder[folder.path].orEmpty()
+                FolderCard(
+                    folder = folder,
+                    videos = folderVideos,
+                    onClick = { onFolderClick(folder) }
+                )
+            }
         }
     }
 }
@@ -986,4 +1000,21 @@ fun VideoSort.label(): String = when (this) {
     VideoSort.DURATION -> "Duration"
     VideoSort.SIZE -> "Size"
     VideoSort.RESOLUTION -> "Resolution"
+}
+
+@Composable
+private fun ThumbnailErrorPlaceholder() {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.surfaceVariant),
+        contentAlignment = Alignment.Center
+    ) {
+        Icon(
+            Icons.Rounded.Movie,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f),
+            modifier = Modifier.size(28.dp)
+        )
+    }
 }

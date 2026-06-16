@@ -37,6 +37,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.setValue
 import com.lumen.player.ui.library.SelectionActionBar
 import androidx.compose.ui.Alignment
@@ -77,7 +78,7 @@ fun FolderDetailScreen(
     var sort by remember { mutableStateOf(VideoSort.TITLE) }
     var sortMenuExpanded by remember { mutableStateOf(false) }
     var selectedIds by remember { mutableStateOf(setOf<Long>()) }
-    val inSelectionMode = selectedIds.isNotEmpty()
+    val inSelectionMode by remember { derivedStateOf { selectedIds.isNotEmpty() } }
 
     val sorted = remember(items, sort) {
         when (sort) {

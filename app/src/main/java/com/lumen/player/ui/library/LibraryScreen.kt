@@ -342,7 +342,7 @@ private fun VideosTabContent(
         displayItems.filter { it.id in selectedIds }
     }
 
-    val inSelectionMode = selectedIds.isNotEmpty() || selectionMode
+    val inSelectionMode by remember { derivedStateOf { selectedIds.isNotEmpty() || selectionMode } }
 
     val activity = context as? androidx.activity.ComponentActivity
     val deleteLauncher = rememberLauncherForActivityResult(
@@ -902,7 +902,7 @@ private fun AudioTabContent(
                 }
                 else -> LazyColumn(state = listState, modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())) {
-                    items(items, key = { it.id }) { item ->
+                    items(items, key = { it.id }, contentType = { "audio" }) { item ->
                         MediaListItem(
                             item = item,
                             onClick = {
@@ -962,7 +962,7 @@ private fun FoldersTabContent(
     }
 
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())) {
-        items(folders, key = { it.path }) { folder ->
+        items(folders, key = { it.path }, contentType = { "folder" }) { folder ->
             val interactionSource = remember { MutableInteractionSource() }
             Row(
                 Modifier.fillMaxWidth()
@@ -1468,7 +1468,7 @@ private fun PlaylistsTabContent(
                 )
         } else {
             LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 8.dp, bottom = 16.dp + WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding())) {
-                items(playlists, key = { it.id }) { playlist ->
+                items(playlists, key = { it.id }, contentType = { "playlist" }) { playlist ->
                     Row(
                         Modifier.fillMaxWidth()
                             .clickable { onPlaylistClick(playlist.id) }

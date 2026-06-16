@@ -331,6 +331,9 @@ fun VideoPlayerScreen(
             if (event == Lifecycle.Event.ON_PAUSE && state.isPlaying) {
                 viewModel.flushResumePosition()
             }
+            if (event == Lifecycle.Event.ON_STOP && state.isPlaying) {
+                viewModel.flushResumePosition()
+            }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
