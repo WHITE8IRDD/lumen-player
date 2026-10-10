@@ -175,6 +175,7 @@ import com.lumen.player.ui.subtitles.SubtitlePanelContent
 import com.lumen.player.ui.subtitles.SubtitleSearchForm
 import com.lumen.player.ui.subtitles.EmbeddedTrack
 import com.lumen.player.ui.subtitles.SubtitleHash
+import com.lumen.player.player.audio.VolumeBoostController
 import kotlin.math.abs
 import java.io.File
 import kotlinx.coroutines.delay
@@ -266,6 +267,9 @@ fun VideoPlayerScreen(
             audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat() / maxVolume
         )
     }
+    // Software boost above the system maximum (1.0 = 100 %, up to 2.0 = 200 %).
+    // Swiping up past the top of the system volume raises this value.
+    var volumeBoost by remember { mutableFloatStateOf(viewModel.volumeBoostLevel()) }
     val brightnessKeeper = remember { BrightnessKeeper(context) }
     // Read the current system brightness on entry so we don't snap to 0.5.
     // Range maps from 0..255 (system value) to 0.05..1.0 (window value).
@@ -513,7 +517,13 @@ fun VideoPlayerScreen(
                             val isLeftHalf = downX < width / 2f
 
                             var sawDrag = false
-                            val startVolume = volumeFraction
+                            // Above 100 % the boost is the starting point, so the
+                            // drag continues smoothly from the boosted level.
+                            val startVolume = if (volumeBoost > VolumeBoostController.MIN_LEVEL) {
+                                volumeBoost
+                            } else {
+                                volumeFraction
+                            }
                             val startBrightness = windowBrightness
 
                             while (true) {
@@ -558,12 +568,21 @@ fun VideoPlayerScreen(
                                         brightnessHud = HudInfo(Icons.Rounded.Brightness6,
                                             "${(windowBrightness * 100).toInt()}%", windowBrightness)
                                     } else {
-                                        val newFrac = (startVolume - dy / 400f).coerceIn(0f, 1f)
+                                        // 0..1 drives the system volume; anything above 1 is boost.
+                                        val newLevel = (startVolume - dy / 400f)
+                                            .coerceIn(0f, VolumeBoostController.MAX_LEVEL)
+                                        val newFrac = newLevel.coerceAtMost(1f)
                                         val newVol = (newFrac * maxVolume).toInt().coerceIn(0, maxVolume)
                                         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
                                         volumeFraction = newFrac
+                                        val newBoost = newLevel.coerceAtLeast(VolumeBoostController.MIN_LEVEL)
+                                        if (newBoost != volumeBoost) {
+                                            volumeBoost = newBoost
+                                            viewModel.setVolumeBoost(newBoost)
+                                        }
                                         volumeHud = HudInfo(Icons.AutoMirrored.Rounded.VolumeUp,
-                                            "${(newFrac * 100).toInt()}%", newFrac)
+                                            "${(newLevel * 100).toInt()}%", newFrac,
+                                            boosted = newLevel > VolumeBoostController.MIN_LEVEL)
                                     }
                                 } else if (abs(dx) > 24f && abs(dx) > abs(dy)) {
                                     sawDrag = true
@@ -1786,7 +1805,12 @@ private fun resolveActiveExternalSubtitleUri(player: androidx.media3.common.Play
 
 private enum class VideoUiMode { MAIN, SPEED, ASPECT }
 private enum class SeekFlash { Back, Forward }
-private data class HudInfo(val icon: ImageVector, val label: String, val value: Float)
+private data class HudInfo(
+    val icon: ImageVector,
+    val label: String,
+    val value: Float,
+    val boosted: Boolean = false
+)
 
 /**
  * Custom seek bar — completely hand-rolled so it stays at 60fps during drag.
@@ -2112,6 +2136,8 @@ private fun VideoBottomControls(
 
 @Composable
 private fun VerticalHud(hud: HudInfo, modifier: Modifier = Modifier) {
+    // Boosted levels use the app's accent color so they stand out from normal volume.
+    val fillColor = if (hud.boosted) LocalAccentColor.current else Color.White
     Surface(
         color = Color.Black.copy(alpha = 0.55f),
         shape = RoundedCornerShape(50.dp),
@@ -2122,7 +2148,7 @@ private fun VerticalHud(hud: HudInfo, modifier: Modifier = Modifier) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
-            Icon(hud.icon, null, tint = Color.White, modifier = Modifier.size(16.dp))
+            Icon(hud.icon, null, tint = fillColor, modifier = Modifier.size(16.dp))
             // Vertical bar: 6dp wide, 90dp tall, filled from the bottom up
             Box(
                 Modifier
@@ -2137,7 +2163,7 @@ private fun VerticalHud(hud: HudInfo, modifier: Modifier = Modifier) {
                         .fillMaxWidth()
                         .fillMaxHeight(hud.value.coerceIn(0f, 1f))
                         .clip(RoundedCornerShape(3.dp))
-                        .background(Color.White)
+                        .background(fillColor)
                 )
             }
         }

@@ -11,6 +11,8 @@ import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.mediacodec.MediaCodecSelector
 import androidx.media3.exoplayer.video.VideoRendererEventListener
+import com.lumen.player.player.audio.VolumeBoostController
+import com.lumen.player.player.audio.VolumeBoostProcessor
 import java.lang.reflect.Constructor
 
 /**
@@ -41,7 +43,10 @@ import java.lang.reflect.Constructor
  *  3. Falling back to the parent's default if FFmpeg isn't on the classpath.
  */
 @UnstableApi
-class LumenRenderersFactory(context: Context) : DefaultRenderersFactory(context) {
+class LumenRenderersFactory(
+    context: Context,
+    private val volumeBoost: VolumeBoostController
+) : DefaultRenderersFactory(context) {
 
     init {
         setEnableDecoderFallback(true)
@@ -56,6 +61,11 @@ class LumenRenderersFactory(context: Context) : DefaultRenderersFactory(context)
         DefaultAudioSink.Builder(context)
             .setEnableFloatOutput(enableFloatOutput)
             .setEnableAudioTrackPlaybackParams(enableAudioTrackPlaybackParams)
+            // Volume boost (100-200 %) runs before the default processors, so
+            // silence skipping and playback speed keep working as before.
+            .setAudioProcessorChain(
+                DefaultAudioSink.DefaultAudioProcessorChain(VolumeBoostProcessor(volumeBoost))
+            )
             .build()
 
     override fun buildVideoRenderers(

@@ -19,6 +19,7 @@ import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.MoreExecutors
 import com.lumen.player.core.util.Constants
 import com.lumen.player.domain.model.NetworkStream
+import com.lumen.player.player.audio.VolumeBoostController
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -33,7 +34,8 @@ data class LyricsLine(val timeMs: Long, val text: String)
 
 @Singleton
 class PlayerController @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val volumeBoost: VolumeBoostController
 ) {
     private var controller: MediaController? = null
     var directPlayer: ExoPlayer? = null
@@ -233,7 +235,27 @@ class PlayerController @Inject constructor(
 
     fun getPlayer(): Player? = directPlayer ?: controller
 
-    fun setVolume(v: Float) { controller?.volume = v.coerceIn(0f, 1f) }
+    /**
+     * Sets the output level on a 0..[VolumeBoostController.MAX_LEVEL] scale.
+     * Up to 1.0 it changes the player volume. Above 1.0 the player stays at
+     * full volume and [VolumeBoostController] amplifies the audio (VLC-style boost).
+     */
+    fun setVolume(v: Float) {
+        val level = v.coerceIn(0f, VolumeBoostController.MAX_LEVEL)
+        controller?.volume = level.coerceAtMost(1f)
+        volumeBoost.setGain(level.coerceAtLeast(VolumeBoostController.MIN_LEVEL))
+    }
+
+    /** Current output level on the same scale as [setVolume]. */
+    fun currentVolumeLevel(): Float {
+        val boost = volumeBoost.gain
+        return if (boost > VolumeBoostController.MIN_LEVEL) boost else (controller?.volume ?: 1f)
+    }
+
+    /** Software boost only (1.0 = 100 %, up to 2.0 = 200 %). Used by the video player. */
+    fun setVolumeBoost(gain: Float) = volumeBoost.setGain(gain)
+
+    fun volumeBoostLevel(): Float = volumeBoost.gain
 
     fun moveQueueItem(from: Int, to: Int) { controller?.moveMediaItem(from, to) }
     fun removeQueueItem(index: Int) { controller?.removeMediaItem(index) }

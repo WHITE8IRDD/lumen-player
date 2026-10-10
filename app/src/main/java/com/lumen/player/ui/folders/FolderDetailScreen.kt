@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.automirrored.rounded.Sort
+import androidx.compose.material.icons.rounded.SelectAll
 import androidx.compose.material.icons.rounded.ViewAgenda
 import androidx.compose.material.icons.rounded.ViewModule
 import androidx.compose.material3.DropdownMenu
@@ -78,7 +79,9 @@ fun FolderDetailScreen(
     var sort by remember { mutableStateOf(VideoSort.TITLE) }
     var sortMenuExpanded by remember { mutableStateOf(false) }
     var selectedIds by remember { mutableStateOf(setOf<Long>()) }
-    val inSelectionMode by remember { derivedStateOf { selectedIds.isNotEmpty() } }
+    // Selection mode can be on with nothing selected yet ("Select multiple" in the header).
+    var selectionMode by remember { mutableStateOf(false) }
+    val inSelectionMode by remember { derivedStateOf { selectedIds.isNotEmpty() || selectionMode } }
 
     val sorted = remember(items, sort) {
         when (sort) {
@@ -97,7 +100,7 @@ fun FolderDetailScreen(
 
     val deleteLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartIntentSenderForResult()
-    ) { _ -> selectedIds = emptySet() }
+    ) { _ -> selectedIds = emptySet(); selectionMode = false }
 
     val open: (MediaItem) -> Unit = { item ->
         if (inSelectionMode) {
@@ -110,30 +113,44 @@ fun FolderDetailScreen(
     }
 
     Column(Modifier.fillMaxSize()) {
+        val allSelected = sorted.isNotEmpty() && sorted.all { it.id in selectedIds }
         SelectionActionBar(
             selectedCount = selectedIds.size,
-            onClear = { selectedIds = emptySet() },
+            selectionMode = selectionMode,
+            onClear = { selectedIds = emptySet(); selectionMode = false },
             onPlayNext = {
                 viewModel.playNext(selectedItems)
                 selectedIds = emptySet()
+                selectionMode = false
             },
             onAddToQueue = {
                 viewModel.addToQueue(selectedItems)
                 selectedIds = emptySet()
+                selectionMode = false
             },
             onShare = {
                 viewModel.share(context, selectedItems)
                 selectedIds = emptySet()
+                selectionMode = false
             },
             onDelete = {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                    val intentSender = viewModel.createDeleteSender(context, selectedItems)
-                    intentSender?.let { deleteLauncher.launch(it) } ?: run { selectedIds = emptySet() }
-                } else {
-                    viewModel.requestDelete(context, selectedItems)
-                    selectedIds = emptySet()
+                if (selectedItems.isNotEmpty()) {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                        val intentSender = viewModel.createDeleteSender(context, selectedItems)
+                        intentSender?.let { deleteLauncher.launch(it) } ?: run { selectedIds = emptySet(); selectionMode = false }
+                    } else {
+                        viewModel.requestDelete(context, selectedItems)
+                        selectedIds = emptySet()
+                        selectionMode = false
+                    }
                 }
-            }
+            },
+            onSelectAll = {
+                // Toggle: select every video in this folder, or clear the selection.
+                selectedIds = if (allSelected) emptySet() else sorted.map { it.id }.toSet()
+                selectionMode = true
+            },
+            allSelected = allSelected
         )
 
         if (!inSelectionMode) {
@@ -143,6 +160,9 @@ fun FolderDetailScreen(
             ) {
                 CircularIconButton(onClick = onBack, icon = Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Back")
                 Spacer(Modifier.weight(1f))
+                IconButton(onClick = { selectionMode = true }) {
+                    Icon(Icons.Rounded.SelectAll, contentDescription = "Select multiple")
+                }
                 Box {
                     IconButton(onClick = { sortMenuExpanded = true }) {
                         Icon(Icons.AutoMirrored.Rounded.Sort, contentDescription = "Sort")

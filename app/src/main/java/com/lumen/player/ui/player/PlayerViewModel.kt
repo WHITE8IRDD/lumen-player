@@ -18,6 +18,7 @@ import com.lumen.player.domain.repository.SettingsRepository
 import com.lumen.player.player.LyricsLine
 import com.lumen.player.player.PlaybackState
 import com.lumen.player.player.PlayerController
+import com.lumen.player.player.audio.VolumeBoostController
 import com.lumen.player.ui.subtitles.LocalSubtitle
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
@@ -171,19 +172,30 @@ class PlayerViewModel @Inject constructor(
         _ui.value = _ui.value.copy(brightness = value.coerceIn(0f, 1f))
         scheduleHudClear()
     }
+    /**
+     * Volume on a 0..200 % scale (1.0 = 100 %). Values above 100 % are a
+     * software boost, see [PlayerController.setVolume].
+     */
     fun adjustVolume(delta: Float) {
-        val current = _ui.value.volume ?: 0.5f
-        val updated = (current + delta).coerceIn(0f, 1f)
+        // Start from the real output level, not a hard-coded 50 %, so the first
+        // swipe after the HUD fades does not jump the volume.
+        val current = _ui.value.volume ?: controller.currentVolumeLevel()
+        val updated = (current + delta).coerceIn(0f, VolumeBoostController.MAX_LEVEL)
         _ui.value = _ui.value.copy(volume = updated)
         controller.setVolume(updated)
         scheduleHudClear()
     }
     fun setVolume(value: Float) {
-        _ui.value = _ui.value.copy(volume = value.coerceIn(0f, 1f))
-        controller.setVolume(value)
+        val clamped = value.coerceIn(0f, VolumeBoostController.MAX_LEVEL)
+        _ui.value = _ui.value.copy(volume = clamped)
+        controller.setVolume(clamped)
         scheduleHudClear()
     }
-    fun currentVolume(): Float = _ui.value.volume ?: 0.5f
+    fun currentVolume(): Float = _ui.value.volume ?: controller.currentVolumeLevel()
+
+    /** Video player: software boost only (the system volume is handled by the screen). */
+    fun setVolumeBoost(gain: Float) = controller.setVolumeBoost(gain)
+    fun volumeBoostLevel(): Float = controller.volumeBoostLevel()
 
     private fun scheduleHudClear() {
         viewModelScope.launch {

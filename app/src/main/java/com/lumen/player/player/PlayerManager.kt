@@ -25,6 +25,7 @@ import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.upstream.DefaultLoadErrorHandlingPolicy
 import androidx.media3.exoplayer.upstream.LoadErrorHandlingPolicy
 import androidx.media3.extractor.DefaultExtractorsFactory
+import com.lumen.player.player.audio.VolumeBoostController
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -49,7 +50,8 @@ import javax.inject.Singleton
 @UnstableApi
 @Singleton
 class PlayerManager @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val volumeBoost: VolumeBoostController
 ) {
     val trackSelector = DefaultTrackSelector(context).apply {
         setParameters(
@@ -142,7 +144,7 @@ class PlayerManager @Inject constructor(
             }
         }
 
-        val renderersFactory = LumenRenderersFactory(context)
+        val renderersFactory = LumenRenderersFactory(context, volumeBoost)
 
         com.lumen.player.core.util.PerfTimer.mark("4b. Factories ready")
 

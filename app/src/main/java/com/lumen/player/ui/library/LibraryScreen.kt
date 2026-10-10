@@ -376,6 +376,7 @@ private fun VideosTabContent(
     }
 
     Column(Modifier.fillMaxSize()) {
+        val allSelected = displayItems.isNotEmpty() && displayItems.all { it.id in selectedIds }
         SelectionActionBar(
             selectedCount = selectedIds.size,
             selectionMode = selectionMode,
@@ -396,16 +397,24 @@ private fun VideosTabContent(
                 selectionMode = false
             },
             onDelete = {
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
-                    val intentSender = viewModel.createDeleteSender(context, selectedItems)
-                    intentSender?.let { deleteLauncher.launch(it) } ?: run { selectedIds = emptySet(); selectionMode = false }
-                } else {
-                    viewModel.requestDelete(context, selectedItems)
-                    selectedIds = emptySet()
-                    selectionMode = false
+                if (selectedItems.isNotEmpty()) {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R) {
+                        val intentSender = viewModel.createDeleteSender(context, selectedItems)
+                        intentSender?.let { deleteLauncher.launch(it) } ?: run { selectedIds = emptySet(); selectionMode = false }
+                    } else {
+                        viewModel.requestDelete(context, selectedItems)
+                        selectedIds = emptySet()
+                        selectionMode = false
+                    }
                 }
             },
-            onAddToPlaylist = { showPlaylistSheet = true }
+            onAddToPlaylist = { showPlaylistSheet = true },
+            onSelectAll = {
+                // Toggle: select every video in the library, or clear the selection.
+                selectedIds = if (allSelected) emptySet() else displayItems.map { it.id }.toSet()
+                selectionMode = true
+            },
+            allSelected = allSelected
         )
 
         if (!inSelectionMode) {

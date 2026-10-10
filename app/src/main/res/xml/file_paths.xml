@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Paths the FileProvider may share with other apps (see AndroidManifest.xml).
+     Media files live on device storage, so the share sheet needs access to it. -->
+<paths>
+    <root-path name="root" path="." />
+</paths>

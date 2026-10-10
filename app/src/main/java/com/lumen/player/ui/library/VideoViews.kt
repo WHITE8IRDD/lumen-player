@@ -51,6 +51,7 @@ import androidx.compose.material.icons.rounded.Movie
 import androidx.compose.material.icons.rounded.PlaylistAdd
 import androidx.compose.material.icons.rounded.QueuePlayNext
 import androidx.compose.material.icons.rounded.Share
+import androidx.compose.material.icons.rounded.SelectAll
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -59,6 +60,7 @@ import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Surface
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -849,7 +851,9 @@ fun SelectionActionBar(
     onAddToQueue: () -> Unit,
     onShare: () -> Unit,
     onDelete: () -> Unit,
-    onAddToPlaylist: (() -> Unit)? = null
+    onAddToPlaylist: (() -> Unit)? = null,
+    onSelectAll: (() -> Unit)? = null,
+    allSelected: Boolean = false
 ) {
     AnimatedVisibility(
         visible = selectedCount > 0 || selectionMode,
@@ -880,34 +884,65 @@ fun SelectionActionBar(
                     modifier = Modifier.weight(1f)
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+                    // Actions need at least one selected item.
+                    val hasSelection = selectedCount > 0
                     SelectionActionMinimalButton(
                         icon = Icons.Rounded.QueuePlayNext,
                         label = "play next",
-                        onClick = onPlayNext
+                        onClick = onPlayNext,
+                        enabled = hasSelection
                     )
                     SelectionActionMinimalButton(
                         icon = Icons.Rounded.PlaylistAdd,
                         label = "add to queue",
-                        onClick = onAddToQueue
+                        onClick = onAddToQueue,
+                        enabled = hasSelection
                     )
                     SelectionActionMinimalButton(
                         icon = Icons.Rounded.Share,
                         label = "share",
-                        onClick = onShare
+                        onClick = onShare,
+                        enabled = hasSelection
                     )
                     if (onAddToPlaylist != null) {
                         SelectionActionMinimalButton(
                             icon = Icons.Rounded.PlaylistAdd,
                             label = "add to playlist",
-                            onClick = onAddToPlaylist
+                            onClick = onAddToPlaylist,
+                            enabled = hasSelection
                         )
                     }
                     SelectionActionMinimalButton(
                         icon = Icons.Rounded.Delete,
                         label = "delete",
                         onClick = onDelete,
-                        isDestructive = true
+                        isDestructive = true,
+                        enabled = hasSelection
                     )
+                }
+            }
+
+            // "Select all" sits on its own row so the icon bar keeps its size on small screens.
+            if (onSelectAll != null) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 4.dp, end = 12.dp, bottom = 2.dp)
+                ) {
+                    TextButton(onClick = onSelectAll) {
+                        Icon(
+                            imageVector = Icons.Rounded.SelectAll,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = if (allSelected) "Deselect all" else "Select all",
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             }
         }
@@ -919,16 +954,22 @@ private fun SelectionActionMinimalButton(
     icon: ImageVector,
     label: String,
     onClick: () -> Unit,
-    isDestructive: Boolean = false
+    isDestructive: Boolean = false,
+    enabled: Boolean = true
 ) {
     IconButton(
         onClick = onClick,
+        enabled = enabled,
         modifier = Modifier.size(40.dp)
     ) {
         Icon(
             imageVector = icon,
             contentDescription = label,
-            tint = if (isDestructive) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary
+            tint = when {
+                !enabled -> MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
+                isDestructive -> MaterialTheme.colorScheme.error
+                else -> MaterialTheme.colorScheme.primary
+            }
         )
     }
 }

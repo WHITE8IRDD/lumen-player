@@ -60,3 +60,5 @@ screenshots/
 *.png
 *.mp4
 *.xml
+# Android resource XML is source code, never ignore it.
+!app/src/main/res/**/*.xml

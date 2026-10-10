@@ -65,6 +65,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import com.lumen.player.ui.theme.LocalAccentColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -262,7 +263,14 @@ fun PlayerScreen(
             )
         }
 
-        ui.volume?.let { HudIndicator(Icons.Rounded.VolumeUp, it, "${(it * 100).toInt()}%") }
+        ui.volume?.let {
+            HudIndicator(
+                icon = Icons.Rounded.VolumeUp,
+                value = it.coerceIn(0f, 1f),
+                label = "${(it * 100).toInt()}%",
+                boosted = it > 1f
+            )
+        }
 
         when (ui.uiMode) {
             UiMode.TRACKS -> TrackModeSheet(
@@ -348,7 +356,12 @@ private fun AnimatedAlbumArt(
 }
 
 @Composable
-private fun HudIndicator(icon: ImageVector, value: Float, label: String) {
+private fun HudIndicator(
+    icon: ImageVector,
+    value: Float,
+    label: String,
+    boosted: Boolean = false
+) {
     Box(
         Modifier
             .fillMaxSize()
@@ -380,7 +393,13 @@ private fun HudIndicator(icon: ImageVector, value: Float, label: String) {
                 ),
                 modifier = Modifier.width(160.dp)
             )
-            Text(label, color = Color.White, fontWeight = FontWeight.SemiBold, fontSize = 14.sp)
+            // Above 100 % the label switches to the app's accent color to show the boost.
+            Text(
+                label,
+                color = if (boosted) LocalAccentColor.current else Color.White,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 14.sp
+            )
         }
     }
 }
