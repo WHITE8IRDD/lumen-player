@@ -11,6 +11,7 @@ A premium local-first media player for Android with TMDB integration and IPTV st
 - Resume playback where you left off
 - Playlists with drag-to-reorder
 - Long-press multi-select with bulk actions
+- Select all / deselect all inside folders and the library
 - Hide videos from Home with undo
 
 ### Premium Visuals
@@ -34,6 +35,7 @@ A premium local-first media player for Android with TMDB integration and IPTV st
 - Subtitle delay adjustment
 - Equalizer (bass boost, virtualizer, loudness)
 - Gesture controls (brightness, volume, seek)
+- Volume boost up to 200% (VLC-style): swipe up past the maximum volume
 - Picture-in-Picture
 - Mini-player with notification controls
 - Sleep timer

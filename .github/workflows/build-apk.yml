@@ -1,15 +1,18 @@
 name: Build APK
 
 # Builds the universal release APK on GitHub's runners and uploads it as a
-# workflow artifact. Triggered by pushes to arena/* branches or manually.
+# workflow artifact. Pushing a tag named new-lumen-* also publishes a GitHub
+# Release with the APK attached.
 on:
   push:
     branches:
       - "arena/**"
+    tags:
+      - "new-lumen-*"
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -71,6 +74,21 @@ jobs:
               tail = " | ".join(l.strip() for l in lines[-25:])[:1800]
               print(f"::error title=Build tail::{tail}")
           PY
+
+      - name: Publish GitHub release (tag builds only)
+        if: startsWith(github.ref, 'refs/tags/new-lumen-')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cp new-Lumen-26.apk "new Lumen 26.apk"
+          gh release create "$GITHUB_REF_NAME" "new Lumen 26.apk" \
+            --title "new Lumen 26" \
+            --notes "Universal release APK built from commit ${GITHUB_SHA:0:7}.
+
+          New in this build:
+          - Volume boost up to 200%: keep swiping up past the maximum volume (video player) or past 100% (music player).
+          - Select all / deselect all when deleting, sharing or queuing videos in a folder or in the library."
 
       - name: Upload build log
         if: always()
