@@ -133,7 +133,9 @@ jobs:
           - Volume boost up to 200%. Turn it on in Settings > Volume > Activate boost, then choose the maximum (120% to 200%).
           - The video and music volume HUD shows the percentage, and a 100% marker when boost is on.
           - Settings > Volume > Boost status shows whether the boost is reaching the audio output.
-          - Select all / deselect all when deleting, sharing or queuing videos in a folder or in the library."
+          - Select all / deselect all when deleting, sharing or queuing videos in a folder or in the library.
+          - Smoother circle animations on empty screens and onboarding. The seek ripple is a ring from the tapped side.
+          - New default accent: light white. You can still pick another colour in Settings."
 
       - name: Upload build log
         if: always()
