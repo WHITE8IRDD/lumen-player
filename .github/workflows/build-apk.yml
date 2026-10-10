@@ -48,6 +48,14 @@ jobs:
           if-no-files-found: error
           retention-days: 30
 
+      - name: Surface compiler errors as annotations
+        if: failure()
+        shell: bash
+        run: |
+          grep -E "^e: |What went wrong|Execution failed|^> " build-output.log \
+            | head -80 \
+            | while IFS= read -r line; do echo "::error title=Build error::${line}"; done
+
       - name: Upload build log
         if: always()
         uses: actions/upload-artifact@v4
