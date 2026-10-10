@@ -52,9 +52,25 @@ jobs:
         if: failure()
         shell: bash
         run: |
-          grep -E "^e: |What went wrong|Execution failed|^> " build-output.log \
-            | head -80 \
-            | while IFS= read -r line; do echo "::error title=Build error::${line}"; done
+          python3 - <<'PY'
+          import re
+          lines = open("build-output.log", encoding="utf-8", errors="replace").read().splitlines()
+          picked = []
+          for i, line in enumerate(lines):
+              if re.match(r"^e: |^w: .*\.kt|^ERROR|^Caused by|Execution failed|FAILED$|What went wrong", line):
+                  picked.append(line.strip())
+                  if "What went wrong" in line:
+                      picked.extend(l.strip() for l in lines[i + 1:i + 3])
+          print("error lines found:", len(picked))
+          # GitHub shows at most 10 error annotations per step: pack the lines into them.
+          chunks = [picked[k:k + 8] for k in range(0, len(picked), 8)][:9]
+          for chunk in chunks:
+              msg = " | ".join(chunk)[:1800].replace("%", "%25").replace("\r", "").replace("\n", " ")
+              print(f"::error title=Build error::{msg}")
+          if not picked:
+              tail = " | ".join(l.strip() for l in lines[-25:])[:1800]
+              print(f"::error title=Build tail::{tail}")
+          PY
 
       - name: Upload build log
         if: always()
