@@ -865,83 +865,86 @@ fun SelectionActionBar(
             color = MaterialTheme.colorScheme.surface,
             modifier = Modifier.fillMaxWidth()
         ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(end = 4.dp)
-            ) {
-                IconButton(onClick = onClear) {
-                    Icon(Icons.Rounded.Close, contentDescription = "exit selection")
-                }
-                Text(
-                    text = "$selectedCount selected",
-                    color = Color.White,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f)
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
-                    // Actions need at least one selected item.
-                    val hasSelection = selectedCount > 0
-                    SelectionActionMinimalButton(
-                        icon = Icons.Rounded.QueuePlayNext,
-                        label = "play next",
-                        onClick = onPlayNext,
-                        enabled = hasSelection
-                    )
-                    SelectionActionMinimalButton(
-                        icon = Icons.Rounded.PlaylistAdd,
-                        label = "add to queue",
-                        onClick = onAddToQueue,
-                        enabled = hasSelection
-                    )
-                    SelectionActionMinimalButton(
-                        icon = Icons.Rounded.Share,
-                        label = "share",
-                        onClick = onShare,
-                        enabled = hasSelection
-                    )
-                    if (onAddToPlaylist != null) {
-                        SelectionActionMinimalButton(
-                            icon = Icons.Rounded.PlaylistAdd,
-                            label = "add to playlist",
-                            onClick = onAddToPlaylist,
-                            enabled = hasSelection
-                        )
-                    }
-                    SelectionActionMinimalButton(
-                        icon = Icons.Rounded.Delete,
-                        label = "delete",
-                        onClick = onDelete,
-                        isDestructive = true,
-                        enabled = hasSelection
-                    )
-                }
-            }
-
-            // "Select all" sits on its own row so the icon bar keeps its size on small screens.
-            if (onSelectAll != null) {
+            // Column stacks the action row and the "Select all" row below it.
+            Column(Modifier.fillMaxWidth()) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 4.dp, end = 12.dp, bottom = 2.dp)
+                        .padding(end = 4.dp)
                 ) {
-                    TextButton(onClick = onSelectAll) {
-                        Icon(
-                            imageVector = Icons.Rounded.SelectAll,
-                            contentDescription = null,
-                            modifier = Modifier.size(18.dp)
+                    IconButton(onClick = onClear) {
+                        Icon(Icons.Rounded.Close, contentDescription = "exit selection")
+                    }
+                    Text(
+                        text = "$selectedCount selected",
+                        color = Color.White,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f)
+                    )
+                    // Actions need at least one selected item.
+                    val hasSelection = selectedCount > 0
+                    Row(horizontalArrangement = Arrangement.spacedBy(0.dp)) {
+                        SelectionActionMinimalButton(
+                            icon = Icons.Rounded.QueuePlayNext,
+                            label = "play next",
+                            onClick = onPlayNext,
+                            enabled = hasSelection
                         )
-                        Spacer(Modifier.width(6.dp))
-                        Text(
-                            text = if (allSelected) "Deselect all" else "Select all",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.SemiBold
+                        SelectionActionMinimalButton(
+                            icon = Icons.Rounded.PlaylistAdd,
+                            label = "add to queue",
+                            onClick = onAddToQueue,
+                            enabled = hasSelection
                         )
+                        SelectionActionMinimalButton(
+                            icon = Icons.Rounded.Share,
+                            label = "share",
+                            onClick = onShare,
+                            enabled = hasSelection
+                        )
+                        if (onAddToPlaylist != null) {
+                            SelectionActionMinimalButton(
+                                icon = Icons.Rounded.PlaylistAdd,
+                                label = "add to playlist",
+                                onClick = onAddToPlaylist,
+                                enabled = hasSelection
+                            )
+                        }
+                        SelectionActionMinimalButton(
+                            icon = Icons.Rounded.Delete,
+                            label = "delete",
+                            onClick = onDelete,
+                            isDestructive = true,
+                            enabled = hasSelection
+                        )
+                    }
+                }
+
+                // "Select all" sits on its own row so the icon bar keeps its size on small screens.
+                if (onSelectAll != null) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(start = 4.dp, end = 12.dp, bottom = 2.dp)
+                    ) {
+                        TextButton(onClick = onSelectAll) {
+                            Icon(
+                                imageVector = Icons.Rounded.SelectAll,
+                                contentDescription = null,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                text = if (allSelected) "Deselect all" else "Select all",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.SemiBold
+                            )
+                        }
                     }
                 }
             }
