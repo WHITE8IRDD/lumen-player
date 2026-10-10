@@ -32,9 +32,10 @@ class SettingsViewModel @Inject constructor(
     val boostEngineStatus: StateFlow<String> = combine(
         repository.settings,
         volumeBoost.engineState,
-        volumeBoost.formatName
-    ) { s, state, format ->
-        boostStatusText(s.volumeBoostEnabled, state, format)
+        volumeBoost.formatName,
+        volumeBoost.deviceEffectActive
+    ) { s, state, format, device ->
+        boostStatusText(s.volumeBoostEnabled, state, format, device)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
 
     private val _isReady = MutableStateFlow(false)
@@ -121,13 +122,16 @@ class SettingsViewModel @Inject constructor(
     private fun boostStatusText(
         enabled: Boolean,
         state: VolumeBoostController.EngineState,
-        format: String
+        format: String,
+        deviceEffect: Boolean
     ): String = when {
         !enabled -> "Off. Turn on the boost to go above 100%."
         state == VolumeBoostController.EngineState.IDLE ->
             "Waiting for audio. Play a song or video to check."
+        deviceEffect ->
+            "Working. The boost uses the device audio effect, like VLC."
         state == VolumeBoostController.EngineState.ACTIVE ->
-            "Working. The boost is applied to $format audio."
+            "Working. The boost is applied in software to $format audio."
         else ->
             "Not available for this audio ($format). Playback stays at 100%."
     }

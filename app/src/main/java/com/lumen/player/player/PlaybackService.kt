@@ -13,6 +13,7 @@ import androidx.media3.session.MediaSessionService
 import com.lumen.player.MainActivity
 import com.lumen.player.data.repository.MediaRepositoryImpl
 import com.lumen.player.domain.repository.MediaRepository
+import com.lumen.player.player.audio.VolumeBoostController
 import com.lumen.player.player.equalizer.EqualizerController
 import com.lumen.player.player.notification.LumenMediaNotificationProvider
 import dagger.hilt.android.AndroidEntryPoint
@@ -40,6 +41,7 @@ class PlaybackService : MediaSessionService() {
     @Inject lateinit var equalizerController: EqualizerController
     @Inject lateinit var mediaRepository: MediaRepository
     @Inject lateinit var controller: PlayerController
+    @Inject lateinit var volumeBoost: VolumeBoostController
 
     private var mediaSession: MediaSession? = null
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -49,6 +51,7 @@ class PlaybackService : MediaSessionService() {
         val player: ExoPlayer = playerManager.build()
         controller.directPlayer = player
         equalizerController.attach(player.audioSessionId)
+        volumeBoost.attachSession(player.audioSessionId)
 
         val sessionActivityPendingIntent = PendingIntent.getActivity(
             this, 0,
@@ -158,6 +161,7 @@ class PlaybackService : MediaSessionService() {
         if (player != null) saveResume(player)
         mediaSession?.run {
             equalizerController.release()
+            volumeBoost.detachSession()
             this.player.release()
             release()
         }

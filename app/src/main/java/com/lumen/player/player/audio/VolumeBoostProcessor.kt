@@ -11,8 +11,10 @@ import kotlin.math.roundToInt
  * Multiplies decoded PCM samples by the current [VolumeBoostController] gain.
  *
  * It sits in the ExoPlayer audio pipeline, so it affects every renderer the
- * same way. At gain 1.0 the buffer is copied through unchanged, so there is
- * no audible difference below 100 %.
+ * same way. It is the fallback for [VolumeBoostController.softwareGain]: when
+ * the device effect carries the boost, this processor copies samples through.
+ * At gain 1.0 the buffer is copied unchanged, so there is no audible difference
+ * below 100 %.
  *
  * Supports 16-bit integer PCM and float PCM. For any other encoding the
  * processor is inactive and reports that to the controller.
@@ -33,7 +35,7 @@ class VolumeBoostProcessor(
         val remaining = inputBuffer.remaining()
         if (remaining == 0) return
 
-        val gain = boost.gain
+        val gain = boost.softwareGain
         val out = replaceOutputBuffer(remaining)
         out.order(inputBuffer.order())
 

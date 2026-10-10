@@ -52,44 +52,47 @@ class VolumeBoostProcessorTest {
         return out
     }
 
-    private fun boostAt(percent: Int): VolumeBoostController {
+    /** A controller with the boost on and its level set; the gain is level cubed. */
+    private fun boostAt(level: Float): VolumeBoostController {
         val boost = VolumeBoostController()
-        boost.applySettings(enabled = true, maxPercent = percent)
-        boost.setGain(percent / 100f)
+        boost.applySettings(enabled = true, maxPercent = 200)
+        boost.setGain(level)
         return boost
     }
 
     // ── 16-bit PCM ──
 
     @Test
-    fun gainOfOneCopiesSamplesUnchanged() {
-        val out = run(boostAt(200).also { it.setGain(1f) }, C.ENCODING_PCM_16BIT,
+    fun levelOfOneCopiesSamplesUnchanged() {
+        val out = run(boostAt(1f), C.ENCODING_PCM_16BIT,
             pcm16(1000, -1000, Short.MAX_VALUE, Short.MIN_VALUE))
         assertEquals(listOf<Short>(1000, -1000, Short.MAX_VALUE, Short.MIN_VALUE), shorts(out))
     }
 
     @Test
-    fun gainOfTwoDoublesEachSample() {
-        val out = run(boostAt(200), C.ENCODING_PCM_16BIT, pcm16(1000, -1000, 5000, -5000))
-        assertEquals(listOf<Short>(2000, -2000, 10000, -10000), shorts(out))
+    fun levelOf150AppliesTheCubedGain() {
+        // 1.5 cubed = 3.375 (exact in binary), as in VLC above 100 %.
+        val out = run(boostAt(1.5f), C.ENCODING_PCM_16BIT, pcm16(1000, -1000, 5000, -5000))
+        assertEquals(listOf<Short>(3375, -3375, 16875, -16875), shorts(out))
     }
 
     @Test
     fun fractionalGainRoundsToNearestSample() {
-        val out = run(boostAt(150), C.ENCODING_PCM_16BIT, pcm16(1000, -2))
-        assertEquals(listOf<Short>(1500, -3), shorts(out))
+        // 1.2 cubed = 1.728: 1000 -> 1728, -2 -> -3.456 -> -3.
+        val out = run(boostAt(1.2f), C.ENCODING_PCM_16BIT, pcm16(1000, -2))
+        assertEquals(listOf<Short>(1728, -3), shorts(out))
     }
 
     @Test
     fun samplesAboveFullScaleAreClipped() {
-        val out = run(boostAt(200), C.ENCODING_PCM_16BIT, pcm16(20_000, -20_000))
+        val out = run(boostAt(2f), C.ENCODING_PCM_16BIT, pcm16(20_000, -20_000))
         assertEquals(listOf<Short>(Short.MAX_VALUE, Short.MIN_VALUE), shorts(out))
     }
 
     @Test
     fun outputHasSameLengthAsInput() {
         val input = pcm16(1, 2, 3, 4, 5, 6)
-        val out = run(boostAt(200), C.ENCODING_PCM_16BIT, input)
+        val out = run(boostAt(1.5f), C.ENCODING_PCM_16BIT, input)
         assertEquals(6, shorts(out).size)
     }
 
@@ -97,10 +100,11 @@ class VolumeBoostProcessorTest {
 
     @Test
     fun floatGainScalesAndClipsToUnitRange() {
-        val out = run(boostAt(200), C.ENCODING_PCM_FLOAT, pcmFloat(0.25f, -0.8f, 0.9f))
+        // 1.2 cubed = 1.728: 0.25 -> 0.432; -0.8 and 0.9 clip to -1 and 1.
+        val out = run(boostAt(1.2f), C.ENCODING_PCM_FLOAT, pcmFloat(0.25f, -0.8f, 0.9f))
         val result = floats(out)
         assertEquals(3, result.size)
-        assertEquals(0.5f, result[0], 1e-6f)
+        assertEquals(0.432f, result[0], 1e-4f)
         assertEquals(-1f, result[1], 1e-6f)
         assertEquals(1f, result[2], 1e-6f)
     }

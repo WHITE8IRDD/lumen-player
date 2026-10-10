@@ -254,14 +254,14 @@ class PlayerController @Inject constructor(
 
     /** Current output level on the same scale as [setVolume]. */
     fun currentVolumeLevel(): Float {
-        val boost = volumeBoost.gain
+        val boost = volumeBoost.level
         return if (boost > VolumeBoostController.MIN_LEVEL) boost else (controller?.volume ?: 1f)
     }
 
     /** Software boost only (1.0 = 100 %, up to 2.0 = 200 %). Used by the video player. */
     fun setVolumeBoost(gain: Float) = volumeBoost.setGain(gain)
 
-    fun volumeBoostLevel(): Float = volumeBoost.gain
+    fun volumeBoostLevel(): Float = volumeBoost.level
 
     fun moveQueueItem(from: Int, to: Int) { controller?.moveMediaItem(from, to) }
     fun removeQueueItem(index: Int) { controller?.removeMediaItem(index) }
