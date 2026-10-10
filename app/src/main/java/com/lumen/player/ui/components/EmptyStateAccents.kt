@@ -1,6 +1,7 @@
 package com.lumen.player.ui.components
 
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
@@ -22,6 +23,8 @@ import androidx.compose.material3.Icon
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.geometry.Offset
@@ -31,6 +34,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.cos
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 private fun driftTransition(
@@ -67,27 +71,56 @@ fun BoxScope.OrbitingAccents(
     blobColor: Color,
     alpha: Float = 0.22f
 ) {
+    val density = LocalDensity.current
     val radius = 110.dp
     val iconSize = 20.dp
-    val radPerDeg = 0.0174533f
     val count = icons.size.coerceAtLeast(1)
+
+    // One slow, continuous revolution. Each icon's position is computed in the
+    // layout phase (the offset lambda), so the animation does not recompose.
+    val transition = rememberInfiniteTransition(label = "orbit")
+    val rotation by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 360f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 60_000, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "orbit-rotation"
+    )
+
+    // Faint track that the icons travel along.
+    Canvas(
+        modifier = Modifier
+            .size(radius * 2)
+            .align(Alignment.Center)
+    ) {
+        drawCircle(
+            color = blobColor.copy(alpha = 0.10f),
+            radius = radius.toPx(),
+            style = Stroke(width = 1.dp.toPx())
+        )
+    }
+
+    val radiusPx = with(density) { radius.toPx() }
     icons.forEachIndexed { index, icon ->
-        val angle = (360f / count) * index - 90f
-        val rad = angle * radPerDeg
-        val offsetX = (radius.value * cos(rad.toDouble())).dp
-        val offsetY = (radius.value * sin(rad.toDouble())).dp
-        DriftOffset(durationMs = 10_000, delayMs = index * 1000) { drift ->
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier
-                    .size(iconSize)
-                    .align(Alignment.Center)
-                    .offset(x = offsetX, y = offsetY + drift)
-                    .alpha(alpha),
-                tint = blobColor
-            )
-        }
+        val baseAngle = (360f / count) * index - 90f
+        Icon(
+            imageVector = icon,
+            contentDescription = null,
+            modifier = Modifier
+                .size(iconSize)
+                .align(Alignment.Center)
+                .offset {
+                    val angle = Math.toRadians((baseAngle + rotation).toDouble())
+                    IntOffset(
+                        (radiusPx * cos(angle)).roundToInt(),
+                        (radiusPx * sin(angle)).roundToInt()
+                    )
+                }
+                .alpha(alpha),
+            tint = blobColor
+        )
     }
 }
 

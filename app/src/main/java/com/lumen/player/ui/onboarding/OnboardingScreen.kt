@@ -8,6 +8,12 @@ import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -48,6 +54,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -166,29 +173,57 @@ fun OnboardingScreen(
 
 @Composable
 private fun GlowOrb(color: Color, modifier: Modifier = Modifier) {
+    // A slow, continuous breath. Scale only, so the layout does not change.
+    val transition = rememberInfiniteTransition(label = "glow-orb")
+    val breath by transition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 3200, easing = FastOutSlowInEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "breath"
+    )
     Box(
         modifier = modifier.size(220.dp),
         contentAlignment = Alignment.Center
     ) {
+        // Wide, soft halo.
         Box(
             modifier = Modifier
                 .size(220.dp)
+                .graphicsLayer {
+                    // Read in the layer phase, so the breath does not recompose each frame.
+                    val s = 0.95f + 0.05f * breath
+                    scaleX = s
+                    scaleY = s
+                }
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(color.copy(alpha = 0.18f), Color.Transparent)
+                        colorStops = listOf(
+                            0f to color.copy(alpha = 0.22f),
+                            0.55f to color.copy(alpha = 0.08f),
+                            1f to Color.Transparent
+                        )
                     ),
                     shape = CircleShape
                 )
         )
+        // Bright core: a near-white centre that fades into the orb colour.
         Box(
             modifier = Modifier
                 .size(130.dp)
+                .graphicsLayer {
+                    val s = 0.97f + 0.06f * breath
+                    scaleX = s
+                    scaleY = s
+                }
                 .background(
                     brush = Brush.radialGradient(
-                        colors = listOf(
-                            color.copy(alpha = 0.9f),
-                            color.copy(alpha = 0.45f),
-                            Color.Transparent
+                        colorStops = listOf(
+                            0f to lerp(color, Color.White, 0.45f).copy(alpha = 0.95f),
+                            0.5f to color.copy(alpha = 0.7f),
+                            1f to Color.Transparent
                         )
                     ),
                     shape = CircleShape

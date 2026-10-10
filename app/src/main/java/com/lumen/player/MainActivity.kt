@@ -19,6 +19,7 @@ import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import com.lumen.player.ui.theme.LocalAccentColor
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
+import com.lumen.player.core.theme.LumenAccentDefault
 import com.lumen.player.core.theme.LumenTheme
 import com.lumen.player.domain.repository.SettingsRepository
 import com.lumen.player.player.PlayerController
@@ -89,7 +90,7 @@ class MainActivity : ComponentActivity() {
             val accentColor = runCatching {
                 val hex = settings.accentColorHex.removePrefix("#")
                 Color(("FF$hex").toLong(16))
-            }.getOrDefault(Color(0xFFFFAB40))
+            }.getOrDefault(LumenAccentDefault)
 
             val fontFamily = remember(settings.fontFamilyChoice) {
                 try { LumenFontChoice.valueOf(settings.fontFamilyChoice).family }

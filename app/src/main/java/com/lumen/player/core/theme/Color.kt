@@ -14,6 +14,9 @@ val LumenTextSecondary = Color(0xFF8E8B85)
 val LumenTextTertiary = Color(0xFF5A5852)
 
 // ── Accent ──
+/** Default app accent: a light white. Users can still pick another in Settings. */
+const val LUMEN_ACCENT_DEFAULT_HEX = "#F5F5F5"
+val LumenAccentDefault = Color(0xFFF5F5F5)
 val LumenAmber = Color(0xFFFFC857)
 val LumenAmberMuted = Color(0xFF8A7A56)
 

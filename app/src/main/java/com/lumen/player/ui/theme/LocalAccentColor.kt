@@ -5,4 +5,4 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-val LocalAccentColor = staticCompositionLocalOf { Color(0xFFFFAB40) }
+val LocalAccentColor = staticCompositionLocalOf { Color(0xFFF5F5F5) }

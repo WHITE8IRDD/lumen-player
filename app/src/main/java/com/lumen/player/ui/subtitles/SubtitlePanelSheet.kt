@@ -1,5 +1,6 @@
 package com.lumen.player.ui.subtitles
 
+import com.lumen.player.ui.theme.LocalAccentColor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -105,7 +106,7 @@ fun SubtitlePanelContent(
                 Box(
                     modifier = Modifier.height(34.dp)
                         .background(
-                            if (isSelected) Color(0xFFFFAB40)
+                            if (isSelected) LocalAccentColor.current
                             else Color.White.copy(0.08f),
                             RoundedCornerShape(17.dp)
                         )
@@ -127,7 +128,7 @@ fun SubtitlePanelContent(
 
         if (isLoading) {
             Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                CircularProgressIndicator(color = Color(0xFFFFAB40), modifier = Modifier.size(28.dp), strokeWidth = 2.5.dp)
+                CircularProgressIndicator(color = LocalAccentColor.current, modifier = Modifier.size(28.dp), strokeWidth = 2.5.dp)
             }
         } else if (onlineSubs.isEmpty() && filteredLocalSubs.isEmpty()) {
             Column(Modifier.fillMaxSize().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
@@ -135,24 +136,24 @@ fun SubtitlePanelContent(
                 Spacer(Modifier.height(12.dp))
                 Text("No subtitles found", fontSize = 14.sp, color = Color.White.copy(0.6f))
                 Spacer(Modifier.height(12.dp))
-                TextButton(onClick = onSearchTap) { Text("Edit search", color = Color(0xFFFFAB40), fontSize = 12.sp) }
+                TextButton(onClick = onSearchTap) { Text("Edit search", color = LocalAccentColor.current, fontSize = 12.sp) }
             }
         } else {
             LazyColumn(modifier = Modifier.fillMaxSize()) {
                 if (filteredLocalSubs.isNotEmpty()) {
-                    item { SectionLabel("ON DEVICE", Color(0xFFFFAB40)) }
+                    item { SectionLabel("ON DEVICE", LocalAccentColor.current) }
                     items(filteredLocalSubs) { file ->
                         val detectedLang = detectLocalSubLanguage(file.name)
                         CompactSubRow(
                             label = detectedLang?.uppercase() ?: "SUB", name = file.name, trailingText = "${file.length() / 1024}KB",
                             downloadCount = null,
                             isApplied = appliedSubtitleName == file.name, isDownloading = false,
-                            accentColor = if (detectedLang != null) Color(0xFFFFAB40) else Color.White.copy(0.5f),
+                            accentColor = if (detectedLang != null) LocalAccentColor.current else Color.White.copy(0.5f),
                             onClick = { onLocalApply(file) }
                         )
                     }
                 }
-                item { SectionLabel("ONLINE", Color(0xFFFFAB40)) }
+                item { SectionLabel("ONLINE", LocalAccentColor.current) }
                 if (onlineSubs.isEmpty()) {
                     item {
                         Box(Modifier.fillMaxWidth().padding(24.dp), contentAlignment = Alignment.Center) {
@@ -164,7 +165,7 @@ fun SubtitlePanelContent(
                         CompactSubRow(
                             label = result.language, name = result.releaseName ?: "Unknown", trailingText = null,
                             downloadCount = result.downloadCount?.let { if (it >= 1000) "${it / 1000}k" else it.toString() },
-                            isApplied = appliedSubtitleName == result.releaseName, isDownloading = false, accentColor = Color(0xFFFFAB40),
+                            isApplied = appliedSubtitleName == result.releaseName, isDownloading = false, accentColor = LocalAccentColor.current,
                             onClick = { onOnlineDownload(result) }
                         )
                     }

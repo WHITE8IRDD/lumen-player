@@ -1,5 +1,6 @@
 package com.lumen.player.ui.subtitles
 
+import com.lumen.player.ui.theme.LocalAccentColor
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -46,14 +47,14 @@ fun SubtitleDelayDialog(
         Surface(
             modifier = Modifier
                 .width(340.dp)
-                .border(BorderStroke(1.dp, Color(0xFFFFAB40).copy(alpha = 0.35f)), RoundedCornerShape(16.dp)),
+                .border(BorderStroke(1.dp, LocalAccentColor.current.copy(alpha = 0.35f)), RoundedCornerShape(16.dp)),
             color = Color(0xFF1C1C1C),
             shape = RoundedCornerShape(16.dp)
         ) {
             Column(modifier = Modifier.padding(20.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Spacer(Modifier.width(24.dp))
-                    Text("Subtitle delay", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Color(0xFFFFAB40), modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
+                    Text("Subtitle delay", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = LocalAccentColor.current, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
                     IconButton(onClick = onDismiss, modifier = Modifier.size(24.dp)) {
                         Icon(Icons.Rounded.Close, "Close", tint = Color.White.copy(0.6f), modifier = Modifier.size(16.dp))
                     }
@@ -73,7 +74,7 @@ fun SubtitleDelayDialog(
                 }
                 Spacer(Modifier.height(16.dp))
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
-                    TextButton(onClick = { onReset(); onDismiss() }) { Text("Reset", color = Color(0xFFFFAB40), fontSize = 13.sp) }
+                    TextButton(onClick = { onReset(); onDismiss() }) { Text("Reset", color = LocalAccentColor.current, fontSize = 13.sp) }
                     Spacer(Modifier.width(8.dp))
                     TextButton(onClick = onDismiss) { Text("Done", color = Color.White, fontSize = 13.sp) }
                 }

@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.lumen.player.core.theme.LUMEN_ACCENT_DEFAULT_HEX
 import com.lumen.player.core.util.Constants
 import com.lumen.player.domain.model.AudioEffectsState
 import com.lumen.player.domain.model.IntroConfig
@@ -30,17 +31,24 @@ import javax.inject.Singleton
 private val Context.prefsDataStore by preferencesDataStore(name = Constants.PREFS_NAME)
 private val settingsScope = CoroutineScope(Dispatchers.Default + SupervisorJob())
 
+/** Accent defaults used by earlier builds. These are reset to the current default once. */
+private val OLD_ACCENT_DEFAULTS = listOf("#00E5C8", "#FFC857", "#FFAB40")
+
 @Singleton
 class SettingsDataStore @Inject constructor(
     @ApplicationContext private val context: Context
 ) {
     init {
-        // One-time migration: old teal default (#00E5C8) → amber (#FFC857) → current (#FFAB40)
+        // One-time migration to the light-white default. Previous defaults (teal, amber)
+        // are cleared so the new default applies. Anything else the user picked is kept.
         settingsScope.launch {
             context.prefsDataStore.edit { prefs ->
-                val current = prefs[Keys.ACCENT_COLOR_HEX]
-                if (current != null && (current == "#00E5C8" || current == "#FFC857")) {
-                    prefs[Keys.ACCENT_COLOR_HEX] = "#FFAB40"
+                if (prefs[Keys.ACCENT_MIGRATED_V4] != true) {
+                    val current = prefs[Keys.ACCENT_COLOR_HEX]
+                    if (current != null && current in OLD_ACCENT_DEFAULTS) {
+                        prefs.remove(Keys.ACCENT_COLOR_HEX)
+                    }
+                    prefs[Keys.ACCENT_MIGRATED_V4] = true
                 }
             }
         }
@@ -73,6 +81,7 @@ class SettingsDataStore @Inject constructor(
 
         val ACCENT_COLOR_HEX = stringPreferencesKey("accent_color_hex")
         val ACCENT_MIGRATED = booleanPreferencesKey("accent_migrated_v3")
+        val ACCENT_MIGRATED_V4 = booleanPreferencesKey("accent_migrated_v4")
 
         val SEC_APPEARANCE  = booleanPreferencesKey("section_appearance")
         val SEC_PLAYBACK    = booleanPreferencesKey("section_playback")
@@ -114,7 +123,7 @@ class SettingsDataStore @Inject constructor(
             subtitleDelayUs = p[Keys.SUBTITLE_DELAY_US] ?: 0L,
             subtitleTextSize = p[Keys.SUBTITLE_TEXT_SIZE] ?: 16f,
             onboardingCompleted = p[Keys.ONBOARDING_COMPLETED] ?: false,
-            accentColorHex = p[Keys.ACCENT_COLOR_HEX] ?: "#FFAB40",
+            accentColorHex = p[Keys.ACCENT_COLOR_HEX] ?: LUMEN_ACCENT_DEFAULT_HEX,
             fontSize = p[Keys.FONT_SIZE] ?: "DEFAULT",
             aspectRatio = p[Keys.ASPECT_RATIO] ?: "AUTO",
             brightnessMode = p[Keys.BRIGHTNESS_MODE] ?: "SYSTEM",

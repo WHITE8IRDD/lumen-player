@@ -1,5 +1,6 @@
 package com.lumen.player.ui.subtitles
 
+import com.lumen.player.ui.theme.LocalAccentColor
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -65,7 +66,7 @@ fun SubtitleMenu(
         onDismissRequest = onDismiss,
         modifier = Modifier
             .background(Color(0xFF1C1C1C), RoundedCornerShape(14.dp))
-            .border(BorderStroke(1.dp, Color(0xFFFFAB40).copy(alpha = 0.35f)), RoundedCornerShape(14.dp))
+            .border(BorderStroke(1.dp, LocalAccentColor.current.copy(alpha = 0.35f)), RoundedCornerShape(14.dp))
             .width(280.dp),
         properties = PopupProperties(focusable = true)
     ) {
@@ -114,11 +115,11 @@ private fun TrackMenuItem(icon: ImageVector?, label: String, subtitle: String? =
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (icon != null) {
-            Icon(icon, null, tint = if (isActive) Color(0xFFFFAB40) else Color.White.copy(0.7f), modifier = Modifier.size(18.dp))
+            Icon(icon, null, tint = if (isActive) LocalAccentColor.current else Color.White.copy(0.7f), modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(14.dp))
         } else { Spacer(Modifier.width(32.dp)) }
         Column(Modifier.weight(1f)) {
-            Text(label, fontSize = 14.sp, color = if (isActive) Color(0xFFFFAB40) else Color.White)
+            Text(label, fontSize = 14.sp, color = if (isActive) LocalAccentColor.current else Color.White)
             if (subtitle != null) Text(subtitle, fontSize = 11.sp, color = Color.White.copy(0.5f), maxLines = 1)
         }
     }

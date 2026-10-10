@@ -20,7 +20,7 @@ data class UserSettings(
     val fetchOnlineMetadata: Boolean = false,
     val metadataWifiOnly: Boolean = true,
     val onboardingCompleted: Boolean = false,
-    val accentColorHex: String = "#FFAB40",
+    val accentColorHex: String = "#F5F5F5",
     val fontSize: String = "DEFAULT",
     val aspectRatio: String = "AUTO",
     val brightnessMode: String = "SYSTEM",

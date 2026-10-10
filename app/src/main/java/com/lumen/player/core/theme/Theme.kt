@@ -18,7 +18,7 @@ import com.lumen.player.ui.theme.LumenTextCase
 
 @Composable
 fun LumenTheme(
-    accentColor: Color = Color(0xFFFFAB40),
+    accentColor: Color = LumenAccentDefault,
     fontFamily: FontFamily = LumenFontChoice.SERIF_DISPLAY.family,
     textCase: LumenTextCase = LumenTextCase.LOWERCASE,
     weightOffset: Int = 0,
@@ -34,7 +34,7 @@ fun LumenTheme(
             primaryContainer = Color(0xFF2A2A4A),
             onPrimaryContainer = Color(0xFFDDE5FF),
             secondary = accentColor,
-            onSecondary = Color(0xFF002B29),
+            onSecondary = onAccent,
             secondaryContainer = accentColor.copy(alpha = 0.2f),
             onSecondaryContainer = accentColor,
             tertiary = accentColor,

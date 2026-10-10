@@ -847,6 +847,7 @@ private fun AboutRow(
 }
 
 private val ACCENT_COLORS = listOf(
+    "#F5F5F5" to "light white",
     "#FFAB40" to "amber",
     "#FF4D6D" to "rose",
     "#7C5CFF" to "purple",
@@ -854,7 +855,6 @@ private val ACCENT_COLORS = listOf(
     "#4CAF50" to "green",
     "#2196F3" to "blue",
     "#FF6B9D" to "pink",
-    "#FFFFFF" to "white"
 )
 
 @Composable

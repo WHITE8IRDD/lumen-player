@@ -37,6 +37,7 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.matchParentSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -1615,7 +1616,7 @@ fun VideoPlayerScreen(
                         fontSize = 10.sp,
                         fontWeight = FontWeight.Bold,
                         letterSpacing = 1.2.sp,
-                        color = Color(0xFFFFAB40),
+                        color = LocalAccentColor.current,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
                     )
                     if (localSubFiles.isEmpty()) {
@@ -1631,12 +1632,12 @@ fun VideoPlayerScreen(
                                         .padding(horizontal = 16.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(Icons.Rounded.Description, null, tint = Color(0xFFFFAB40), modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Rounded.Description, null, tint = LocalAccentColor.current, modifier = Modifier.size(18.dp))
                                     Spacer(Modifier.width(12.dp))
                                     Text(file.name, fontSize = 13.sp, color = Color.White, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                                     Text("${file.length() / 1024}KB", fontSize = 10.sp, color = Color.White.copy(0.4f))
                                     Spacer(Modifier.width(10.dp))
-                                    Icon(Icons.Rounded.PlayArrow, null, tint = Color(0xFFFFAB40), modifier = Modifier.size(16.dp))
+                                    Icon(Icons.Rounded.PlayArrow, null, tint = LocalAccentColor.current, modifier = Modifier.size(16.dp))
                                 }
                                 HorizontalDivider(thickness = 0.5.dp, color = Color.White.copy(0.06f), modifier = Modifier.padding(horizontal = 16.dp))
                             }
@@ -2235,43 +2236,71 @@ private fun SeekFlashLayer(
 ) {
     val flash = stateProvider() ?: return
     val isBack = flash == SeekFlash.Back
-    val transition = androidx.compose.animation.core.rememberInfiniteTransition(label = "seek-flash")
-    val ripple by transition.animateFloat(
-        initialValue = 0.55f,
-        targetValue = 1f,
-        animationSpec = androidx.compose.animation.core.infiniteRepeatable(
-            animation = tween(700, easing = androidx.compose.animation.core.LinearEasing),
-            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
-        ),
-        label = "ripple"
-    )
-    Box(
-        modifier.padding(24.dp),
-        contentAlignment = if (isBack) Alignment.CenterStart else Alignment.CenterEnd
-    ) {
-        Surface(
-            color = Color.Black.copy(alpha = 0.55f),
-            shape = LumenSquircle(16.dp),
-            modifier = Modifier
-                .size(width = 120.dp, height = 96.dp)
-                .graphicsLayer { this.scaleX = ripple; this.scaleY = ripple }
+    // One short, one-shot animation per flash. The parent clears the flash after
+    // 700 ms, which removes this layer from composition.
+    val progress = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(Unit) {
+        progress.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(650, easing = androidx.compose.animation.core.FastOutSlowInEasing)
+        )
+    }
+    Box(modifier) {
+        // A ring that expands from the side of the screen that was tapped, then fades.
+        // The value is read in the draw phase, so this does not recompose each frame.
+        androidx.compose.foundation.Canvas(modifier = Modifier.matchParentSize()) {
+            val p = progress.value
+            val centerX = if (isBack) 84.dp.toPx() else size.width - 84.dp.toPx()
+            val centerY = size.height / 2f
+            val radius = 44.dp.toPx() + 96.dp.toPx() * p
+            val fade = 1f - p
+            drawCircle(
+                color = Color.White.copy(alpha = 0.14f * fade),
+                radius = radius,
+                center = androidx.compose.ui.geometry.Offset(centerX, centerY)
+            )
+            drawCircle(
+                color = Color.White.copy(alpha = 0.45f * fade),
+                radius = radius,
+                center = androidx.compose.ui.geometry.Offset(centerX, centerY),
+                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 2.dp.toPx())
+            )
+        }
+        Box(
+            Modifier
+                .fillMaxSize()
+                .padding(24.dp),
+            contentAlignment = if (isBack) Alignment.CenterStart else Alignment.CenterEnd
         ) {
-            Column(
-                Modifier.fillMaxSize(),
-                verticalArrangement = Arrangement.Center,
-                horizontalAlignment = Alignment.CenterHorizontally
+            Surface(
+                color = Color.Black.copy(alpha = 0.55f),
+                shape = LumenSquircle(16.dp),
+                modifier = Modifier
+                    .size(width = 120.dp, height = 96.dp)
+                    .graphicsLayer {
+                        // Small pop-in as the label appears.
+                        val s = 0.9f + 0.1f * (progress.value * 4f).coerceAtMost(1f)
+                        scaleX = s
+                        scaleY = s
+                    }
             ) {
-                Icon(
-                    if (isBack) Icons.Rounded.FastRewind else Icons.Rounded.FastForward,
-                    null, tint = Color.White, modifier = Modifier.size(36.dp)
-                )
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    if (isBack) "−10s" else "+10s",
-                    color = Color.White,
-                    fontWeight = FontWeight.SemiBold,
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Column(
+                    Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.Center,
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    Icon(
+                        if (isBack) Icons.Rounded.FastRewind else Icons.Rounded.FastForward,
+                        null, tint = Color.White, modifier = Modifier.size(36.dp)
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        if (isBack) "−10s" else "+10s",
+                        color = Color.White,
+                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
             }
         }
     }
