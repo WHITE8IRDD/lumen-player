@@ -266,7 +266,8 @@ fun PlayerScreen(
         ui.volume?.let {
             HudIndicator(
                 icon = Icons.Rounded.VolumeUp,
-                value = it.coerceIn(0f, 1f),
+                // The bar is scaled to the boost cap, so 100 % is not the full bar when boosting.
+                value = (it / viewModel.volumeMaxLevel()).coerceIn(0f, 1f),
                 label = "${(it * 100).toInt()}%",
                 boosted = it > 1f
             )

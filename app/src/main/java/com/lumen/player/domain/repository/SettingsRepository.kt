@@ -41,6 +41,9 @@ data class UserSettings(
     val sectionNetwork: Boolean = false,
     val sectionAdvanced: Boolean = false,
     val sectionAbout: Boolean = false,
+    val sectionVolume: Boolean = false,
+    val volumeBoostEnabled: Boolean = false,
+    val volumeBoostMaxPercent: Int = 200,
 )
 
 interface SettingsRepository {
@@ -67,6 +70,8 @@ interface SettingsRepository {
     suspend fun setAutoScanOnStartup(enabled: Boolean)
     suspend fun setShowAudio(enabled: Boolean)
     suspend fun setReplayGain(enabled: Boolean)
+    suspend fun setVolumeBoostEnabled(enabled: Boolean)
+    suspend fun setVolumeBoostMaxPercent(percent: Int)
     suspend fun setSectionExpanded(section: String, expanded: Boolean)
     suspend fun setFontFamilyChoice(value: String)
     suspend fun setTextCaseChoice(value: String)

@@ -236,12 +236,18 @@ class PlayerController @Inject constructor(
     fun getPlayer(): Player? = directPlayer ?: controller
 
     /**
-     * Sets the output level on a 0..[VolumeBoostController.MAX_LEVEL] scale.
+     * Highest output level allowed right now: the user's boost cap when the
+     * boost is enabled in Settings, otherwise 1.0 (100 %).
+     */
+    fun volumeMaxLevel(): Float = volumeBoost.maxLevel
+
+    /**
+     * Sets the output level on a 0..[volumeMaxLevel] scale.
      * Up to 1.0 it changes the player volume. Above 1.0 the player stays at
      * full volume and [VolumeBoostController] amplifies the audio (VLC-style boost).
      */
     fun setVolume(v: Float) {
-        val level = v.coerceIn(0f, VolumeBoostController.MAX_LEVEL)
+        val level = v.coerceIn(0f, volumeMaxLevel())
         controller?.volume = level.coerceAtMost(1f)
         volumeBoost.setGain(level.coerceAtLeast(VolumeBoostController.MIN_LEVEL))
     }

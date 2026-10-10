@@ -35,7 +35,7 @@ A premium local-first media player for Android with TMDB integration and IPTV st
 - Subtitle delay adjustment
 - Equalizer (bass boost, virtualizer, loudness)
 - Gesture controls (brightness, volume, seek)
-- Volume boost up to 200% (VLC-style): swipe up past the maximum volume
+- Volume boost up to 200% (VLC-style): turn it on in Settings > Volume, then swipe up past the maximum volume. The HUD shows the percentage.
 - Picture-in-Picture
 - Mini-player with notification controls
 - Sleep timer

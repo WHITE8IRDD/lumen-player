@@ -7,10 +7,14 @@ import com.lumen.player.domain.repository.MediaRepository
 import com.lumen.player.domain.repository.SettingsRepository
 import com.lumen.player.domain.repository.ThemeMode
 import com.lumen.player.domain.repository.UserSettings
+import com.lumen.player.player.audio.VolumeBoostController
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -18,10 +22,20 @@ import javax.inject.Inject
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val repository: SettingsRepository,
-    private val mediaRepository: MediaRepository
+    private val mediaRepository: MediaRepository,
+    private val volumeBoost: VolumeBoostController
 ) : ViewModel() {
 
     val settings = repository.settings
+
+    /** One-line description of whether the boost is reaching the audio output. */
+    val boostEngineStatus: StateFlow<String> = combine(
+        repository.settings,
+        volumeBoost.engineState,
+        volumeBoost.formatName
+    ) { s, state, format ->
+        boostStatusText(s.volumeBoostEnabled, state, format)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), "")
 
     private val _isReady = MutableStateFlow(false)
     val isReady: StateFlow<Boolean> = _isReady.asStateFlow()
@@ -69,6 +83,8 @@ class SettingsViewModel @Inject constructor(
     fun setAutoScanOnStartup(v: Boolean) = viewModelScope.launch { repository.setAutoScanOnStartup(v) }
     fun setShowAudio(v: Boolean) = viewModelScope.launch { repository.setShowAudio(v) }
     fun setReplayGain(v: Boolean) = viewModelScope.launch { repository.setReplayGain(v) }
+    fun setVolumeBoostEnabled(v: Boolean) = viewModelScope.launch { repository.setVolumeBoostEnabled(v) }
+    fun setVolumeBoostMaxPercent(v: Int) = viewModelScope.launch { repository.setVolumeBoostMaxPercent(v) }
     fun setSectionExpanded(section: String, expanded: Boolean) = viewModelScope.launch {
         repository.setSectionExpanded(section, expanded)
     }
@@ -94,9 +110,25 @@ class SettingsViewModel @Inject constructor(
         repository.setFontFamilyChoice("SERIF_DISPLAY")
         repository.setTextCaseChoice("LOWERCASE")
         repository.setWeightOffset(0)
+        repository.setVolumeBoostEnabled(false)
+        repository.setVolumeBoostMaxPercent(VolumeBoostController.DEFAULT_MAX_PERCENT)
     }
 
     fun resetOnboarding() = viewModelScope.launch {
         repository.setOnboardingCompleted(false)
+    }
+
+    private fun boostStatusText(
+        enabled: Boolean,
+        state: VolumeBoostController.EngineState,
+        format: String
+    ): String = when {
+        !enabled -> "Off. Turn on the boost to go above 100%."
+        state == VolumeBoostController.EngineState.IDLE ->
+            "Waiting for audio. Play a song or video to check."
+        state == VolumeBoostController.EngineState.ACTIVE ->
+            "Working. The boost is applied to $format audio."
+        else ->
+            "Not available for this audio ($format). Playback stays at 100%."
     }
 }

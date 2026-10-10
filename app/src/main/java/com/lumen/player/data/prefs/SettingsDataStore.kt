@@ -83,6 +83,9 @@ class SettingsDataStore @Inject constructor(
         val SEC_NETWORK     = booleanPreferencesKey("section_network")
         val SEC_ADVANCED    = booleanPreferencesKey("section_advanced")
         val SEC_ABOUT       = booleanPreferencesKey("section_about")
+        val SEC_VOLUME     = booleanPreferencesKey("section_volume")
+        val VOLUME_BOOST_ENABLED     = booleanPreferencesKey("volume_boost_enabled")
+        val VOLUME_BOOST_MAX_PERCENT = intPreferencesKey("volume_boost_max_percent")
 
         val EQ_ENABLED        = booleanPreferencesKey("eq_enabled")
         val EQ_PRESET         = intPreferencesKey("eq_preset")
@@ -129,6 +132,9 @@ class SettingsDataStore @Inject constructor(
             sectionNetwork = p[Keys.SEC_NETWORK] ?: false,
             sectionAdvanced = p[Keys.SEC_ADVANCED] ?: false,
             sectionAbout = p[Keys.SEC_ABOUT] ?: false,
+            sectionVolume = p[Keys.SEC_VOLUME] ?: false,
+            volumeBoostEnabled = p[Keys.VOLUME_BOOST_ENABLED] ?: false,
+            volumeBoostMaxPercent = (p[Keys.VOLUME_BOOST_MAX_PERCENT] ?: 200).coerceIn(100, 200),
             fontFamilyChoice = p[Keys.TYPOGRAPHY_FONT_FAMILY] ?: "SERIF_DISPLAY",
             textCaseChoice = p[Keys.TYPOGRAPHY_CASE] ?: "LOWERCASE",
             weightOffset = p[Keys.TYPOGRAPHY_WEIGHT] ?: 0,
@@ -247,6 +253,14 @@ class SettingsDataStore @Inject constructor(
         context.prefsDataStore.edit { it[Keys.REPLAY_GAIN] = v }
     }
 
+    suspend fun setVolumeBoostEnabled(v: Boolean) {
+        context.prefsDataStore.edit { it[Keys.VOLUME_BOOST_ENABLED] = v }
+    }
+
+    suspend fun setVolumeBoostMaxPercent(v: Int) {
+        context.prefsDataStore.edit { it[Keys.VOLUME_BOOST_MAX_PERCENT] = v.coerceIn(100, 200) }
+    }
+
     suspend fun setFontFamilyChoice(v: String) {
         context.prefsDataStore.edit { it[Keys.TYPOGRAPHY_FONT_FAMILY] = v }
     }
@@ -294,6 +308,7 @@ class SettingsDataStore @Inject constructor(
             "network" -> Keys.SEC_NETWORK
             "advanced" -> Keys.SEC_ADVANCED
             "about" -> Keys.SEC_ABOUT
+            "volume" -> Keys.SEC_VOLUME
             else -> return
         }
         context.prefsDataStore.edit { it[key] = expanded }

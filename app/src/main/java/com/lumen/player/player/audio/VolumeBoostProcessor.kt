@@ -5,7 +5,6 @@ import androidx.media3.common.audio.AudioProcessor
 import androidx.media3.common.audio.BaseAudioProcessor
 import androidx.media3.common.util.UnstableApi
 import java.nio.ByteBuffer
-import java.nio.ByteOrder
 import kotlin.math.roundToInt
 
 /**
@@ -15,19 +14,20 @@ import kotlin.math.roundToInt
  * same way. At gain 1.0 the buffer is copied through unchanged, so there is
  * no audible difference below 100 %.
  *
- * Supports 16-bit integer PCM and float PCM. Other encodings are left alone
- * (the processor reports itself as inactive for them).
+ * Supports 16-bit integer PCM and float PCM. For any other encoding the
+ * processor is inactive and reports that to the controller.
  */
 @UnstableApi
 class VolumeBoostProcessor(
     private val boost: VolumeBoostController
 ) : BaseAudioProcessor() {
 
-    override fun onConfigure(inputAudioFormat: AudioProcessor.AudioFormat): AudioProcessor.AudioFormat =
-        when (inputAudioFormat.encoding) {
-            C.ENCODING_PCM_16BIT, C.ENCODING_PCM_FLOAT -> inputAudioFormat
-            else -> AudioProcessor.AudioFormat.NOT_SET
-        }
+    override fun onConfigure(inputAudioFormat: AudioProcessor.AudioFormat): AudioProcessor.AudioFormat {
+        val encoding = inputAudioFormat.encoding
+        val supported = encoding == C.ENCODING_PCM_16BIT || encoding == C.ENCODING_PCM_FLOAT
+        boost.reportFormat(describe(encoding), supported)
+        return if (supported) inputAudioFormat else AudioProcessor.AudioFormat.NOT_SET
+    }
 
     override fun queueInput(inputBuffer: ByteBuffer) {
         val remaining = inputBuffer.remaining()
@@ -53,16 +53,34 @@ class VolumeBoostProcessor(
 
     private fun boost16Bit(input: ByteBuffer, out: ByteBuffer, gain: Float) {
         while (input.remaining() >= 2) {
-            val sample = input.short.toFloat() * gain
-            val clipped = sample.roundToInt().coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt())
-            out.putShort(clipped.toShort())
+            out.putShort(applyGain16(input.short, gain))
         }
     }
 
     private fun boostFloat(input: ByteBuffer, out: ByteBuffer, gain: Float) {
         while (input.remaining() >= 4) {
-            val sample = input.float * gain
-            out.putFloat(sample.coerceIn(-1f, 1f))
+            out.putFloat(applyGainFloat(input.float, gain))
         }
+    }
+
+    private fun describe(encoding: Int): String = when (encoding) {
+        C.ENCODING_PCM_16BIT -> "16-bit PCM"
+        C.ENCODING_PCM_FLOAT -> "float PCM"
+        else -> "encoding $encoding"
+    }
+
+    companion object {
+        /**
+         * Scales one 16-bit sample and clips it to the signed 16-bit range.
+         * Internal so the unit tests can check the exact math.
+         */
+        internal fun applyGain16(sample: Short, gain: Float): Short {
+            val scaled = (sample.toFloat() * gain).roundToInt()
+            return scaled.coerceIn(Short.MIN_VALUE.toInt(), Short.MAX_VALUE.toInt()).toShort()
+        }
+
+        /** Scales one float sample and clips it to the -1..1 range. */
+        internal fun applyGainFloat(sample: Float, gain: Float): Float =
+            (sample * gain).coerceIn(-1f, 1f)
     }
 }

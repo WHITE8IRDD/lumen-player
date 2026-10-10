@@ -11,18 +11,40 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import coil.Coil
 import com.lumen.player.data.worker.ThumbnailPreGenWorker
+import com.lumen.player.domain.repository.SettingsRepository
+import com.lumen.player.player.audio.VolumeBoostController
 import com.lumen.player.ui.util.LumenImageLoaderFactory
 import dagger.hilt.android.HiltAndroidApp
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
 
 @HiltAndroidApp
 class LumenApplication : Application() {
+
+    @Inject lateinit var settingsRepository: SettingsRepository
+    @Inject lateinit var volumeBoost: VolumeBoostController
+
+    private val appScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
     override fun onCreate() {
         super.onCreate()
         createPlaybackChannel()
         installCoil()
         scheduleThumbnailPreGen()
+        syncVolumeBoostSettings()
+    }
+
+    /** Keeps the shared volume boost in step with the Settings > Volume choices. */
+    private fun syncVolumeBoostSettings() {
+        appScope.launch {
+            settingsRepository.settings.collect { s ->
+                volumeBoost.applySettings(s.volumeBoostEnabled, s.volumeBoostMaxPercent)
+            }
+        }
     }
 
     @UnstableApi

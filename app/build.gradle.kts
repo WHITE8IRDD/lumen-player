@@ -15,6 +15,10 @@ val localProperties = Properties().apply {
 val tmdbKey = localProperties.getProperty("TMDB_API_KEY", "")
 
 android {
+    testOptions {
+        // Lets JVM unit tests load Media3 classes that touch android.* APIs.
+        unitTests.isReturnDefaultValues = true
+    }
     namespace = "com.lumen.player"
     compileSdk = 35
 

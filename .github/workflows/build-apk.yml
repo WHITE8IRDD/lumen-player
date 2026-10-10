@@ -15,6 +15,44 @@ permissions:
   contents: write
 
 jobs:
+  # Runs the volume boost unit tests. It runs next to the APK build, so a test
+  # failure is reported without blocking the APK.
+  unit-tests:
+    name: Volume boost unit tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: gradle
+
+      - name: Make Gradle wrapper executable
+        run: chmod +x ./gradlew
+
+      - name: Run volume boost tests
+        shell: bash
+        run: |
+          set -o pipefail
+          ./gradlew :app:testDebugUnitTest --tests "com.lumen.player.player.audio.*" --no-daemon --stacktrace 2>&1 | tee test-output.log
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: volume-boost-test-reports
+          path: |
+            app/build/test-results/testDebugUnitTest/
+            test-output.log
+          if-no-files-found: warn
+          retention-days: 14
+
   build:
     name: Build universal release APK
     runs-on: ubuntu-latest
@@ -82,12 +120,19 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           cp new-Lumen-26.apk "new Lumen 26.apk"
+          # Tag new-lumen-26 -> "new Lumen 26"; tag new-lumen-26-v2 -> "new Lumen 26 v2".
+          SUFFIX="${GITHUB_REF_NAME#new-lumen-26}"
+          SUFFIX="${SUFFIX#-}"
+          TITLE="new Lumen 26"
+          if [ -n "$SUFFIX" ]; then TITLE="new Lumen 26 ${SUFFIX}"; fi
           gh release create "$GITHUB_REF_NAME" "new Lumen 26.apk" \
-            --title "new Lumen 26" \
+            --title "$TITLE" \
             --notes "Universal release APK built from commit ${GITHUB_SHA:0:7}.
 
           New in this build:
-          - Volume boost up to 200%: keep swiping up past the maximum volume (video player) or past 100% (music player).
+          - Volume boost up to 200%. Turn it on in Settings > Volume > Activate boost, then choose the maximum (120% to 200%).
+          - The video and music volume HUD shows the percentage, and a 100% marker when boost is on.
+          - Settings > Volume > Boost status shows whether the boost is reaching the audio output.
           - Select all / deselect all when deleting, sharing or queuing videos in a folder or in the library."
 
       - name: Upload build log

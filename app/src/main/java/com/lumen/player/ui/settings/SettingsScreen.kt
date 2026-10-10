@@ -76,6 +76,7 @@ import com.lumen.player.core.theme.LumenBorderSubtle
 
 import com.lumen.player.ui.components.LumenConfirmationDialog
 import com.lumen.player.ui.components.LumenInputDialog
+import com.lumen.player.player.audio.VolumeBoostController
 import com.lumen.player.ui.components.LumenPickerDialog
 import com.lumen.player.ui.theme.LumenFontChoice
 import com.lumen.player.ui.theme.LumenTextCase
@@ -111,6 +112,8 @@ fun SettingsScreen(
     var showClearCacheDialog by remember { mutableStateOf(false) }
     var showResetSettingsDialog by remember { mutableStateOf(false) }
     var showResetOnboardingDialog by remember { mutableStateOf(false) }
+    var showVolumeBoostPicker by remember { mutableStateOf(false) }
+    val boostStatus by viewModel.boostEngineStatus.collectAsStateWithLifecycle()
 
     Column(
         Modifier
@@ -141,6 +144,38 @@ fun SettingsScreen(
                 SettingsSwitchRow(title = stringResource(R.string.gapless_playback), summary = null, checked = s.gaplessPlayback, onToggle = viewModel::setGapless)
                 SettingsDivider()
                 SettingsSwitchRow(title = stringResource(R.string.skip_silence), summary = null, checked = s.skipSilence, onToggle = viewModel::setSkipSilence)
+            }
+        }
+        SettingsDivider()
+
+        // ── VOLUME GROUP ──
+        SettingsSectionHeader(
+            title = "Volume",
+            subtitle = "Boost above 100%",
+            expanded = s.sectionVolume,
+            onToggle = { viewModel.setSectionExpanded("volume", !s.sectionVolume) }
+        )
+        AnimatedVisibility(visible = s.sectionVolume) {
+            Column {
+                SettingsDivider()
+                SettingsSwitchRow(
+                    title = "Activate boost",
+                    summary = "Raise the volume above 100% in the music and video players. Very high levels can distort.",
+                    checked = s.volumeBoostEnabled,
+                    onToggle = viewModel::setVolumeBoostEnabled
+                )
+                AnimatedVisibility(visible = s.volumeBoostEnabled) {
+                    Column {
+                        SettingsDivider()
+                        SettingsClickableRow(
+                            title = "Maximum boost",
+                            subtitle = "${s.volumeBoostMaxPercent}%",
+                            onClick = { showVolumeBoostPicker = true }
+                        )
+                        SettingsDivider()
+                        SettingsStatusRow(title = "Boost status", subtitle = boostStatus)
+                    }
+                }
             }
         }
         SettingsDivider()
@@ -515,6 +550,20 @@ fun SettingsScreen(
             onConfirm = { viewModel.resetOnboarding(); showResetOnboardingDialog = false },
             onDismiss = { showResetOnboardingDialog = false }
         )
+
+        if (showVolumeBoostPicker) {
+            LumenPickerDialog(
+                onDismiss = { showVolumeBoostPicker = false },
+                title = "Maximum boost",
+                options = VolumeBoostController.MAX_PERCENT_OPTIONS,
+                selectedValue = s.volumeBoostMaxPercent,
+                optionLabel = { "$it%" },
+                onPick = {
+                    viewModel.setVolumeBoostMaxPercent(it)
+                    showVolumeBoostPicker = false
+                }
+            )
+        }
     }
 }
 
@@ -611,6 +660,32 @@ private fun SettingsDivider() {
         color = LumenBorderSubtle,
         modifier = Modifier.padding(horizontal = 16.dp)
     )
+}
+
+/** Read-only row: a title with a status line underneath. */
+@Composable
+private fun SettingsStatusRow(
+    title: String,
+    subtitle: String
+) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .defaultMinSize(minHeight = 48.dp)
+            .padding(horizontal = 16.dp, vertical = 14.dp)
+    ) {
+        Text(
+            title,
+            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 15.sp),
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(Modifier.height(2.dp))
+        Text(
+            subtitle,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
+        )
+    }
 }
 
 @Composable

@@ -267,9 +267,6 @@ fun VideoPlayerScreen(
             audioManager.getStreamVolume(AudioManager.STREAM_MUSIC).toFloat() / maxVolume
         )
     }
-    // Software boost above the system maximum (1.0 = 100 %, up to 2.0 = 200 %).
-    // Swiping up past the top of the system volume raises this value.
-    var volumeBoost by remember { mutableFloatStateOf(viewModel.volumeBoostLevel()) }
     val brightnessKeeper = remember { BrightnessKeeper(context) }
     // Read the current system brightness on entry so we don't snap to 0.5.
     // Range maps from 0..255 (system value) to 0.05..1.0 (window value).
@@ -519,8 +516,10 @@ fun VideoPlayerScreen(
                             var sawDrag = false
                             // Above 100 % the boost is the starting point, so the
                             // drag continues smoothly from the boosted level.
-                            val startVolume = if (volumeBoost > VolumeBoostController.MIN_LEVEL) {
-                                volumeBoost
+                            // Read the live boost, not a copy, so a Settings change applies at once.
+                            val startBoost = viewModel.volumeBoostLevel()
+                            val startVolume = if (startBoost > VolumeBoostController.MIN_LEVEL) {
+                                startBoost
                             } else {
                                 volumeFraction
                             }
@@ -569,20 +568,25 @@ fun VideoPlayerScreen(
                                             "${(windowBrightness * 100).toInt()}%", windowBrightness)
                                     } else {
                                         // 0..1 drives the system volume; anything above 1 is boost.
+                                        // The top of the range is the user's boost cap (100 % when off).
+                                        val maxLevel = viewModel.volumeMaxLevel()
                                         val newLevel = (startVolume - dy / 400f)
-                                            .coerceIn(0f, VolumeBoostController.MAX_LEVEL)
+                                            .coerceIn(0f, maxLevel)
                                         val newFrac = newLevel.coerceAtMost(1f)
                                         val newVol = (newFrac * maxVolume).toInt().coerceIn(0, maxVolume)
                                         audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, newVol, 0)
                                         volumeFraction = newFrac
-                                        val newBoost = newLevel.coerceAtLeast(VolumeBoostController.MIN_LEVEL)
-                                        if (newBoost != volumeBoost) {
-                                            volumeBoost = newBoost
-                                            viewModel.setVolumeBoost(newBoost)
-                                        }
-                                        volumeHud = HudInfo(Icons.AutoMirrored.Rounded.VolumeUp,
-                                            "${(newLevel * 100).toInt()}%", newFrac,
-                                            boosted = newLevel > VolumeBoostController.MIN_LEVEL)
+                                        viewModel.setVolumeBoost(newLevel.coerceAtLeast(VolumeBoostController.MIN_LEVEL))
+                                        // The bar is scaled to the cap, so 100 % sits at 1/cap of the height.
+                                        val boosting = maxLevel > VolumeBoostController.MIN_LEVEL
+                                        volumeHud = HudInfo(
+                                            icon = Icons.AutoMirrored.Rounded.VolumeUp,
+                                            label = "${(newLevel * 100).toInt()}%",
+                                            value = (newLevel / maxLevel).coerceIn(0f, 1f),
+                                            boosted = newLevel > VolumeBoostController.MIN_LEVEL,
+                                            showLabel = true,
+                                            tickFraction = if (boosting) 1f / maxLevel else null
+                                        )
                                     }
                                 } else if (abs(dx) > 24f && abs(dx) > abs(dy)) {
                                     sawDrag = true
@@ -1809,7 +1813,11 @@ private data class HudInfo(
     val icon: ImageVector,
     val label: String,
     val value: Float,
-    val boosted: Boolean = false
+    val boosted: Boolean = false,
+    /** Show [label] under the bar. Used by the volume HUD only. */
+    val showLabel: Boolean = false,
+    /** Where to draw the 100 % marker on the bar, from the bottom (0..1). Null = no marker. */
+    val tickFraction: Float? = null
 )
 
 /**
@@ -2149,14 +2157,16 @@ private fun VerticalHud(hud: HudInfo, modifier: Modifier = Modifier) {
             verticalArrangement = Arrangement.spacedBy(6.dp)
         ) {
             Icon(hud.icon, null, tint = fillColor, modifier = Modifier.size(16.dp))
-            // Vertical bar: 6dp wide, 90dp tall, filled from the bottom up
-            Box(
-                Modifier
-                    .width(6.dp)
-                    .height(90.dp)
-                    .clip(RoundedCornerShape(3.dp))
-                    .background(Color.White.copy(alpha = 0.22f))
-            ) {
+            // Vertical bar: 6dp wide, 90dp tall, filled from the bottom up.
+            // The fill is clamped to the full bar, so the bar must already be
+            // scaled to the boost cap (see tickFraction) for boosts to be visible.
+            Box(Modifier.width(6.dp).height(90.dp)) {
+                Box(
+                    Modifier
+                        .fillMaxSize()
+                        .clip(RoundedCornerShape(3.dp))
+                        .background(Color.White.copy(alpha = 0.22f))
+                )
                 Box(
                     Modifier
                         .align(Alignment.BottomCenter)
@@ -2164,6 +2174,26 @@ private fun VerticalHud(hud: HudInfo, modifier: Modifier = Modifier) {
                         .fillMaxHeight(hud.value.coerceIn(0f, 1f))
                         .clip(RoundedCornerShape(3.dp))
                         .background(fillColor)
+                )
+                // 100 % marker, drawn outside the clipped track so it is visible.
+                hud.tickFraction?.let { tick ->
+                    Box(
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .offset(y = -(90.dp * tick.coerceIn(0f, 1f)))
+                            .width(12.dp)
+                            .height(2.dp)
+                            .background(Color.White)
+                    )
+                }
+            }
+            if (hud.showLabel) {
+                Text(
+                    hud.label,
+                    color = fillColor,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 12.sp,
+                    maxLines = 1
                 )
             }
         }
