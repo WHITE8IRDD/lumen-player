@@ -200,12 +200,10 @@ private fun GlowOrb(color: Color, modifier: Modifier = Modifier) {
                 }
                 .background(
                     brush = Brush.radialGradient(
-                        colorStops = listOf(
                             0f to color.copy(alpha = 0.22f),
                             0.55f to color.copy(alpha = 0.08f),
                             1f to Color.Transparent
-                        )
-                    ),
+                        ),
                     shape = CircleShape
                 )
         )
@@ -220,12 +218,10 @@ private fun GlowOrb(color: Color, modifier: Modifier = Modifier) {
                 }
                 .background(
                     brush = Brush.radialGradient(
-                        colorStops = listOf(
                             0f to lerp(color, Color.White, 0.45f).copy(alpha = 0.95f),
                             0.5f to color.copy(alpha = 0.7f),
                             1f to Color.Transparent
-                        )
-                    ),
+                        ),
                     shape = CircleShape
                 )
         )

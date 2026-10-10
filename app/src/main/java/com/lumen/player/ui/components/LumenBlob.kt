@@ -87,11 +87,9 @@ fun LumenBlob(
             // Two soft halos that fade smoothly to nothing.
             drawCircle(
                 brush = Brush.radialGradient(
-                    colorStops = listOf(
-                        0f to color.copy(alpha = 0.30f),
+                    0f to color.copy(alpha = 0.30f),
                         0.45f to color.copy(alpha = 0.12f),
-                        1f to color.copy(alpha = 0f)
-                    ),
+                        1f to color.copy(alpha = 0f),
                     center = center,
                     radius = baseRadius * 2.4f
                 ),
@@ -100,11 +98,9 @@ fun LumenBlob(
             )
             drawCircle(
                 brush = Brush.radialGradient(
-                    colorStops = listOf(
-                        0f to color.copy(alpha = 0.50f),
+                    0f to color.copy(alpha = 0.50f),
                         0.5f to color.copy(alpha = 0.18f),
-                        1f to color.copy(alpha = 0f)
-                    ),
+                        1f to color.copy(alpha = 0f),
                     center = center,
                     radius = baseRadius * 1.6f
                 ),
@@ -119,14 +115,12 @@ fun LumenBlob(
         drawPath(
             path = bodyPath,
             brush = Brush.radialGradient(
-                colorStops = listOf(
                     0f to lerp(color, Color.White, 0.35f).copy(alpha = 0.95f),
                     0.6f to color.copy(alpha = 0.90f),
-                    1f to color.copy(alpha = 0.60f)
-                ),
-                center = center,
-                radius = baseRadius * 1.2f
-            )
+                    1f to color.copy(alpha = 0.60f),
+                    center = center,
+                    radius = baseRadius * 1.2f
+                )
         )
 
         // Core: a soft highlight that moves with the morph.
